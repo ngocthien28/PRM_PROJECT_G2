@@ -1,0 +1,21 @@
+# Flutter and Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+coverage/
+# Local IDE
+.idea/
+.vscode/
+*.iml
+# Sensitive configuration
+*.jks
+*.keystore
+*.p12
+*.pem
+service-account*.json
+.env
+.env.*
