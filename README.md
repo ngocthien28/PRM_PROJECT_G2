@@ -34,7 +34,7 @@ flutter test test/auth test/core/validators_test.dart test/widget_test.dart
 flutter build web
 ```
 
-52 authentication tests passed and `flutter analyze` reported no issues. Tests inject fake repositories / mocked Firebase SDKs and do not prove a real Firebase deployment works. A complete `flutter test` also discovers five unrelated skeleton test files without `main`; those files remain for their module owners to implement.
+52 authentication tests passed and `flutter analyze` reported no issues. Tests inject fake repositories / mocked Firebase SDKs and do not prove a real Firebase deployment works. After merging the Organizer foundation from remote main, four unrelated skeleton test files still lack `main`. The combined Auth/Organizer check reported 93 passing tests and 11 failing Organizer widget tests whose taps target an off-screen save button; Organizer code was preserved unchanged.
 
 Do not rerun the original `scripts/setup_windows.ps1` / `setup_unix.sh` merely to start this iteration: those bootstrap scripts add dependencies for the entire project.
 

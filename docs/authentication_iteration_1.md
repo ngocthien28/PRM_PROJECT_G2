@@ -83,6 +83,8 @@ Kết quả cuối:
 
 Log test cục bộ: build/auth-test-results.log và build/full-test-results.log; không commit các artifact build.
 
+Kiểm tra khi tích hợp remote main trước push: giữ nguyên commit Organizer 7d70782, merge không conflict. flutter analyze không có vấn đề; bộ Auth/Organizer có 93 pass (bao gồm toàn bộ 52 test Auth), 11 lỗi widget Organizer vì tap nút Save ngoài viewport 800×600. Không sửa code/test Organizer. Placeholder test/organizer/event_form_test.dart đã được remote triển khai, nên còn bốn file module khác thiếu main. Log: build/pre-push-tests.log. Các kết quả toàn dự án và hiện trạng skeleton bên trên ghi nhận thời điểm trước merge.
+
 Lệnh toàn bộ `flutter test` phát hiện năm placeholder module ngoài Auth thiếu main: test/clubs/club_view_model_test.dart, test/events/event_repository_test.dart, test/organizer/event_form_test.dart, test/registration/registration_repository_test.dart và test/registration/ticket_screen_test.dart. Không sửa hoặc đánh dấu pass các file này.
 
 ## Cấu hình và demo thủ công còn cần
