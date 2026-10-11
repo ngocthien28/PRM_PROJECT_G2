@@ -1,16 +1,54 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/routing/app_router.dart';
+import 'core/services/firebase_providers.dart';
+import 'core/theme/app_theme.dart';
 
-/// Bootstrap-only screen. Replace with Riverpod + go_router when configured.
-class CampusHubApp extends StatelessWidget {
+class CampusHubApp extends ConsumerWidget {
   const CampusHubApp({super.key});
-
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    title: 'CampusHub',
-    debugShowCheckedModeBanner: false,
-    theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.indigo),
-    home: const Scaffold(
-      body: Center(child: Text('CampusHub • Project Skeleton')),
-    ),
-  );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final initialization = ref.watch(firebaseInitializationProvider);
+    return initialization.when(
+      skipLoadingOnRefresh: false,
+      data: (_) => MaterialApp.router(
+        title: 'CampusHub',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        routerConfig: ref.watch(appRouterProvider),
+      ),
+      loading: () => MaterialApp(
+        theme: AppTheme.light,
+        home: const Scaffold(body: Center(child: CircularProgressIndicator())),
+      ),
+      error: (error, _) => MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('CampusHub', style: TextStyle(fontSize: 28)),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Firebase could not be initialized. Check the Firebase '
+                    'configuration and your connection, then try again.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () =>
+                        ref.invalidate(firebaseInitializationProvider),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

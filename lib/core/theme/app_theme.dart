@@ -1,2 +1,11 @@
-// CampusHub skeleton • lib/core/theme/app_theme.dart
-// TODO: Implement according to 00_Master_Coder_Implementation_Blueprint.
+import 'package:flutter/material.dart';
+
+class AppTheme {
+  static ThemeData get light => ThemeData(
+    useMaterial3: true,
+    colorSchemeSeed: Colors.indigo,
+    inputDecorationTheme: const InputDecorationTheme(
+      border: OutlineInputBorder(),
+    ),
+  );
+}

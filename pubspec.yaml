@@ -1,15 +1,24 @@
 name: campushub
-description: CampusHub PRM393 - project structure bootstrap.
+description: CampusHub PRM393 - authentication foundation.
 publish_to: 'none'
 version: 1.0.0+1
 environment:
-  sdk: '>=3.4.0 <4.0.0'
+  sdk: '>=3.12.0 <4.0.0'
+  flutter: '>=3.44.0'
 dependencies:
+  cloud_firestore: ^6.10.0
+  firebase_auth: ^6.7.0
+  firebase_core: ^4.15.0
   flutter:
     sdk: flutter
+  flutter_riverpod: ^3.4.3
+  go_router: ^18.0.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: any
+  mocktail: ^1.0.5
+  fake_cloud_firestore: ^4.3.0
+  firebase_auth_mocks: ^0.15.2
 flutter:
   uses-material-design: true

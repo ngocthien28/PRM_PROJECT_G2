@@ -1,2 +1,9 @@
-// CampusHub skeleton • lib/features/auth/presentation/screens/register_screen.dart
-// TODO: Implement according to 00_Master_Coder_Implementation_Blueprint.
+import 'package:flutter/material.dart';
+import '../widgets/auth_form.dart';
+
+class RegisterScreen extends StatelessWidget {
+  const RegisterScreen({super.key});
+  @override
+  Widget build(BuildContext context) =>
+      const AuthForm(kind: AuthFormKind.register);
+}

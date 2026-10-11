@@ -1,2 +1,8 @@
-// CampusHub skeleton • lib/core/errors/app_exception.dart
-// TODO: Implement according to 00_Master_Coder_Implementation_Blueprint.
+class AppException implements Exception {
+  final String message;
+  final String code;
+  final Object? cause;
+  const AppException(this.message, {this.code = 'unknown', this.cause});
+  @override
+  String toString() => message;
+}

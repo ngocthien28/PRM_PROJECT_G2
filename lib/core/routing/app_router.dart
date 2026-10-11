@@ -1,2 +1,58 @@
-// CampusHub skeleton • lib/core/routing/app_router.dart
-// TODO: Implement according to 00_Master_Coder_Implementation_Blueprint.
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../features/auth/presentation/screens/forgot_password_screen.dart';
+import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/auth/presentation/screens/register_screen.dart';
+import '../../features/auth/presentation/screens/splash_screen.dart';
+import '../../features/auth/presentation/viewmodels/auth_view_model.dart';
+import '../../features/home/presentation/screens/student_shell.dart';
+import 'route_guards.dart';
+import 'route_names.dart';
+
+class _RouterRefresh extends ChangeNotifier {
+  void refresh() => notifyListeners();
+}
+
+final appRouterProvider = Provider<GoRouter>((ref) {
+  final refresh = _RouterRefresh();
+  ref.listen(authStateProvider, (_, _) => refresh.refresh());
+  ref.listen(currentUserProvider, (_, _) => refresh.refresh());
+  ref.listen(authViewModelProvider, (_, _) => refresh.refresh());
+  final router = GoRouter(
+    initialLocation: RouteNames.splash,
+    refreshListenable: refresh,
+    redirect: (_, state) => sessionRedirect(
+      path: state.uri.path,
+      auth: ref.read(authStateProvider),
+      profile: ref.read(currentUserProvider),
+      actionLoading: ref.read(authViewModelProvider).isLoading,
+    ),
+    routes: [
+      GoRoute(path: RouteNames.splash, builder: (_, _) => const SplashScreen()),
+      GoRoute(path: RouteNames.login, builder: (_, _) => const LoginScreen()),
+      GoRoute(
+        path: RouteNames.register,
+        builder: (_, _) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.forgotPassword,
+        builder: (_, _) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(path: RouteNames.home, builder: (_, _) => const StudentShell()),
+      GoRoute(
+        path: RouteNames.organizer,
+        builder: (_, _) => const StudentShell(title: 'Organizer'),
+      ),
+      GoRoute(
+        path: RouteNames.admin,
+        builder: (_, _) => const StudentShell(title: 'Admin'),
+      ),
+    ],
+  );
+  ref.onDispose(() {
+    router.dispose();
+    refresh.dispose();
+  });
+  return router;
+});
