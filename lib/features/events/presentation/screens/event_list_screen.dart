@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/utils/debouncer.dart';
 import '../viewmodels/event_list_view_model.dart';
 import '../widgets/event_results.dart';
 
@@ -10,6 +11,22 @@ class EventListScreen extends ConsumerStatefulWidget {
 }
 
 class _EventListScreenState extends ConsumerState<EventListScreen> {
+  final _search = TextEditingController();
+  final _debouncer = Debouncer();
+
+  @override
+  void initState() {
+    super.initState();
+    _search.text = ref.read(eventFilterProvider).keyword;
+  }
+
+  @override
+  void dispose() {
+    _debouncer.dispose();
+    _search.dispose();
+    super.dispose();
+  }
+
   Future<void> _refresh() async {
     try {
       ref.invalidate(eventListProvider);
@@ -21,7 +38,8 @@ class _EventListScreenState extends ConsumerState<EventListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final events = ref.watch(eventListProvider);
+    final filter = ref.watch(eventFilterProvider);
+    final events = ref.watch(filteredEventsProvider);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Discover events'),
@@ -53,6 +71,34 @@ class _EventListScreenState extends ConsumerState<EventListScreen> {
                     'Explore upcoming events and make room for something new.',
                   ),
                   const SizedBox(height: 24),
+                  TextField(
+                    key: const Key('event-search'),
+                    controller: _search,
+                    onChanged: (value) => _debouncer.run(
+                      () => ref
+                          .read(eventFilterProvider.notifier)
+                          .setKeyword(value),
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Search events',
+                      hintText: 'Search by title',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _search.text.isEmpty
+                          ? null
+                          : IconButton(
+                              tooltip: 'Clear search',
+                              icon: const Icon(Icons.close),
+                              onPressed: () {
+                                _search.clear();
+                                _debouncer.cancel();
+                                ref
+                                    .read(eventFilterProvider.notifier)
+                                    .setKeyword('');
+                              },
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   EventResults(
                     events: events,
                     onRetry: _refresh,
