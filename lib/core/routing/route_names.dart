@@ -5,6 +5,7 @@ class RouteNames {
   static const forgotPassword = '/forgot-password';
   static const home = '/home';
   static const events = '/events';
+  static String eventDetail(String id) => '$events/${Uri.encodeComponent(id)}';
   static const organizer = '/organizer';
   static const admin = '/admin';
 }

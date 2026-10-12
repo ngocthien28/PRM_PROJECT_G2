@@ -70,4 +70,29 @@ class EventRepositoryImpl implements EventRepository {
         .get(const GetOptions(source: Source.server));
     return selection.apply(snapshot.docs.map(EventModel.fromFirestore));
   });
+
+  @override
+  Future<EventModel> getEventById(String eventId) => _request(() async {
+    if (eventId.trim().isEmpty || eventId.contains('/')) {
+      throw const AppException(
+        'This event is unavailable.',
+        code: 'event-not-found',
+      );
+    }
+    // Status-constrained query also satisfies published-only rules for missing
+    // or unpublished IDs without leaking the underlying document.
+    final snapshot = await firestore
+        .collection(FirestoreCollections.events)
+        .where(FieldPath.documentId, isEqualTo: eventId)
+        .where('status', isEqualTo: EventStatus.published.name)
+        .limit(1)
+        .get(const GetOptions(source: Source.server));
+    if (snapshot.docs.isEmpty) {
+      throw const AppException(
+        'This event is unavailable or is no longer published.',
+        code: 'event-not-found',
+      );
+    }
+    return EventModel.fromFirestore(snapshot.docs.single);
+  });
 }

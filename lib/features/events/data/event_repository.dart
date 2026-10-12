@@ -7,4 +7,5 @@ abstract interface class EventRepository {
     EventFilter? filter,
     bool forceRefresh = false,
   });
+  Future<EventModel> getEventById(String eventId);
 }
