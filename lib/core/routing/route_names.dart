@@ -9,4 +9,7 @@ class RouteNames {
   static const organizer = '/organizer';
   static const organizerCreateEvent = '$organizer/events/create';
   static const admin = '/admin';
+  static const myEvents = '/my-events';
+  static const tickets = '/tickets';
+  static String ticketDetail(String id) => '$tickets/${Uri.encodeComponent(id)}';
 }

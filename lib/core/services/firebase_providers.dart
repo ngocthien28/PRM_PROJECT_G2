@@ -8,6 +8,9 @@ import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/data/auth_repository_impl.dart';
 import '../../features/profile/data/profile_repository.dart';
 import '../../features/profile/data/profile_repository_impl.dart';
+import '../../features/registration/data/registration_repository.dart';
+import '../../features/registration/data/registration_repository_impl.dart';
+import '../../local/dao/ticket_dao.dart';
 
 final firebaseInitializationProvider = FutureProvider<void>((ref) async {
   try {
@@ -32,5 +35,12 @@ final authRepositoryProvider = Provider<AuthRepository>(
   (ref) => AuthRepositoryImpl(
     ref.watch(firebaseAuthProvider),
     ref.watch(profileRepositoryProvider),
+  ),
+);
+
+final registrationRepositoryProvider = Provider<RegistrationRepository>(
+  (ref) => RegistrationRepositoryImpl(
+    ref.watch(firestoreProvider),
+    ref.watch(ticketDaoProvider),
   ),
 );
