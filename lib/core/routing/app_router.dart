@@ -9,6 +9,7 @@ import '../../features/auth/presentation/viewmodels/auth_view_model.dart';
 import '../../features/home/presentation/screens/student_shell.dart';
 import '../../features/events/presentation/screens/event_list_screen.dart';
 import '../../features/events/presentation/screens/event_detail_screen.dart';
+import '../../features/events/data/models/event_model.dart';
 import '../../features/organizer_events/presentation/screens/organizer_create_event_screen.dart';
 import '../../features/organizer_events/presentation/screens/organizer_dashboard_screen.dart';
 import '../../features/registration/presentation/screens/my_events_screen.dart';
@@ -60,11 +61,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: RouteNames.organizer,
         builder: (context, _) => OrganizerDashboardScreen(
           onCreateEvent: () => context.go(RouteNames.organizerCreateEvent),
+          onEditEvent: (event) => context.go(
+            RouteNames.organizerEditEvent(event.id),
+            extra: event,
+          ),
         ),
       ),
       GoRoute(
         path: RouteNames.organizerCreateEvent,
         builder: (_, _) => const OrganizerCreateEventScreen(),
+      ),
+      GoRoute(
+        path: '${RouteNames.organizer}/events/:eventId/edit',
+        builder: (_, state) {
+          final event = state.extra;
+          if (event is! EventModel) {
+            return const Scaffold(
+              body: Center(child: Text('Event details are no longer available.')),
+            );
+          }
+          return OrganizerEditEventScreen(event: event);
+        },
       ),
       GoRoute(
         path: RouteNames.admin,
