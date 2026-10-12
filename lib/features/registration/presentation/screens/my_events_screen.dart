@@ -1,2 +1,222 @@
-// CampusHub skeleton • lib/features/registration/presentation/screens/my_events_screen.dart
-// TODO: Implement according to 00_Master_Coder_Implementation_Blueprint.
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import '../../../../core/routing/route_names.dart';
+import '../../../events/data/models/event_model.dart';
+import '../../../events/presentation/viewmodels/event_list_view_model.dart';
+import '../../data/models/registration_model.dart';
+import '../viewmodels/registration_view_model.dart';
+import '../widgets/registration_status_chip.dart';
+import 'ticket_screen.dart';
+
+class MyEventsScreen extends ConsumerStatefulWidget {
+  const MyEventsScreen({super.key});
+
+  @override
+  ConsumerState<MyEventsScreen> createState() => _MyEventsScreenState();
+}
+
+class _MyEventsScreenState extends ConsumerState<MyEventsScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final registrationsAsync = ref.watch(myRegistrationsProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Sự Kiện Của Tôi'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Sắp tới'),
+            Tab(text: 'Đã check-in'),
+            Tab(text: 'Đã hủy'),
+          ],
+        ),
+      ),
+      body: registrationsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 12),
+                Text('Lỗi: $error', textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => ref.read(myRegistrationsProvider.notifier).refresh(),
+                  child: const Text('Thử lại'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        data: (registrations) {
+          final upcoming = registrations.where((r) => r.isActive).toList();
+          final checkedIn = registrations.where((r) => r.isCheckedIn).toList();
+          final cancelled = registrations.where((r) => r.isCancelled).toList();
+
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              _buildList(upcoming, 'Bạn chưa đăng ký sự kiện sắp tới nào'),
+              _buildList(checkedIn, 'Chưa có sự kiện nào được check-in'),
+              _buildList(cancelled, 'Không có sự kiện đã hủy'),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildList(List<RegistrationModel> items, String emptyMessage) {
+    if (items.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.event_busy, size: 64, color: Colors.grey.shade400),
+              const SizedBox(height: 16),
+              Text(
+                emptyMessage,
+                style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              FilledButton.tonal(
+                onPressed: () => context.go(RouteNames.events),
+                child: const Text('Khám phá sự kiện ngay'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => ref.read(myRegistrationsProvider.notifier).refresh(),
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: items.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          final reg = items[index];
+          return _RegistrationCard(registration: reg);
+        },
+      ),
+    );
+  }
+}
+
+class _RegistrationCard extends ConsumerWidget {
+  const _RegistrationCard({required this.registration});
+
+  final RegistrationModel registration;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FutureBuilder<EventModel>(
+      future: ref.read(eventRepositoryProvider).getEventById(registration.eventId),
+      builder: (context, snapshot) {
+        final event = snapshot.data;
+
+        return Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    RegistrationStatusChip(status: registration.status),
+                    Text(
+                      DateFormat('dd/MM/yyyy HH:mm').format(registration.registeredAt.toLocal()),
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  event?.title ?? 'Đang tải thông tin sự kiện...',
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (event != null) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(Icons.location_on_outlined, size: 15, color: Colors.grey.shade700),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          event.locationName,
+                          style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade700),
+                      const SizedBox(width: 4),
+                      Text(
+                        DateFormat('dd/MM/yyyy HH:mm').format(event.startAt.toLocal()),
+                        style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => TicketScreen(
+                            registrationId: registration.id,
+                            initialRegistration: registration,
+                            initialEvent: event,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.qr_code, size: 18),
+                    label: const Text('Xem Vé QR'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
