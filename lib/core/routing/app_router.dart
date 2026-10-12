@@ -9,6 +9,8 @@ import '../../features/auth/presentation/viewmodels/auth_view_model.dart';
 import '../../features/home/presentation/screens/student_shell.dart';
 import '../../features/events/presentation/screens/event_list_screen.dart';
 import '../../features/events/presentation/screens/event_detail_screen.dart';
+import '../../features/registration/presentation/screens/my_events_screen.dart';
+import '../../features/registration/presentation/screens/ticket_screen.dart';
 import 'route_guards.dart';
 import 'route_names.dart';
 
@@ -31,6 +33,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       actionLoading: ref.read(authViewModelProvider).isLoading,
     ),
     routes: [
+      GoRoute(path: '/', redirect: (_, _) => RouteNames.splash),
       GoRoute(path: RouteNames.splash, builder: (_, _) => const SplashScreen()),
       GoRoute(path: RouteNames.login, builder: (_, _) => const LoginScreen()),
       GoRoute(
@@ -58,6 +61,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RouteNames.admin,
         builder: (_, _) => const StudentShell(title: 'Admin'),
+      ),
+      GoRoute(
+        path: RouteNames.myEvents,
+        builder: (_, _) => const MyEventsScreen(),
+      ),
+      GoRoute(
+        path: '${RouteNames.tickets}/:id',
+        builder: (_, state) =>
+            TicketScreen(registrationId: state.pathParameters['id']!),
       ),
     ],
   );
