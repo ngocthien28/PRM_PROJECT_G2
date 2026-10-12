@@ -11,9 +11,11 @@ class OrganizerDashboardScreen extends ConsumerWidget {
   const OrganizerDashboardScreen({
     super.key,
     required this.onCreateEvent,
+    required this.onEditEvent,
   });
 
   final VoidCallback onCreateEvent;
+  final ValueChanged<EventModel> onEditEvent;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -70,9 +72,20 @@ class OrganizerDashboardScreen extends ConsumerWidget {
                                 trailing: PopupMenuButton<_EventAction>(
                                   tooltip: 'Event actions',
                                   onSelected: (action) {
-                                    _confirmCancel(context, ref, event);
+                                    if (action == _EventAction.edit) {
+                                      onEditEvent(event);
+                                    } else {
+                                      _confirmCancel(context, ref, event);
+                                    }
                                   },
                                   itemBuilder: (_) => const [
+                                    PopupMenuItem(
+                                      value: _EventAction.edit,
+                                      child: ListTile(
+                                        leading: Icon(Icons.edit_outlined),
+                                        title: Text('Edit'),
+                                      ),
+                                    ),
                                     PopupMenuItem(
                                       value: _EventAction.delete,
                                       child: ListTile(
@@ -136,7 +149,7 @@ class OrganizerDashboardScreen extends ConsumerWidget {
   }
 }
 
-enum _EventAction { delete }
+enum _EventAction { edit, delete }
 
 class _StatCard extends StatelessWidget {
   const _StatCard({required this.icon, required this.label, required this.value});
