@@ -37,6 +37,11 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('CampusHub'),
         actions: [
+          IconButton(
+            tooltip: 'Sự kiện của tôi',
+            onPressed: () => context.push(RouteNames.myEvents),
+            icon: const Icon(Icons.confirmation_number_outlined),
+          ),
           TextButton.icon(
             onPressed: action.isLoading
                 ? null
