@@ -3,11 +3,20 @@ import 'package:flutter/foundation.dart';
 import 'app_exception.dart';
 
 AppException mapError(Object error, StackTrace stack) {
-  final code = error is FirebaseException
+  final sourceCode = error is FirebaseException
       ? error.code
       : error is AppException
       ? error.code
       : 'unknown';
+  // Some native SDK errors wrap the backend configuration error in an
+  // internal/unknown error. Recognize only that explicit backend marker.
+  final missingAuthConfiguration =
+      error is FirebaseException &&
+      ({'unknown', 'unknown-error', 'internal-error'}.contains(sourceCode)) &&
+      RegExp(r'\bCONFIGURATION_NOT_FOUND\b').hasMatch(error.message ?? '');
+  final code = missingAuthConfiguration
+      ? 'configuration-not-found'
+      : sourceCode;
   debugPrint('CampusHub: ${error.runtimeType} [$code]\n$stack');
   if (error is AppException) return error;
   final message = switch (code) {
@@ -26,6 +35,10 @@ AppException mapError(Object error, StackTrace stack) {
     'permission-denied' => 'You do not have permission to access this data.',
     'operation-not-allowed' =>
       'Email/password sign-in is not enabled. Contact the project administrator.',
+    'configuration-not-found' || 'CONFIGURATION_NOT_FOUND' =>
+      'Account access is not configured yet. Contact the project administrator.',
+    'invalid-api-key' || 'app-not-authorized' =>
+      'This app cannot connect to the account service. Contact the project administrator.',
     _ => 'Something went wrong. Please try again.',
   };
   return AppException(message, code: code, cause: error);

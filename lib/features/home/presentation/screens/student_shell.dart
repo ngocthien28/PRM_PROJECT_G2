@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../auth/presentation/viewmodels/auth_view_model.dart';
+import 'home_screen.dart';
 
 /// Minimal authenticated landing. Feature tabs/dashboards belong to later work.
 class StudentShell extends ConsumerWidget {
@@ -8,6 +9,7 @@ class StudentShell extends ConsumerWidget {
   const StudentShell({super.key, this.title = 'Student'});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (title == 'Student') return const HomeScreen();
     final user = ref.watch(currentUserProvider).asData?.value;
     final action = ref.watch(authViewModelProvider);
     return Scaffold(

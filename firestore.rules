@@ -1,9 +1,19 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Iteration 1 only. Extend this file with each later feature's reviewed rules.
+    // Auth foundation + Member 2 Discovery iteration 1.
     function owns(uid) {
       return request.auth != null && request.auth.uid == uid;
+    }
+    function activeUser() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active';
+    }
+    match /events/{eventId} {
+      // Discovery queries must include status == published.
+      allow read: if activeUser() && resource.data.status == 'published';
+      // Organizer writes will be added by the owning module.
+      allow write: if false;
     }
     match /users/{uid} {
       allow get: if owns(uid);

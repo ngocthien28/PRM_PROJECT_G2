@@ -1,2 +1,9 @@
-// CampusHub skeleton • lib/core/constants/event_categories.dart
-// TODO: Implement according to 00_Master_Coder_Implementation_Blueprint.
+class EventCategories {
+  static const labels = {
+    'technology': 'Technology',
+    'sport': 'Sport',
+    'workshop': 'Workshop',
+    'music': 'Music',
+  };
+  static String label(String category) => labels[category] ?? category;
+}
