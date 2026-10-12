@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/errors/app_exception.dart';
+import '../../../../core/errors/error_mapper.dart';
 import '../../data/models/event_form_input.dart';
 
 /// Submission states for the organizer event form.
@@ -76,10 +78,13 @@ class EventFormSubmissionController {
         status: EventFormSubmissionStatus.success,
       ));
       return true;
-    } catch (_) {
-      _setState(const EventFormSubmissionState(
+    } catch (error, stack) {
+      final message = error is AppException
+          ? error.message
+          : mapError(error, stack).message;
+      _setState(EventFormSubmissionState(
         status: EventFormSubmissionStatus.error,
-        errorMessage: 'Unable to save event. Please try again.',
+        errorMessage: message,
       ));
       return false;
     } finally {

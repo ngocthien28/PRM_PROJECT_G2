@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../auth/data/models/app_user.dart';
@@ -28,7 +30,10 @@ final organizerEventsProvider =
 final organizerEventActionsProvider = Provider<OrganizerEventActions>((ref) {
   return OrganizerEventActions(
     repository: ref.watch(eventRepositoryProvider),
-    currentActor: () => ref.read(currentUserProvider).asData?.value,
+    // The route can render before the profile stream has emitted a synchronous
+    // value. Await it here instead of treating that brief state as a lost
+    // session.
+    currentActor: () => ref.read(currentUserProvider.future),
     refresh: () {
       ref.invalidate(organizerEventsProvider);
       ref.invalidate(eventListProvider);
@@ -40,18 +45,18 @@ final organizerEventActionsProvider = Provider<OrganizerEventActions>((ref) {
 class OrganizerEventActions {
   const OrganizerEventActions({
     required EventRepository repository,
-    required AppUser? Function() currentActor,
+    required FutureOr<AppUser?> Function() currentActor,
     required void Function() refresh,
   }) : _repository = repository,
        _currentActor = currentActor,
        _refresh = refresh;
 
   final EventRepository _repository;
-  final AppUser? Function() _currentActor;
+  final FutureOr<AppUser?> Function() _currentActor;
   final void Function() _refresh;
 
   Future<void> createEvent(EventFormInput input) async {
-    await _repository.createEvent(input: input, actor: _requireActor());
+    await _repository.createEvent(input: input, actor: await _requireActor());
     _refresh();
   }
 
@@ -59,18 +64,18 @@ class OrganizerEventActions {
     await _repository.updateEvent(
       eventId: eventId,
       input: input,
-      actor: _requireActor(),
+      actor: await _requireActor(),
     );
     _refresh();
   }
 
   Future<void> cancelEvent(String eventId) async {
-    await _repository.cancelEvent(eventId: eventId, actor: _requireActor());
+    await _repository.cancelEvent(eventId: eventId, actor: await _requireActor());
     _refresh();
   }
 
-  AppUser _requireActor() {
-    final actor = _currentActor();
+  Future<AppUser> _requireActor() async {
+    final actor = await _currentActor();
     if (actor == null) {
       throw StateError('Your session is no longer available. Please sign in again.');
     }
