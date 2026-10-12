@@ -19,7 +19,10 @@ void main() {
   Future<void> fill(WidgetTester t) async {
     await t.enterText(find.byKey(const Key('titleField')), 'Flutter Workshop');
     await t.enterText(find.byKey(const Key('descriptionField')), 'Learn Flutter fundamentals in this hands-on workshop.');
-    await t.enterText(find.byKey(const Key('categoryField')), 'technology');
+    await t.tap(find.byKey(const Key('categoryField')));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Technology').last);
+    await t.pumpAndSettle();
     await t.enterText(find.byKey(const Key('locationField')), 'Hall A');
     await t.enterText(find.byKey(const Key('capacityField')), '100');
   }
@@ -108,7 +111,7 @@ void main() {
     await t.pumpWidget(form(submit: (_) async => throw Exception('backend detail'))); await fill(t);
     await tapSubmit(t); await t.pumpAndSettle();
     expect(find.byKey(const Key('submissionErrorMessage')), findsOneWidget);
-    expect(find.text('Unable to save event. Please try again.'), findsOneWidget);
+    expect(find.text('Something went wrong. Please try again.'), findsOneWidget);
   });
 
   testWidgets('retry succeeds after a failed save', (t) async {
