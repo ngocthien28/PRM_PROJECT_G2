@@ -81,6 +81,23 @@ void main() {
       isNull,
     );
   });
+  test('create event route is protected for every direct URL access', () {
+    const createEvent = '/organizer/events/create';
+
+    expect(
+      redirect(createEvent, profile: AsyncData(testUser(role: UserRole.organizer))),
+      isNull,
+    );
+    expect(
+      redirect(createEvent, profile: AsyncData(testUser(role: UserRole.admin))),
+      isNull,
+    );
+    expect(redirect(createEvent), '/home');
+    expect(
+      redirect(createEvent, auth: const AsyncData(null)),
+      '/login',
+    );
+  });
   test('registration keeps form stable until action completes', () {
     expect(
       redirect('/register', profile: const AsyncData(null), busy: true),
