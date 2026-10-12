@@ -113,6 +113,19 @@ service cloud.firestore {
       // Profile updates, status changes and role assignment are future work.
       allow list, update, delete: if false;
     }
+    match /registrations/{registrationId} {
+      allow read: if activeUser() && (
+        resource.data.userId == request.auth.uid
+        || isEventManager()
+      );
+      allow create: if activeUser()
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if activeUser() && (
+        resource.data.userId == request.auth.uid
+        || isEventManager()
+      );
+      allow delete: if false;
+    }
     match /{document=**} {
       allow read, write: if false;
     }
