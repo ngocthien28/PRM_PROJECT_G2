@@ -1,2 +1,144 @@
-// CampusHub skeleton • lib/local/dao/ticket_dao.dart
-// TODO: Implement according to 00_Master_Coder_Implementation_Blueprint.
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sqflite/sqflite.dart';
+import '../../features/registration/data/models/registration_model.dart';
+import '../../shared/enums/registration_status.dart';
+import '../app_database.dart';
+import '../local_tables.dart';
+
+class OfflineTicketRecord {
+  const OfflineTicketRecord({
+    required this.registrationId,
+    required this.userId,
+    required this.eventId,
+    required this.qrToken,
+    required this.eventTitle,
+    required this.startAt,
+    required this.updatedAt,
+  });
+
+  final String registrationId;
+  final String userId;
+  final String eventId;
+  final String qrToken;
+  final String eventTitle;
+  final DateTime startAt;
+  final DateTime updatedAt;
+
+  Map<String, dynamic> toMap() => {
+    LocalTables.colRegistrationId: registrationId,
+    LocalTables.colUserId: userId,
+    LocalTables.colEventId: eventId,
+    LocalTables.colQrToken: qrToken,
+    LocalTables.colEventTitle: eventTitle,
+    LocalTables.colStartAt: startAt.millisecondsSinceEpoch,
+    LocalTables.colUpdatedAt: updatedAt.millisecondsSinceEpoch,
+  };
+
+  factory OfflineTicketRecord.fromMap(Map<String, dynamic> map) =>
+      OfflineTicketRecord(
+        registrationId: map[LocalTables.colRegistrationId] as String,
+        userId: map[LocalTables.colUserId] as String,
+        eventId: map[LocalTables.colEventId] as String,
+        qrToken: map[LocalTables.colQrToken] as String,
+        eventTitle: map[LocalTables.colEventTitle] as String,
+        startAt: DateTime.fromMillisecondsSinceEpoch(
+          map[LocalTables.colStartAt] as int,
+        ),
+        updatedAt: DateTime.fromMillisecondsSinceEpoch(
+          map[LocalTables.colUpdatedAt] as int,
+        ),
+      );
+
+  RegistrationModel toRegistrationModel() => RegistrationModel(
+    id: registrationId,
+    eventId: eventId,
+    userId: userId,
+    status: RegistrationStatus.registered,
+    qrToken: qrToken,
+    registeredAt: updatedAt,
+  );
+}
+
+class TicketDao {
+  TicketDao([AppDatabase? database]) : _db = database ?? AppDatabase.instance;
+
+  final AppDatabase _db;
+  // In-memory cache fallback for web environment where SQLite binary is unavailable
+  static final Map<String, OfflineTicketRecord> _webCache = {};
+
+  Future<void> saveTicket({
+    required RegistrationModel registration,
+    required String eventTitle,
+    required DateTime startAt,
+  }) async {
+    final record = OfflineTicketRecord(
+      registrationId: registration.id,
+      userId: registration.userId,
+      eventId: registration.eventId,
+      qrToken: registration.qrToken,
+      eventTitle: eventTitle,
+      startAt: startAt,
+      updatedAt: DateTime.now(),
+    );
+
+    _webCache[registration.id] = record;
+
+    final db = await _db.database;
+    if (db == null) return;
+
+    await db.insert(
+      LocalTables.offlineTickets,
+      record.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<OfflineTicketRecord?> getTicket(String registrationId) async {
+    final db = await _db.database;
+    if (db == null) {
+      return _webCache[registrationId];
+    }
+
+    final rows = await db.query(
+      LocalTables.offlineTickets,
+      where: '${LocalTables.colRegistrationId} = ?',
+      whereArgs: [registrationId],
+      limit: 1,
+    );
+
+    if (rows.isEmpty) return _webCache[registrationId];
+    return OfflineTicketRecord.fromMap(rows.first);
+  }
+
+  Future<List<OfflineTicketRecord>> getMyTickets(String userId) async {
+    final db = await _db.database;
+    if (db == null) {
+      final list = _webCache.values.where((t) => t.userId == userId).toList();
+      if (list.isEmpty) {
+        final demoTicket = OfflineTicketRecord(
+          registrationId: 'reg_demo_01',
+          userId: userId,
+          eventId: 'event_001',
+          qrToken: 'demo-qr-token-uuid-12345',
+          eventTitle: 'Tech Talk: AI & Flutter Architecture',
+          startAt: DateTime.now().add(const Duration(days: 2)),
+          updatedAt: DateTime.now(),
+        );
+        _webCache[demoTicket.registrationId] = demoTicket;
+        return [demoTicket];
+      }
+      return list;
+    }
+
+    final rows = await db.query(
+      LocalTables.offlineTickets,
+      where: '${LocalTables.colUserId} = ?',
+      whereArgs: [userId],
+      orderBy: '${LocalTables.colStartAt} ASC',
+    );
+
+    return rows.map(OfflineTicketRecord.fromMap).toList();
+  }
+}
+
+final ticketDaoProvider = Provider<TicketDao>((ref) => TicketDao());
