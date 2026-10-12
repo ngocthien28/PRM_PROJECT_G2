@@ -2,7 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/firestore_collections.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/errors/error_mapper.dart';
+import '../../auth/data/models/app_user.dart';
+import '../../organizer_events/data/models/event_form_input.dart';
 import '../../../shared/enums/event_status.dart';
+import '../../../shared/enums/user_role.dart';
 import 'event_repository.dart';
 import 'models/event_filter.dart';
 import 'models/event_model.dart';
@@ -95,4 +98,147 @@ class EventRepositoryImpl implements EventRepository {
     }
     return EventModel.fromFirestore(snapshot.docs.single);
   });
+
+  @override
+  Future<List<EventModel>> getManagedEvents({required AppUser actor}) =>
+      _request(() async {
+        _requireEventManager(actor);
+        Query<Map<String, dynamic>> query =
+            firestore.collection(FirestoreCollections.events);
+        if (actor.role != UserRole.admin) {
+          query = query.where('organizerId', isEqualTo: actor.uid);
+        }
+        final snapshot = await query.get(const GetOptions(source: Source.server));
+        final events = snapshot.docs.map(EventModel.fromFirestore).toList()
+          ..sort((a, b) => b.startAt.compareTo(a.startAt));
+        return events;
+      });
+
+  @override
+  Future<EventModel> createEvent({
+    required EventFormInput input,
+    required AppUser actor,
+  }) => _request(() async {
+    _requireEventManager(actor);
+    _requireValidInput(input);
+    final ref = firestore.collection(FirestoreCollections.events).doc();
+    await ref.set(_createMap(input, actor.uid));
+    final snapshot = await ref.get(const GetOptions(source: Source.server));
+    return EventModel.fromFirestore(snapshot);
+  });
+
+  @override
+  Future<EventModel> updateEvent({
+    required String eventId,
+    required EventFormInput input,
+    required AppUser actor,
+  }) => _request(() async {
+    _requireEventManager(actor);
+    _requireValidInput(input);
+    final ref = _eventDocument(eventId);
+    final existing = EventModel.fromFirestore(
+      await ref.get(const GetOptions(source: Source.server)),
+    );
+    _requireOwnerOrAdmin(existing, actor);
+    if (existing.status == EventStatus.cancelled) {
+      throw const AppException(
+        'Cancelled events cannot be updated.',
+        code: 'event-cancelled',
+      );
+    }
+    await ref.update(_editableMap(input));
+    return EventModel.fromFirestore(
+      await ref.get(const GetOptions(source: Source.server)),
+    );
+  });
+
+  @override
+  Future<EventModel> cancelEvent({
+    required String eventId,
+    required AppUser actor,
+  }) => _request(() async {
+    _requireEventManager(actor);
+    final ref = _eventDocument(eventId);
+    final existing = EventModel.fromFirestore(
+      await ref.get(const GetOptions(source: Source.server)),
+    );
+    _requireOwnerOrAdmin(existing, actor);
+    if (existing.status == EventStatus.cancelled) return existing;
+    await ref.update({
+      'status': EventStatus.cancelled.name,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    return EventModel.fromFirestore(
+      await ref.get(const GetOptions(source: Source.server)),
+    );
+  });
+
+  DocumentReference<Map<String, dynamic>> _eventDocument(String eventId) {
+    final id = eventId.trim();
+    if (id.isEmpty || id.contains('/')) {
+      throw const AppException(
+        'This event is unavailable.',
+        code: 'event-not-found',
+      );
+    }
+    return firestore.collection(FirestoreCollections.events).doc(id);
+  }
+
+  void _requireEventManager(AppUser actor) {
+    if (!actor.isActive || !actor.role.canOrganize) {
+      throw const AppException(
+        'Only active organizers or admins can manage events.',
+        code: 'event-forbidden',
+      );
+    }
+  }
+
+  void _requireOwnerOrAdmin(EventModel event, AppUser actor) {
+    if (actor.role != UserRole.admin && event.organizerId != actor.uid) {
+      throw const AppException(
+        'You can only manage events you own.',
+        code: 'event-forbidden',
+      );
+    }
+  }
+
+  void _requireValidInput(EventFormInput input) {
+    final errors = input.validate();
+    if (errors.isNotEmpty) {
+      throw AppException(
+        errors.values.first,
+        code: 'invalid-event-input',
+      );
+    }
+  }
+
+  Map<String, dynamic> _createMap(EventFormInput input, String organizerId) => {
+    ..._editableValues(input),
+    'organizerId': organizerId,
+    'clubId': null,
+    'latitude': null,
+    'longitude': null,
+    'registeredCount': 0,
+    'checkedInCount': 0,
+    'posterUrl': null,
+    'status': EventStatus.published.name,
+    'createdAt': FieldValue.serverTimestamp(),
+    'updatedAt': FieldValue.serverTimestamp(),
+  };
+
+  Map<String, dynamic> _editableMap(EventFormInput input) => {
+    ..._editableValues(input),
+    'updatedAt': FieldValue.serverTimestamp(),
+  };
+
+  Map<String, dynamic> _editableValues(EventFormInput input) => {
+    'title': input.title.trim(),
+    'titleLower': input.title.trim().toLowerCase(),
+    'description': input.description.trim(),
+    'category': input.category.trim(),
+    'locationName': input.locationName.trim(),
+    'startAt': Timestamp.fromDate(input.startAt.toUtc()),
+    'endAt': Timestamp.fromDate(input.endAt.toUtc()),
+    'capacity': input.capacity,
+  };
 }
