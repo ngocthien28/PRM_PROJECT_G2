@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -53,6 +50,18 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyBWjV3MsvBRQVczqw_O2Ww8vQxP5mNlJxQ',
+    appId: '1:943731905884:web:2bd4984359adbbd5de9d99',
+    messagingSenderId: '943731905884',
+    projectId: 'studio-1527538381-9d991',
+    authDomain: 'studio-1527538381-9d991.firebaseapp.com',
+    storageBucket: 'studio-1527538381-9d991.firebasestorage.app',
+  );
+
+  // Firebase console registers Windows targets as Web Apps. The project
+  // already has this configuration, so it also supplies the Flutter Web
+  // target instead of failing before Firebase can initialise.
+  static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyBWjV3MsvBRQVczqw_O2Ww8vQxP5mNlJxQ',
     appId: '1:943731905884:web:2bd4984359adbbd5de9d99',
     messagingSenderId: '943731905884',

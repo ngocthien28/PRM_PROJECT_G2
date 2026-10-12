@@ -9,7 +9,7 @@ EventFormInput validInput({String title = 'Flutter Workshop'}) {
   return EventFormInput(
     title: title,
     description: 'Learn practical Flutter patterns with the CampusHub team.',
-    category: 'Technology',
+    category: 'technology',
     locationName: 'Innovation Hall',
     startAt: DateTime(2030, 1, 1, 9),
     endAt: DateTime(2030, 1, 1, 11),

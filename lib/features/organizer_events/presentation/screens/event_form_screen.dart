@@ -10,11 +10,11 @@ class EventFormScreen extends ConsumerStatefulWidget {
   const EventFormScreen({
     super.key,
     this.initialValue,
-    required this.onSubmit,
+    this.onSubmit,
   });
 
   final EventFormInput? initialValue;
-  final EventFormSubmitCallback onSubmit;
+  final EventFormSubmitCallback? onSubmit;
 
   @override
   ConsumerState<EventFormScreen> createState() => _EventFormScreenState();
@@ -30,6 +30,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
   late DateTime _endAt;
 
   bool get _isEditMode => widget.initialValue != null;
+  bool get _canSubmit => widget.onSubmit != null;
 
   @override
   void initState() {
@@ -90,11 +91,15 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
   }
 
   Future<void> _submit() async {
-    if (ref.read(eventFormViewModelProvider).isSubmitting) return;
+    final onSubmit = widget.onSubmit;
+    if (onSubmit == null ||
+        ref.read(eventFormViewModelProvider).isSubmitting) {
+      return;
+    }
 
     await ref
         .read(eventFormViewModelProvider.notifier)
-        .submit(_input, widget.onSubmit);
+        .submit(_input, onSubmit);
   }
 
   @override
@@ -130,10 +135,21 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                         key: const Key('submissionErrorMessage'),
                         style: TextStyle(color: Theme.of(context).colorScheme.error),
                       ),
+                    if (!_canSubmit)
+                      const Text(
+                        'Event saving is not available yet.',
+                        key: Key('eventSavingUnavailableMessage'),
+                      ),
                     FilledButton(
                       key: const Key('submitEventFormButton'),
-                      onPressed: isSubmitting ? null : _submit,
-                      child: Text(isSubmitting ? 'Saving...' : 'Save Event'),
+                      onPressed: isSubmitting || !_canSubmit ? null : _submit,
+                      child: Text(
+                        isSubmitting
+                            ? 'Saving...'
+                            : _canSubmit
+                            ? 'Save Event'
+                            : 'Saving unavailable',
+                      ),
                     ),
                   ].map((child) => Padding(padding: const EdgeInsets.only(bottom: 16), child: child)).toList(),
                 ),

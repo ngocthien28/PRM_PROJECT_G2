@@ -9,6 +9,8 @@ import '../../features/auth/presentation/viewmodels/auth_view_model.dart';
 import '../../features/home/presentation/screens/student_shell.dart';
 import '../../features/events/presentation/screens/event_list_screen.dart';
 import '../../features/events/presentation/screens/event_detail_screen.dart';
+import '../../features/organizer_events/presentation/screens/organizer_create_event_screen.dart';
+import '../../features/organizer_events/presentation/screens/organizer_dashboard_screen.dart';
 import 'route_guards.dart';
 import 'route_names.dart';
 
@@ -53,7 +55,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: RouteNames.organizer,
-        builder: (_, _) => const StudentShell(title: 'Organizer'),
+        builder: (context, _) => OrganizerDashboardScreen(
+          onCreateEvent: () => context.go(RouteNames.organizerCreateEvent),
+        ),
+      ),
+      GoRoute(
+        path: RouteNames.organizerCreateEvent,
+        builder: (_, _) => const OrganizerCreateEventScreen(),
       ),
       GoRoute(
         path: RouteNames.admin,

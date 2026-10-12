@@ -1,3 +1,5 @@
+import '../../../../core/constants/event_categories.dart';
+
 /// Pure-Dart input and validation for the organizer event create/edit form.
 ///
 /// This type deliberately contains only editable form fields. Event identity,
@@ -54,6 +56,8 @@ class EventFormInput {
 
     if (category.trim().isEmpty) {
       errors['category'] = 'Category is required.';
+    } else if (!EventCategories.labels.containsKey(category.trim())) {
+      errors['category'] = 'Select a valid event category.';
     }
 
     if (locationName.trim().isEmpty) {
