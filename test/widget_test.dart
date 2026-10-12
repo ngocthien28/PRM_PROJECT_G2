@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'auth/auth_fakes.dart';
+import 'events/event_fakes.dart';
+import 'package:campushub/features/events/presentation/viewmodels/event_list_view_model.dart';
 
 void main() {
   late FakeProfiles profiles;
@@ -21,6 +23,7 @@ void main() {
         firebaseInitializationProvider.overrideWith((ref) async {}),
         authRepositoryProvider.overrideWithValue(auth),
         profileRepositoryProvider.overrideWithValue(profiles),
+        eventRepositoryProvider.overrideWithValue(FakeEvents([])),
       ],
     );
   });

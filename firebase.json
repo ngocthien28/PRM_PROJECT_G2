@@ -1,5 +1,1 @@
-{
-  "firestore": {
-    "rules": "firestore.rules"
-  }
-}
+{"firestore":{"rules":"firestore.rules","indexes":"firestore.indexes.json"},"flutter":{"platforms":{"dart":{"lib/firebase_options.dart":{"projectId":"studio-1527538381-9d991","configurations":{"windows":"1:943731905884:web:2bd4984359adbbd5de9d99"}}}}}}
