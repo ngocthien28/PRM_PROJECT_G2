@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/constants/event_categories.dart';
 import '../../../../core/utils/debouncer.dart';
 import '../viewmodels/event_list_view_model.dart';
 import '../widgets/event_results.dart';
+import '../widgets/event_filter_sheet.dart';
 
 class EventListScreen extends ConsumerStatefulWidget {
   const EventListScreen({super.key});
@@ -97,6 +99,46 @@ class _EventListScreenState extends ConsumerState<EventListScreen> {
                               },
                             ),
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final result = await showEventFilterSheet(
+                            context,
+                            filter,
+                          );
+                          if (result != null && mounted) {
+                            ref
+                                .read(eventFilterProvider.notifier)
+                                .setFilter(result);
+                          }
+                        },
+                        icon: const Icon(Icons.tune),
+                        label: const Text('Filters'),
+                      ),
+                      if (filter.category != null)
+                        Chip(
+                          label: Text(EventCategories.label(filter.category!)),
+                        ),
+                      if (filter.onlyAvailable)
+                        const Chip(label: Text('Places available')),
+                      if (filter.fromDate != null || filter.toDate != null)
+                        const Chip(label: Text('Date range')),
+                      if (filter.hasFilters || filter.keyword.isNotEmpty)
+                        TextButton(
+                          onPressed: () {
+                            _search.clear();
+                            _debouncer.cancel();
+                            ref.read(eventFilterProvider.notifier).reset();
+                          },
+                          child: const Text('Clear all'),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   EventResults(

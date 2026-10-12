@@ -35,9 +35,15 @@ final eventListProvider =
 class EventListViewModel extends AsyncNotifier<List<EventModel>> {
   @override
   Future<List<EventModel>> build() async {
+    // Typing searches the fetched results; only a category change refetches.
+    final category = ref.watch(
+      eventFilterProvider.select((filter) => filter.category),
+    );
     final identity = await ref.watch(authStateProvider.future);
     if (!ref.mounted || identity == null) return [];
-    return ref.watch(eventRepositoryProvider).getUpcomingEvents();
+    return ref
+        .watch(eventRepositoryProvider)
+        .getUpcomingEvents(filter: EventFilter(category: category));
   }
 }
 
