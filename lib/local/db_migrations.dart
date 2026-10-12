@@ -1,2 +1,59 @@
-// CampusHub skeleton • lib/local/db_migrations.dart
-// TODO: Implement according to 00_Master_Coder_Implementation_Blueprint.
+import 'package:sqflite/sqflite.dart';
+import 'local_tables.dart';
+
+/// Database schema initialization and version migrations for CampusHub.
+abstract final class DbMigrations {
+  static const int currentVersion = 1;
+
+  static Future<void> onCreate(Database db, int version) async {
+    // 1. cached_events
+    await db.execute('''
+      CREATE TABLE ${LocalTables.cachedEvents} (
+        ${LocalTables.colId} TEXT PRIMARY KEY,
+        ${LocalTables.colJson} TEXT NOT NULL,
+        ${LocalTables.colUpdatedAt} INTEGER NOT NULL
+      )
+    ''');
+
+    // 2. offline_tickets
+    await db.execute('''
+      CREATE TABLE ${LocalTables.offlineTickets} (
+        ${LocalTables.colRegistrationId} TEXT PRIMARY KEY,
+        ${LocalTables.colUserId} TEXT NOT NULL,
+        ${LocalTables.colEventId} TEXT NOT NULL,
+        ${LocalTables.colQrToken} TEXT NOT NULL,
+        ${LocalTables.colEventTitle} TEXT NOT NULL,
+        ${LocalTables.colStartAt} INTEGER NOT NULL,
+        ${LocalTables.colUpdatedAt} INTEGER NOT NULL
+      )
+    ''');
+
+    // 3. recently_viewed
+    await db.execute('''
+      CREATE TABLE ${LocalTables.recentlyViewed} (
+        ${LocalTables.colEventId} TEXT PRIMARY KEY,
+        ${LocalTables.colUserId} TEXT NOT NULL,
+        ${LocalTables.colViewedAt} INTEGER NOT NULL
+      )
+    ''');
+
+    // 4. favorite_local
+    await db.execute('''
+      CREATE TABLE ${LocalTables.favoriteLocal} (
+        ${LocalTables.colEventId} TEXT NOT NULL,
+        ${LocalTables.colUserId} TEXT NOT NULL,
+        ${LocalTables.colIsFavorite} INTEGER NOT NULL,
+        ${LocalTables.colUpdatedAt} INTEGER NOT NULL,
+        PRIMARY KEY(${LocalTables.colEventId}, ${LocalTables.colUserId})
+      )
+    ''');
+  }
+
+  static Future<void> onUpgrade(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    // Migration steps when schema version changes
+  }
+}
