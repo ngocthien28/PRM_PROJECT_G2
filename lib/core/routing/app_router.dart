@@ -7,6 +7,7 @@ import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/viewmodels/auth_view_model.dart';
 import '../../features/home/presentation/screens/student_shell.dart';
+import '../../features/events/presentation/screens/event_list_screen.dart';
 import 'route_guards.dart';
 import 'route_names.dart';
 
@@ -40,6 +41,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const ForgotPasswordScreen(),
       ),
       GoRoute(path: RouteNames.home, builder: (_, _) => const StudentShell()),
+      GoRoute(
+        path: RouteNames.events,
+        builder: (_, _) => const EventListScreen(),
+      ),
       GoRoute(
         path: RouteNames.organizer,
         builder: (_, _) => const StudentShell(title: 'Organizer'),

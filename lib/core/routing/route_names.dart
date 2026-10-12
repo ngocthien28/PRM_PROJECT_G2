@@ -4,6 +4,7 @@ class RouteNames {
   static const register = '/register';
   static const forgotPassword = '/forgot-password';
   static const home = '/home';
+  static const events = '/events';
   static const organizer = '/organizer';
   static const admin = '/admin';
 }
