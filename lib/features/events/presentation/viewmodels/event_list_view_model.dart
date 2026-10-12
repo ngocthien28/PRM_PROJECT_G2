@@ -9,6 +9,20 @@ final eventRepositoryProvider = Provider<EventRepository>(
   (ref) => EventRepositoryImpl(firestore: ref.watch(firestoreProvider)),
 );
 
+final eventListProvider =
+    AsyncNotifierProvider.autoDispose<EventListViewModel, List<EventModel>>(
+      EventListViewModel.new,
+    );
+
+class EventListViewModel extends AsyncNotifier<List<EventModel>> {
+  @override
+  Future<List<EventModel>> build() async {
+    final identity = await ref.watch(authStateProvider.future);
+    if (!ref.mounted || identity == null) return [];
+    return ref.watch(eventRepositoryProvider).getUpcomingEvents();
+  }
+}
+
 final homeEventsProvider = FutureProvider.autoDispose<List<EventModel>>((
   ref,
 ) async {
