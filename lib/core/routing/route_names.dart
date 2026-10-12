@@ -8,4 +8,7 @@ class RouteNames {
   static String eventDetail(String id) => '$events/${Uri.encodeComponent(id)}';
   static const organizer = '/organizer';
   static const admin = '/admin';
+  static const myEvents = '/my-events';
+  static const tickets = '/tickets';
+  static String ticketDetail(String id) => '$tickets/${Uri.encodeComponent(id)}';
 }

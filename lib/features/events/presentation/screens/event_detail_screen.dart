@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/event_categories.dart';
+import '../../../registration/data/models/registration_model.dart';
+import '../../../registration/presentation/screens/ticket_screen.dart';
+import '../../../registration/presentation/viewmodels/registration_view_model.dart';
+import '../../data/models/event_model.dart';
 import '../viewmodels/event_detail_view_model.dart';
 import '../widgets/event_poster.dart';
 import '../widgets/event_results.dart';
@@ -112,6 +116,8 @@ class EventDetailScreen extends ConsumerWidget {
                                   color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
+                              const SizedBox(height: 20),
+                              _JoinEventButton(event: value),
                             ],
                           ),
                         ),
@@ -166,4 +172,145 @@ class _Detail extends StatelessWidget {
       ],
     ),
   );
+}
+
+class _JoinEventButton extends ConsumerWidget {
+  const _JoinEventButton({required this.event});
+  final EventModel event;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final regAsync = ref.watch(eventRegistrationStatusProvider(event.id));
+    final actionState = ref.watch(registrationActionProvider);
+
+    final isPast = event.startAt.isBefore(DateTime.now());
+    final isFull = event.isFull;
+
+    return regAsync.when(
+      loading: () => const SizedBox(
+        width: double.infinity,
+        child: FilledButton(
+          onPressed: null,
+          child: SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (_, _) {
+        // If status check fails, allow joining anyway
+        return _buildJoinButton(
+          context: context,
+          ref: ref,
+          isPast: isPast,
+          isFull: isFull,
+          actionState: actionState,
+        );
+      },
+      data: (reg) {
+        if (reg != null && reg.isActive) {
+          return SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.green.shade700,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => TicketScreen(
+                      registrationId: reg.id,
+                      initialRegistration: reg,
+                      initialEvent: event,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.qr_code),
+              label: const Text('Xem Vé QR Của Bạn'),
+            ),
+          );
+        }
+        return _buildJoinButton(
+          context: context,
+          ref: ref,
+          isPast: isPast,
+          isFull: isFull,
+          actionState: actionState,
+        );
+      },
+    );
+  }
+
+  Widget _buildJoinButton({
+    required BuildContext context,
+    required WidgetRef ref,
+    required bool isPast,
+    required bool isFull,
+    required AsyncValue<RegistrationModel?> actionState,
+  }) {
+    final canJoin = !isPast && !isFull && !actionState.isLoading;
+    final label = isPast
+        ? 'Sự kiện đã kết thúc'
+        : isFull
+            ? 'Đã hết chỗ'
+            : actionState.isLoading
+                ? 'Đang đăng ký...'
+                : 'Tham gia sự kiện';
+
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton.icon(
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+        ),
+        onPressed: canJoin
+            ? () async {
+                try {
+                  final createdReg = await ref
+                      .read(registrationActionProvider.notifier)
+                      .joinEvent(event);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Đăng ký tham gia thành công!'),
+                      ),
+                    );
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => TicketScreen(
+                          registrationId: createdReg.id,
+                          initialRegistration: createdReg,
+                        ),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('$e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              }
+            : null,
+        icon: actionState.isLoading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : const Icon(Icons.confirmation_number_outlined),
+        label: Text(label),
+      ),
+    );
+  }
 }
