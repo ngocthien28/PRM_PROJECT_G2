@@ -56,6 +56,29 @@ void main() {
   );
 
   test(
+    'details hide missing or unpublished IDs and preserve published data',
+    () async {
+      final event = testEvent();
+      await save(event);
+      final loaded = await repo.getEventById(event.id);
+      expect(loaded.toMap(), event.toMap());
+      await save(testEvent(id: 'draft', status: EventStatus.draft));
+      for (final id in ['missing', 'draft', '', 'bad/path']) {
+        await expectLater(
+          repo.getEventById(id),
+          throwsA(
+            isA<AppException>().having(
+              (e) => e.code,
+              'code',
+              'event-not-found',
+            ),
+          ),
+        );
+      }
+    },
+  );
+
+  test(
     'malformed event produces an actionable error instead of crashing widgets',
     () async {
       await db.collection('events').doc('bad').set({

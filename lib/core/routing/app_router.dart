@@ -8,6 +8,7 @@ import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/viewmodels/auth_view_model.dart';
 import '../../features/home/presentation/screens/student_shell.dart';
 import '../../features/events/presentation/screens/event_list_screen.dart';
+import '../../features/events/presentation/screens/event_detail_screen.dart';
 import 'route_guards.dart';
 import 'route_names.dart';
 
@@ -44,6 +45,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RouteNames.events,
         builder: (_, _) => const EventListScreen(),
+      ),
+      GoRoute(
+        path: '${RouteNames.events}/:eventId',
+        builder: (_, state) =>
+            EventDetailScreen(eventId: state.pathParameters['eventId']!),
       ),
       GoRoute(
         path: RouteNames.organizer,
