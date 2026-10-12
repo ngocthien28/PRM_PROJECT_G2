@@ -4,6 +4,17 @@ import 'core/routing/app_router.dart';
 import 'core/services/firebase_providers.dart';
 import 'core/theme/app_theme.dart';
 
+String firebaseInitializationMessage(Object error) {
+  if (error is UnsupportedError &&
+      error.message.toString().contains('have not been configured for')) {
+    return 'Firebase has not been configured for this platform yet. '
+        'Register this app in Firebase and run flutterfire configure.';
+  }
+
+  return 'Firebase could not be initialized. Check the Firebase '
+      'configuration and your connection, then try again.';
+}
+
 class CampusHubApp extends ConsumerWidget {
   const CampusHubApp({super.key});
   @override
@@ -32,9 +43,8 @@ class CampusHubApp extends ConsumerWidget {
                 children: [
                   const Text('CampusHub', style: TextStyle(fontSize: 28)),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Firebase could not be initialized. Check the Firebase '
-                    'configuration and your connection, then try again.',
+                  Text(
+                    firebaseInitializationMessage(error),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
