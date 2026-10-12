@@ -74,6 +74,12 @@ void main() {
     expect(errors['category'], 'Category is required.');
   });
 
+  test('rejects a category outside the shared event categories', () {
+    final errors = validInput(category: 'other').validate();
+
+    expect(errors['category'], 'Select a valid event category.');
+  });
+
   test('rejects an empty location', () {
     final errors = validInput(locationName: '').validate();
 

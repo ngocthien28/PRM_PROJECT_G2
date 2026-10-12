@@ -2,10 +2,13 @@ import 'package:campushub/core/errors/app_exception.dart';
 import 'package:campushub/features/events/data/event_repository_impl.dart';
 import 'package:campushub/features/events/data/models/event_filter.dart';
 import 'package:campushub/features/events/data/models/event_model.dart';
+import 'package:campushub/features/organizer_events/data/models/event_form_input.dart';
 import 'package:campushub/shared/enums/event_status.dart';
+import 'package:campushub/shared/enums/user_role.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'event_fakes.dart';
+import '../auth/auth_fakes.dart';
 
 void main() {
   late FakeFirebaseFirestore db;
@@ -17,6 +20,17 @@ void main() {
   });
   Future<void> save(EventModel event) =>
       db.collection('events').doc(event.id).set(event.toMap());
+  EventFormInput formInput({String title = 'Organizer Flutter Workshop'}) =>
+      EventFormInput(
+        title: title,
+        description:
+            'A practical hands-on Flutter workshop for CampusHub students.',
+        category: 'technology',
+        locationName: 'Hall A',
+        startAt: DateTime.utc(2030, 6, 1, 9),
+        endAt: DateTime.utc(2030, 6, 1, 11),
+        capacity: 100,
+      );
 
   test(
     'reads only upcoming published events, orders by time and filters category',
@@ -54,6 +68,68 @@ void main() {
       );
     },
   );
+
+  test('organizer can create, update and soft-cancel an owned event', () async {
+    final organizer = testUser(uid: 'organizer-1', role: UserRole.organizer);
+    final created = await repo.createEvent(input: formInput(), actor: organizer);
+
+    expect(created.organizerId, organizer.uid);
+    expect(created.status, EventStatus.published);
+    expect(created.registeredCount, 0);
+    expect(created.checkedInCount, 0);
+    expect(created.titleLower, 'organizer flutter workshop');
+
+    final updated = await repo.updateEvent(
+      eventId: created.id,
+      input: formInput(title: 'Updated Flutter Workshop'),
+      actor: organizer,
+    );
+    expect(updated.title, 'Updated Flutter Workshop');
+    expect(updated.organizerId, organizer.uid);
+
+    final cancelled = await repo.cancelEvent(
+      eventId: created.id,
+      actor: organizer,
+    );
+    expect(cancelled.status, EventStatus.cancelled);
+    await expectLater(
+      repo.updateEvent(
+        eventId: created.id,
+        input: formInput(),
+        actor: organizer,
+      ),
+      throwsA(isA<AppException>().having((e) => e.code, 'code', 'event-cancelled')),
+    );
+  });
+
+  test('student is denied and an admin can manage another organizer event', () async {
+    final owner = testUser(uid: 'organizer-1', role: UserRole.organizer);
+    final otherOrganizer = testUser(uid: 'organizer-2', role: UserRole.organizer);
+    final admin = testUser(uid: 'admin-1', role: UserRole.admin);
+    final created = await repo.createEvent(input: formInput(), actor: owner);
+
+    await expectLater(
+      repo.createEvent(input: formInput(), actor: testUser()),
+      throwsA(isA<AppException>().having((e) => e.code, 'code', 'event-forbidden')),
+    );
+    await expectLater(
+      repo.updateEvent(
+        eventId: created.id,
+        input: formInput(title: 'Not owner'),
+        actor: otherOrganizer,
+      ),
+      throwsA(isA<AppException>().having((e) => e.code, 'code', 'event-forbidden')),
+    );
+
+    final updated = await repo.updateEvent(
+      eventId: created.id,
+      input: formInput(title: 'Admin override'),
+      actor: admin,
+    );
+    expect(updated.title, 'Admin override');
+    expect((await repo.getManagedEvents(actor: owner)).single.id, created.id);
+    expect((await repo.getManagedEvents(actor: admin)).single.id, created.id);
+  });
 
   test(
     'details hide missing or unpublished IDs and preserve published data',

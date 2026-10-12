@@ -9,11 +9,85 @@ service cloud.firestore {
       return request.auth != null
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active';
     }
+    function currentRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    function isEventManager() {
+      return activeUser()
+        && (currentRole() == 'organizer' || currentRole() == 'admin');
+    }
+    function isAdmin() {
+      return isEventManager() && currentRole() == 'admin';
+    }
+    function validEventFields(data) {
+      return data.keys().hasAll([
+          'organizerId', 'clubId', 'title', 'titleLower', 'description',
+          'category', 'locationName', 'latitude', 'longitude', 'startAt',
+          'endAt', 'capacity', 'registeredCount', 'checkedInCount',
+          'posterUrl', 'status', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'organizerId', 'clubId', 'title', 'titleLower', 'description',
+          'category', 'locationName', 'latitude', 'longitude', 'startAt',
+          'endAt', 'capacity', 'registeredCount', 'checkedInCount',
+          'posterUrl', 'status', 'createdAt', 'updatedAt'
+        ])
+        && data.organizerId is string
+        && (data.clubId == null || data.clubId is string)
+        && data.title is string && data.title.size() >= 3 && data.title.size() <= 120
+        && data.titleLower is string
+        && data.description is string && data.description.size() >= 20
+        && data.category in ['technology', 'sport', 'workshop', 'music']
+        && data.locationName is string && data.locationName.size() > 0
+        && (data.latitude == null || data.latitude is number)
+        && (data.longitude == null || data.longitude is number)
+        && data.startAt is timestamp && data.endAt is timestamp
+        && data.startAt < data.endAt
+        && data.capacity is int && data.capacity > 0 && data.capacity <= 5000
+        && data.registeredCount is int && data.registeredCount >= 0
+        && data.registeredCount <= data.capacity
+        && data.checkedInCount is int && data.checkedInCount >= 0
+        && data.checkedInCount <= data.registeredCount
+        && (data.posterUrl == null || data.posterUrl is string)
+        && data.status in ['draft', 'published', 'cancelled', 'finished']
+        && data.createdAt is timestamp && data.updatedAt is timestamp;
+    }
     match /events/{eventId} {
       // Discovery queries must include status == published.
-      allow read: if activeUser() && resource.data.status == 'published';
-      // Organizer writes will be added by the owning module.
-      allow write: if false;
+      allow read: if activeUser() && (
+        resource.data.status == 'published'
+        || (isEventManager() && (
+          isAdmin() || resource.data.organizerId == request.auth.uid
+        ))
+      );
+      allow create: if isEventManager()
+        && request.resource.data.organizerId == request.auth.uid
+        && request.resource.data.status == 'published'
+        && request.resource.data.registeredCount == 0
+        && request.resource.data.checkedInCount == 0
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && validEventFields(request.resource.data);
+      allow update: if isEventManager()
+        && (isAdmin() || resource.data.organizerId == request.auth.uid)
+        && request.resource.data.organizerId == resource.data.organizerId
+        && request.resource.data.clubId == resource.data.clubId
+        && request.resource.data.posterUrl == resource.data.posterUrl
+        && request.resource.data.latitude == resource.data.latitude
+        && request.resource.data.longitude == resource.data.longitude
+        && request.resource.data.registeredCount == resource.data.registeredCount
+        && request.resource.data.checkedInCount == resource.data.checkedInCount
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && validEventFields(request.resource.data)
+        && (
+          (resource.data.status != 'cancelled'
+            && request.resource.data.status == resource.data.status)
+          || (request.resource.data.status == 'cancelled'
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'updatedAt']))
+        );
+      allow delete: if false;
     }
     match /users/{uid} {
       allow get: if owns(uid);
