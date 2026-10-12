@@ -1,37 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/event_form_input.dart';
 import '../viewmodels/event_form_view_model.dart';
 
 typedef EventFormSubmitCallback = Future<void> Function(EventFormInput input);
 
-class EventFormScreen extends StatefulWidget {
+class EventFormScreen extends ConsumerStatefulWidget {
   const EventFormScreen({
     super.key,
     this.initialValue,
     required this.onSubmit,
-    this.submissionController,
   });
 
   final EventFormInput? initialValue;
   final EventFormSubmitCallback onSubmit;
-  final EventFormSubmissionController? submissionController;
 
   @override
-  State<EventFormScreen> createState() => _EventFormScreenState();
+  ConsumerState<EventFormScreen> createState() => _EventFormScreenState();
 }
 
-class _EventFormScreenState extends State<EventFormScreen> {
+class _EventFormScreenState extends ConsumerState<EventFormScreen> {
   late final TextEditingController _title;
   late final TextEditingController _description;
   late final TextEditingController _category;
   late final TextEditingController _location;
   late final TextEditingController _capacity;
-  late final EventFormSubmissionController _submissionController;
   late DateTime _startAt;
   late DateTime _endAt;
-  Map<String, String> _validationErrors = const {};
-  String? _submissionErrorMessage;
 
   bool get _isEditMode => widget.initialValue != null;
 
@@ -40,8 +36,6 @@ class _EventFormScreenState extends State<EventFormScreen> {
     super.initState();
     final value = widget.initialValue;
     final now = DateTime.now();
-    _submissionController =
-        widget.submissionController ?? EventFormSubmissionController();
     _title = TextEditingController(text: value?.title ?? '');
     _description = TextEditingController(text: value?.description ?? '');
     _category = TextEditingController(text: value?.category ?? '');
@@ -96,27 +90,17 @@ class _EventFormScreenState extends State<EventFormScreen> {
   }
 
   Future<void> _submit() async {
-    if (_submissionController.state.isSubmitting) return;
+    if (ref.read(eventFormViewModelProvider).isSubmitting) return;
 
-    final result = _submissionController.submit(_input, widget.onSubmit);
-    // submit() synchronously advances to validation or submitting before its
-    // first await, so the UI can immediately reflect controller state.
-    setState(() {
-      _validationErrors = _submissionController.state.validationErrors;
-      _submissionErrorMessage = _submissionController.state.errorMessage;
-    });
-
-    await result;
-    if (!mounted) return;
-    setState(() {
-      _validationErrors = _submissionController.state.validationErrors;
-      _submissionErrorMessage = _submissionController.state.errorMessage;
-    });
+    await ref
+        .read(eventFormViewModelProvider.notifier)
+        .submit(_input, widget.onSubmit);
   }
 
   @override
   Widget build(BuildContext context) {
-    final isSubmitting = _submissionController.state.isSubmitting;
+    final submissionState = ref.watch(eventFormViewModelProvider);
+    final isSubmitting = submissionState.isSubmitting;
     return Scaffold(
       appBar: AppBar(title: Text(_isEditMode ? 'Edit Event' : 'Create Event')),
       body: SafeArea(
@@ -131,18 +115,18 @@ class _EventFormScreenState extends State<EventFormScreen> {
                   children: [
                     Text(_isEditMode ? 'Edit Event' : 'Create Event', style: Theme.of(context).textTheme.headlineSmall),
                     const SizedBox(height: 24),
-                    _textField('titleField', _title, 'Title', _validationErrors['title'], isSubmitting),
-                    _textField('descriptionField', _description, 'Description', _validationErrors['description'], isSubmitting, minLines: 4, maxLines: 6),
+                    _textField('titleField', _title, 'Title', submissionState.validationErrors['title'], isSubmitting),
+                    _textField('descriptionField', _description, 'Description', submissionState.validationErrors['description'], isSubmitting, minLines: 4, maxLines: 6),
                     // Temporary text input until the shared category list exists.
-                    _textField('categoryField', _category, 'Category', _validationErrors['category'], isSubmitting),
-                    _textField('locationField', _location, 'Location', _validationErrors['locationName'], isSubmitting),
+                    _textField('categoryField', _category, 'Category', submissionState.validationErrors['category'], isSubmitting),
+                    _textField('locationField', _location, 'Location', submissionState.validationErrors['locationName'], isSubmitting),
                     _dateTimeField('startDateTimeField', 'Start date and time', _startAt, null, isSubmitting, () => _selectDateTime(true)),
-                    _dateTimeField('endDateTimeField', 'End date and time', _endAt, _validationErrors['endAt'], isSubmitting, () => _selectDateTime(false)),
-                    _textField('capacityField', _capacity, 'Capacity', _validationErrors['capacity'], isSubmitting, number: true),
+                    _dateTimeField('endDateTimeField', 'End date and time', _endAt, submissionState.validationErrors['endAt'], isSubmitting, () => _selectDateTime(false)),
+                    _textField('capacityField', _capacity, 'Capacity', submissionState.validationErrors['capacity'], isSubmitting, number: true),
                     const SizedBox(height: 8),
-                    if (_submissionErrorMessage != null)
+                    if (submissionState.errorMessage != null)
                       Text(
-                        _submissionErrorMessage!,
+                        submissionState.errorMessage!,
                         key: const Key('submissionErrorMessage'),
                         style: TextStyle(color: Theme.of(context).colorScheme.error),
                       ),

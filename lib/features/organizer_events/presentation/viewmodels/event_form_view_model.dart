@@ -1,3 +1,5 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../data/models/event_form_input.dart';
 
 /// Submission states for the organizer event form.
@@ -24,6 +26,8 @@ class EventFormSubmissionState {
 }
 
 typedef EventFormSaveCallback = Future<void> Function(EventFormInput input);
+typedef EventFormSubmissionStateListener =
+    void Function(EventFormSubmissionState state);
 
 /// Coordinates validation and an injected async save operation.
 ///
@@ -32,42 +36,83 @@ typedef EventFormSaveCallback = Future<void> Function(EventFormInput input);
 class EventFormSubmissionController {
   EventFormSubmissionState _state = const EventFormSubmissionState.idle();
   bool _submissionLocked = false;
+  final Set<EventFormSubmissionStateListener> _listeners = {};
 
   EventFormSubmissionState get state => _state;
+  void addListener(EventFormSubmissionStateListener listener) =>
+      _listeners.add(listener);
+  void removeListener(EventFormSubmissionStateListener listener) =>
+      _listeners.remove(listener);
+
+  void _setState(EventFormSubmissionState next) {
+    _state = next;
+    for (final listener in List.of(_listeners)) {
+      listener(next);
+    }
+  }
 
   Future<bool> submit(EventFormInput input, EventFormSaveCallback save) async {
     if (_submissionLocked) return false;
 
-    _state = const EventFormSubmissionState(
+    _setState(const EventFormSubmissionState(
       status: EventFormSubmissionStatus.validating,
-    );
+    ));
     final errors = input.validate();
     if (errors.isNotEmpty) {
-      _state = EventFormSubmissionState(
+      _setState(EventFormSubmissionState(
         status: EventFormSubmissionStatus.error,
         validationErrors: Map.unmodifiable(errors),
-      );
+      ));
       return false;
     }
 
     _submissionLocked = true;
-    _state = const EventFormSubmissionState(
+    _setState(const EventFormSubmissionState(
       status: EventFormSubmissionStatus.submitting,
-    );
+    ));
     try {
       await save(input);
-      _state = const EventFormSubmissionState(
+      _setState(const EventFormSubmissionState(
         status: EventFormSubmissionStatus.success,
-      );
+      ));
       return true;
     } catch (_) {
-      _state = const EventFormSubmissionState(
+      _setState(const EventFormSubmissionState(
         status: EventFormSubmissionStatus.error,
         errorMessage: 'Unable to save event. Please try again.',
-      );
+      ));
       return false;
     } finally {
       _submissionLocked = false;
     }
   }
+}
+
+final eventFormViewModelProvider =
+    NotifierProvider<EventFormViewModel, EventFormSubmissionState>(
+      EventFormViewModel.new,
+    );
+
+/// Riverpod wrapper for [EventFormSubmissionController].
+///
+/// The controller remains the single owner of validation and submission
+/// workflow. Its listener mirrors intermediate state to Riverpod, so consumers
+/// can observe submitting before the injected callback completes.
+class EventFormViewModel extends Notifier<EventFormSubmissionState> {
+  late final EventFormSubmissionController _controller;
+  late final EventFormSubmissionStateListener _stateListener;
+
+  @override
+  EventFormSubmissionState build() {
+    _controller = EventFormSubmissionController();
+    _stateListener = (next) {
+      if (ref.mounted) state = next;
+    };
+    _controller.addListener(_stateListener);
+    ref.onDispose(() => _controller.removeListener(_stateListener));
+    return _controller.state;
+  }
+
+  Future<bool> submit(EventFormInput input, EventFormSaveCallback save) =>
+      _controller.submit(input, save);
 }
