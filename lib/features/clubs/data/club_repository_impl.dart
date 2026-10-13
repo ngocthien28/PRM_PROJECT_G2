@@ -8,6 +8,7 @@ import '../../../shared/enums/club_status.dart';
 import '../../../shared/enums/user_role.dart';
 import '../../auth/data/models/app_user.dart';
 import '../domain/usecases/create_club.dart';
+import '../domain/usecases/update_club.dart';
 import '../domain/usecases/view_club_list.dart';
 import '../domain/usecases/view_club_details.dart';
 import 'club_repository.dart';
@@ -88,21 +89,13 @@ class ClubRepositoryImpl implements ClubRepository {
     required String description,
     required AppUser actor,
     ClubLogoSource? newLogo,
-  }) async {
-    final c = await getClub(clubId);
-    owner(actor, c);
-    ClubLogoUpload? up;
-    if (newLogo != null) up = await logos.uploadLogo(newLogo);
-    final n = c.copyWith(
-      name: name.trim(),
-      description: description.trim(),
-      logoUrl: up?.secureUrl,
-      logoPublicId: up?.publicId,
-      updatedAt: DateTime.now().toUtc(),
-    );
-    await clubs.doc(clubId).update(n.toMap());
-    return n;
-  }
+  }) => UpdateClub(db, logos)(
+    clubId: clubId,
+    name: name,
+    description: description,
+    actor: actor,
+    newLogo: newLogo,
+  );
 
   @override
   Future<ClubModel> cancelClub({
