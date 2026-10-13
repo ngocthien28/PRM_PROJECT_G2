@@ -86,6 +86,11 @@ void main() {
       );
       final student = actor('student', UserRole.student);
       await repository.joinClub(clubId: club.id, actor: student);
+      final repositoryAfterSignIn = ClubRepositoryImpl(db, FakeLogos());
+      final restoredMembership = await repositoryAfterSignIn
+          .watchMembership(club.id, student.uid)
+          .first;
+      expect(restoredMembership?.isActive, isTrue);
       await expectLater(
         repository.joinClub(clubId: club.id, actor: student),
         throwsA(isA<Exception>()),
