@@ -8,6 +8,7 @@ import '../../../shared/enums/club_status.dart';
 import '../../../shared/enums/user_role.dart';
 import '../../auth/data/models/app_user.dart';
 import '../domain/usecases/view_club_list.dart';
+import '../domain/usecases/view_club_details.dart';
 import 'club_repository.dart';
 import 'models/club_membership.dart';
 import 'models/club_model.dart';
@@ -23,10 +24,7 @@ class ClubRepositoryImpl implements ClubRepository {
   @override
   Stream<List<ClubModel>> watchClubs() => ViewClubList(db)();
   @override
-  Stream<ClubModel?> watchClub(String id) => clubs
-      .doc(id)
-      .snapshots()
-      .map((d) => d.exists ? ClubModel.fromFirestore(d) : null);
+  Stream<ClubModel?> watchClub(String id) => ViewClubDetails(db)(id);
   @override
   Stream<ClubMembership?> watchMembership(String c, String u) {
     final reference = members.doc(ClubMembership.documentId(c, u));
