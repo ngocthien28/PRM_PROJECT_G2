@@ -7,6 +7,7 @@ import '../../../auth/presentation/viewmodels/auth_view_model.dart';
 import '../../../events/data/models/event_filter.dart';
 import '../../../events/presentation/viewmodels/event_list_view_model.dart';
 import '../../../events/presentation/widgets/event_results.dart';
+import '../../../../shared/widgets/role_navigation_actions.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -37,6 +38,7 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('CampusHub'),
         actions: [
+          const RoleNavigationActions(),
           IconButton(
             tooltip: 'Sự kiện của tôi',
             onPressed: () => context.push(RouteNames.myEvents),
