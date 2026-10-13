@@ -2,9 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/firebase_providers.dart';
 import '../../data/models/club_membership.dart';
 import '../../data/models/club_model.dart';
+import '../../domain/usecases/view_club_list.dart';
 
 final clubsProvider = StreamProvider.autoDispose<List<ClubModel>>(
-  (ref) => ref.watch(clubRepositoryProvider).watchClubs(),
+  (ref) => ViewClubList(ref.watch(clubRepositoryProvider))(),
 );
 final clubProvider = StreamProvider.autoDispose.family<ClubModel?, String>(
   (ref, id) => ref.watch(clubRepositoryProvider).watchClub(id),
