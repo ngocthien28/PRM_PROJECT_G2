@@ -85,11 +85,11 @@ void main() {
   );
 
   test('Club providers expose list, detail, and membership streams', () async {
+    final repository = FakeClubRepository(club, membership);
     final container = ProviderContainer(
       overrides: [
-        clubRepositoryProvider.overrideWithValue(
-          FakeClubRepository(club, membership),
-        ),
+        clubRepositoryProvider.overrideWithValue(repository),
+        viewClubListActionProvider.overrideWithValue(repository.watchClubs),
       ],
     );
     addTearDown(container.dispose);
