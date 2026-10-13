@@ -1,2 +1,173 @@
-// CampusHub skeleton • lib/features/clubs/data/club_repository_impl.dart
-// TODO: Implement according to 00_Master_Coder_Implementation_Blueprint.
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../core/constants/firestore_collections.dart';
+import '../../../core/errors/app_exception.dart';
+import '../../../core/services/club_logo_service.dart';
+import '../../../shared/enums/club_status.dart';
+import '../../../shared/enums/user_role.dart';
+import '../../auth/data/models/app_user.dart';
+import 'club_repository.dart';
+import 'models/club_membership.dart';
+import 'models/club_model.dart';
+
+class ClubRepositoryImpl implements ClubRepository {
+  ClubRepositoryImpl(this.db, this.logos);
+  final FirebaseFirestore db;
+  final ClubLogoService logos;
+  CollectionReference<Map<String, dynamic>> get clubs =>
+      db.collection(FirestoreCollections.clubs);
+  CollectionReference<Map<String, dynamic>> get members =>
+      db.collection(FirestoreCollections.clubMemberships);
+  @override
+  Stream<List<ClubModel>> watchClubs() => clubs
+      .where('status', isEqualTo: 'active')
+      .snapshots()
+      .map(
+        (s) =>
+            s.docs.map(ClubModel.fromFirestore).toList()
+              ..sort((a, b) => a.nameLower.compareTo(b.nameLower)),
+      );
+  @override
+  Stream<ClubModel?> watchClub(String id) => clubs
+      .doc(id)
+      .snapshots()
+      .map((d) => d.exists ? ClubModel.fromFirestore(d) : null);
+  @override
+  Stream<ClubMembership?> watchMembership(String c, String u) => members
+      .doc(ClubMembership.documentId(c, u))
+      .snapshots()
+      .map((d) => d.exists ? ClubMembership.fromFirestore(d) : null);
+  void manager(AppUser a) {
+    if (!a.isActive || !a.role.canOrganize) {
+      throw const AppException('Organizer or admin access is required.');
+    }
+  }
+
+  Future<ClubModel> getClub(String id) async {
+    final d = await clubs.doc(id).get();
+    if (!d.exists) throw const AppException('Club not found.');
+    return ClubModel.fromFirestore(d);
+  }
+
+  void owner(AppUser a, ClubModel c) {
+    manager(a);
+    if (a.role != UserRole.admin && c.ownerId != a.uid) {
+      throw const AppException('Only the Club owner or an admin can do this.');
+    }
+  }
+
+  @override
+  Future<ClubModel> createClub({
+    required String name,
+    required String description,
+    required AppUser actor,
+    ClubLogoSource? logo,
+  }) async {
+    manager(actor);
+    final r = clubs.doc(), now = DateTime.now().toUtc();
+    ClubLogoUpload? up;
+    if (logo != null) up = await logos.uploadLogo(logo);
+    final c = ClubModel(
+      id: r.id,
+      ownerId: actor.uid,
+      name: name.trim(),
+      description: description.trim(),
+      logoUrl: up?.secureUrl,
+      logoPublicId: up?.publicId,
+      memberCount: 0,
+      status: ClubStatus.active,
+      createdAt: now,
+      updatedAt: now,
+    );
+    final b = db.batch()
+      ..set(r, c.toMap())
+      ..set(members.doc(ClubMembership.documentId(r.id, actor.uid)), {
+        'clubId': r.id,
+        'userId': actor.uid,
+        'role': 'manager',
+        'status': 'active',
+        'joinedAt': Timestamp.fromDate(now),
+        'updatedAt': Timestamp.fromDate(now),
+      });
+    await b.commit();
+    return c;
+  }
+
+  @override
+  Future<ClubModel> updateClub({
+    required String clubId,
+    required String name,
+    required String description,
+    required AppUser actor,
+    ClubLogoSource? newLogo,
+  }) async {
+    final c = await getClub(clubId);
+    owner(actor, c);
+    ClubLogoUpload? up;
+    if (newLogo != null) up = await logos.uploadLogo(newLogo);
+    final n = c.copyWith(
+      name: name.trim(),
+      description: description.trim(),
+      logoUrl: up?.secureUrl,
+      logoPublicId: up?.publicId,
+      updatedAt: DateTime.now().toUtc(),
+    );
+    await clubs.doc(clubId).update(n.toMap());
+    return n;
+  }
+
+  @override
+  Future<ClubModel> cancelClub({
+    required String clubId,
+    required AppUser actor,
+  }) async {
+    final c = await getClub(clubId);
+    owner(actor, c);
+    await clubs.doc(clubId).update({
+      'status': 'cancelled',
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    return c.copyWith(status: ClubStatus.cancelled);
+  }
+
+  @override
+  Future<void> joinClub({required String clubId, required AppUser actor}) =>
+      membership(clubId, actor, true);
+  @override
+  Future<void> leaveClub({required String clubId, required AppUser actor}) =>
+      membership(clubId, actor, false);
+  Future<void> membership(String id, AppUser a, bool join) =>
+      db.runTransaction((tx) async {
+        if (!a.isActive || a.role != UserRole.student) {
+          throw const AppException('Only active students can join Clubs.');
+        }
+        final cr = clubs.doc(id),
+            mr = members.doc(ClubMembership.documentId(id, a.uid)),
+            cd = await tx.get(cr),
+            md = await tx.get(mr);
+        if (!cd.exists) throw const AppException('Club not found.');
+        final c = ClubModel.fromFirestore(cd),
+            active = md.exists && md.data()?['status'] == 'active';
+        if (!c.isActive) throw const AppException('Club is not active.');
+        if (join == active) {
+          throw AppException(
+            join
+                ? 'You already joined this Club.'
+                : 'You are not an active member.',
+          );
+        }
+        tx.set(mr, {
+          'clubId': id,
+          'userId': a.uid,
+          'role': 'member',
+          'status': join ? 'active' : 'left',
+          'joinedAt': md.data()?['joinedAt'] ?? FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+        tx.update(cr, {
+          'memberCount': join
+              ? c.memberCount + 1
+              : (c.memberCount > 0 ? c.memberCount - 1 : 0),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      });
+}
