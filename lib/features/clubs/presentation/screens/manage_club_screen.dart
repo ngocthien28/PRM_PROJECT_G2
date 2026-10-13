@@ -13,6 +13,7 @@ import '../../../auth/presentation/viewmodels/auth_view_model.dart';
 import '../../../notifications/presentation/viewmodels/notification_view_model.dart';
 import '../../data/club_repository.dart';
 import '../../data/models/club_model.dart';
+import '../../domain/usecases/create_club.dart';
 import '../viewmodels/club_form_validators.dart';
 import 'club_list_screen.dart';
 
@@ -167,7 +168,10 @@ class _ManageClubScreenState extends ConsumerState<ManageClubScreen> {
               actor: actor,
               newLogo: source,
             )
-          : await repository.createClub(
+          : await CreateClub(
+              ref.read(firestoreProvider),
+              ref.read(clubLogoServiceProvider),
+            )(
               name: _nameController.text.trim(),
               description: _descriptionController.text.trim(),
               actor: actor,
