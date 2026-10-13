@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../events/data/models/event_model.dart';
 import '../../../../shared/enums/event_status.dart';
 import '../../../../shared/widgets/role_navigation_actions.dart';
+import '../../../auth/presentation/viewmodels/auth_view_model.dart';
 import '../viewmodels/organizer_events_view_model.dart';
 
 /// Minimal organizer entry point until the full dashboard is implemented.
@@ -21,6 +22,7 @@ class OrganizerDashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final events = ref.watch(organizerEventsProvider);
+    final signingOut = ref.watch(authViewModelProvider).isLoading;
     final eventCount = events.asData?.value
             .where((event) => event.status != EventStatus.cancelled)
             .length ??
@@ -28,7 +30,49 @@ class OrganizerDashboardScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('CampusHub Organizer'),
-        actions: const [RoleNavigationActions()],
+        actions: [
+          const RoleNavigationActions(),
+          IconButton(
+            key: const Key('organizerSignOutButton'),
+            tooltip: 'Sign out',
+            onPressed: signingOut
+                ? null
+                : () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (dialogContext) => AlertDialog(
+                        title: const Text('Sign out?'),
+                        content: const Text(
+                          'You will need to sign in again to manage events.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(dialogContext, false),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton.icon(
+                            onPressed: () => Navigator.pop(dialogContext, true),
+                            icon: const Icon(Icons.logout),
+                            label: const Text('Sign out'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirmed == true) {
+                      await ref
+                          .read(authViewModelProvider.notifier)
+                          .signOut();
+                    }
+                  },
+            icon: signingOut
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.logout),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: ListView(
