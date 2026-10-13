@@ -126,6 +126,39 @@ service cloud.firestore {
       );
       allow delete: if false;
     }
+    match /clubs/{clubId} {
+      allow read: if activeUser() && (
+        resource.data.status == 'active' || isEventManager()
+      );
+      allow create: if isEventManager()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.status == 'active'
+        && request.resource.data.memberCount == 0;
+      allow update: if isAdmin() || (
+        isEventManager() && resource.data.ownerId == request.auth.uid
+      ) || (
+        activeUser()
+        && currentRole() == 'student'
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['memberCount', 'updatedAt'])
+        && request.resource.data.memberCount >= 0
+      );
+      allow delete: if false;
+    }
+    match /club_memberships/{membershipId} {
+      allow read: if activeUser() && (
+        resource.data.userId == request.auth.uid || isEventManager()
+      );
+      allow create: if activeUser() && (
+        request.resource.data.userId == request.auth.uid
+        || isEventManager()
+      );
+      allow update: if activeUser()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.clubId == resource.data.clubId;
+      allow delete: if false;
+    }
     match /{document=**} {
       allow read, write: if false;
     }
