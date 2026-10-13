@@ -83,6 +83,21 @@ void main() {
     expect(find.byKey(const Key('titleField')), findsOneWidget);
   });
 
+  testWidgets('organizer can sign out from the dashboard', (tester) async {
+    restoreActiveUser(UserRole.organizer);
+    await mount(tester);
+
+    await tester.tap(find.byKey(const Key('organizerSignOutButton')));
+    await tester.pumpAndSettle();
+    expect(find.text('Sign out?'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Sign out'));
+    await tester.pumpAndSettle();
+
+    expect(currentPath(), RouteNames.login);
+    expect(find.text('Sign in'), findsWidgets);
+  });
+
   testWidgets('student cannot access Create Event by direct URL', (
     tester,
   ) async {
