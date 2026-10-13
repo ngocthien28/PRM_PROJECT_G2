@@ -11,12 +11,12 @@ class RoleNavigationActions extends StatelessWidget {
     children: [
       IconButton(
         tooltip: 'Clubs',
-        onPressed: () => context.go(RouteNames.clubs),
+        onPressed: () => context.push(RouteNames.clubs),
         icon: const Icon(Icons.groups_outlined),
       ),
       IconButton(
         tooltip: 'Notifications',
-        onPressed: () => context.go(RouteNames.notifications),
+        onPressed: () => context.push(RouteNames.notifications),
         icon: const Icon(Icons.notifications_outlined),
       ),
     ],
