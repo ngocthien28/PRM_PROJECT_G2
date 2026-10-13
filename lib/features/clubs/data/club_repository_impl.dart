@@ -1,11 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+
 import '../../../core/constants/firestore_collections.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/services/club_logo_service.dart';
 import '../../../shared/enums/club_status.dart';
 import '../../../shared/enums/user_role.dart';
 import '../../auth/data/models/app_user.dart';
+import '../domain/usecases/view_club_list.dart';
 import 'club_repository.dart';
 import 'models/club_membership.dart';
 import 'models/club_model.dart';
@@ -19,14 +21,7 @@ class ClubRepositoryImpl implements ClubRepository {
   CollectionReference<Map<String, dynamic>> get members =>
       db.collection(FirestoreCollections.clubMemberships);
   @override
-  Stream<List<ClubModel>> watchClubs() => clubs
-      .where('status', isEqualTo: 'active')
-      .snapshots()
-      .map(
-        (s) =>
-            s.docs.map(ClubModel.fromFirestore).toList()
-              ..sort((a, b) => a.nameLower.compareTo(b.nameLower)),
-      );
+  Stream<List<ClubModel>> watchClubs() => ViewClubList(db)();
   @override
   Stream<ClubModel?> watchClub(String id) => clubs
       .doc(id)
@@ -168,6 +163,7 @@ class ClubRepositoryImpl implements ClubRepository {
   @override
   Future<void> leaveClub({required String clubId, required AppUser actor}) =>
       membership(clubId, actor, false);
+
   /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
   /// MODULE: Testing & Integration
   /// DESCRIPTION: Chặn join/leave nếu actor không phải student active trước khi ghi transaction.
