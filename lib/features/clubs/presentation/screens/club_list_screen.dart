@@ -15,7 +15,7 @@ class ClubListScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Clubs')),
       floatingActionButton: user?.role.canOrganize == true
           ? FloatingActionButton(
-              onPressed: () => context.go(RouteNames.createClub),
+              onPressed: () => context.push(RouteNames.createClub),
               child: const Icon(Icons.add),
             )
           : null,
@@ -52,7 +52,8 @@ class ClubListScreen extends ConsumerWidget {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        onTap: () => context.go(RouteNames.clubDetail(club.id)),
+                        onTap: () =>
+                            context.push(RouteNames.clubDetail(club.id)),
                       ),
                     );
                   },
