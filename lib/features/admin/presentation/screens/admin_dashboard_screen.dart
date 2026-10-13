@@ -72,10 +72,10 @@ class AdminDashboardScreen extends ConsumerWidget {
           mainAxisSpacing: 16,
           children: [
             _StatCard('Users', value.userCount, Icons.people_outline),
-            _StatCard('Clubs', value.clubCount, Icons.groups_outlined),
+            _StatCard('Active clubs', value.clubCount, Icons.groups_outlined),
             _StatCard('Events', value.eventCount, Icons.event_outlined),
             _StatCard(
-              'Active memberships',
+              'Student memberships',
               value.activeMembershipCount,
               Icons.how_to_reg_outlined,
             ),
