@@ -90,7 +90,7 @@ class _State extends ConsumerState<ClubDetailScreen> {
               if (manage) ...[
                 OutlinedButton(
                   onPressed: () =>
-                      context.go(RouteNames.editClub(club.id), extra: club),
+                      context.push(RouteNames.editClub(club.id), extra: club),
                   child: const Text('Edit Club'),
                 ),
                 TextButton(
@@ -122,7 +122,11 @@ class _State extends ConsumerState<ClubDetailScreen> {
                                   .read(clubRepositoryProvider)
                                   .cancelClub(clubId: club.id, actor: user);
                               if (!context.mounted) return;
-                              context.go(RouteNames.clubs);
+                              if (context.canPop()) {
+                                context.pop();
+                              } else {
+                                context.go(RouteNames.clubs);
+                              }
                             });
                           }
                         },
