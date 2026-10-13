@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../events/data/models/event_model.dart';
 import '../../../../shared/enums/event_status.dart';
+import '../../../../shared/widgets/role_navigation_actions.dart';
 import '../viewmodels/organizer_events_view_model.dart';
 
 /// Minimal organizer entry point until the full dashboard is implemented.
@@ -25,7 +26,10 @@ class OrganizerDashboardScreen extends ConsumerWidget {
             .length ??
         0;
     return Scaffold(
-      appBar: AppBar(title: const Text('CampusHub Organizer')),
+      appBar: AppBar(
+        title: const Text('CampusHub Organizer'),
+        actions: const [RoleNavigationActions()],
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(20),
