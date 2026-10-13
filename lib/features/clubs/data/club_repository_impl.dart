@@ -7,6 +7,7 @@ import '../../../core/services/club_logo_service.dart';
 import '../../../shared/enums/club_status.dart';
 import '../../../shared/enums/user_role.dart';
 import '../../auth/data/models/app_user.dart';
+import '../domain/usecases/create_club.dart';
 import '../domain/usecases/view_club_list.dart';
 import '../domain/usecases/view_club_details.dart';
 import 'club_repository.dart';
@@ -73,50 +74,12 @@ class ClubRepositoryImpl implements ClubRepository {
     required String description,
     required AppUser actor,
     ClubLogoSource? logo,
-  }) async {
-    manager(actor);
-    final r = clubs.doc(), now = DateTime.now().toUtc();
-    ClubLogoUpload? up;
-    if (logo != null) {
-      final uploadTimer = Stopwatch()..start();
-      up = await logos.uploadLogo(logo);
-      if (kDebugMode) {
-        debugPrint(
-          '[CampusHub perf] club.logo.upload: ${uploadTimer.elapsedMilliseconds} ms',
-        );
-      }
-    }
-    final c = ClubModel(
-      id: r.id,
-      ownerId: actor.uid,
-      name: name.trim(),
-      description: description.trim(),
-      logoUrl: up?.secureUrl,
-      logoPublicId: up?.publicId,
-      memberCount: 0,
-      status: ClubStatus.active,
-      createdAt: now,
-      updatedAt: now,
-    );
-    final b = db.batch()
-      ..set(r, c.toMap())
-      ..set(members.doc(ClubMembership.documentId(r.id, actor.uid)), {
-        'clubId': r.id,
-        'userId': actor.uid,
-        'role': 'manager',
-        'status': 'active',
-        'joinedAt': Timestamp.fromDate(now),
-        'updatedAt': Timestamp.fromDate(now),
-      });
-    final writeTimer = Stopwatch()..start();
-    await b.commit();
-    if (kDebugMode) {
-      debugPrint(
-        '[CampusHub perf] club.create.commit: ${writeTimer.elapsedMilliseconds} ms',
-      );
-    }
-    return c;
-  }
+  }) => CreateClub(db, logos)(
+    name: name,
+    description: description,
+    actor: actor,
+    logo: logo,
+  );
 
   @override
   Future<ClubModel> updateClub({
