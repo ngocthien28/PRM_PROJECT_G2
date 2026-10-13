@@ -12,6 +12,7 @@ import '../../../admin/presentation/widgets/report_content_button.dart';
 import '../../../notifications/presentation/viewmodels/notification_view_model.dart';
 import '../../data/models/club_membership.dart';
 import '../../data/models/club_model.dart';
+import '../../domain/usecases/deactivate_club.dart';
 import '../viewmodels/club_view_model.dart';
 import 'club_list_screen.dart';
 
@@ -67,9 +68,9 @@ class _ClubDetailScreenState extends ConsumerState<ClubDetailScreen> {
     );
     if (confirmed != true || !mounted) return;
     await _action(() async {
-      await ref
-          .read(clubRepositoryProvider)
-          .cancelClub(clubId: club.id, actor: user);
+      await DeactivateClub(
+        ref.read(clubRepositoryProvider),
+      )(clubId: club.id, actor: user);
       if (!mounted) return;
       context.go(RouteNames.clubs);
     });
