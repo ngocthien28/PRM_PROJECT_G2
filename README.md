@@ -23,6 +23,28 @@ Read [the Iteration 1 report](docs/authentication_iteration_1.md) for the initia
 6. Review and deploy `firestore.rules` to that project using Firebase CLI or the Firebase console. These rules cover Iteration 1 only and deny other collections; merge reviewed feature rules before later integrations.
 7. Run `flutter run` on a connected Android device or `flutter run -d chrome`. Without Firebase configuration, the app displays a configuration error with Retry.
 
+## Club logo uploads (Cloudinary)
+
+Club logos are uploaded directly from the app to Cloudinary with an unsigned
+upload preset. The API secret is never stored in this repository or shipped in
+the Flutter application.
+
+- Cloud name: `djznx3z7o`
+- Unsigned preset: `campushub_club_logos_unsigned`
+- Asset folder configured by the preset: `campushub/club_logos`
+- Accepted formats: JPG, PNG, and WebP; maximum size: 5 MB
+
+The defaults above work for the team environment. They can be overridden at
+build time without changing source code:
+
+```powershell
+flutter run --dart-define=CLOUDINARY_CLOUD_NAME=djznx3z7o --dart-define=CLOUDINARY_UPLOAD_PRESET=campushub_club_logos_unsigned
+```
+
+Deploy the updated `firestore.rules` before testing Club create/edit/join/leave
+against the real Firebase project. Organizer and admin roles must still be
+assigned by a trusted administrator.
+
 Android SDK licenses still need acceptance on the checked development machine: `flutter doctor --android-licenses`.
 
 ## Verify
