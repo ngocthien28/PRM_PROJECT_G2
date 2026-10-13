@@ -100,3 +100,37 @@
 [info] +  Deploy complete! 
 [info] 
 [info] Project Console: https://console.firebase.google.com/project/studio-1527538381-9d991/overview
+[debug] [2026-10-13T07:41:03.870Z] ----------------------------------------------------------------------
+[debug] [2026-10-13T07:41:03.876Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\tagia\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js projects:list
+[debug] [2026-10-13T07:41:03.876Z] CLI Version:   15.33.0
+[debug] [2026-10-13T07:41:03.877Z] Platform:      win32
+[debug] [2026-10-13T07:41:03.877Z] Node Version:  v24.14.0
+[debug] [2026-10-13T07:41:03.878Z] Detected Agent: codex_cli
+[debug] [2026-10-13T07:41:03.878Z] Time:          Tue Oct 13 2026 14:41:03 GMT+0700 (Indochina Time)
+[debug] [2026-10-13T07:41:03.884Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-10-13T07:41:03.911Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-10-13T07:41:04.289Z] Object "" in "firebase.json" has unknown property: {"additionalProperty":"flutter"}
+[debug] [2026-10-13T07:41:04.300Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-10-13T07:41:04.300Z] > authorizing via signed-in user (tagiahuy14@gmail.com)
+[debug] [2026-10-13T07:41:04.305Z] Checked if tokens are valid: false, expires at: 1791823593168
+[debug] [2026-10-13T07:41:04.306Z] Checked if tokens are valid: false, expires at: 1791823593168
+[debug] [2026-10-13T07:41:04.306Z] > refreshing access token with scopes: []
+[debug] [2026-10-13T07:41:04.308Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-10-13T07:41:04.308Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-10-13T07:41:04.594Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-10-13T07:41:04.594Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-10-13T07:41:04.614Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2026-10-13T07:41:04.933Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2026-10-13T07:41:04.934Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2026-10-13T07:41:05.413Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2026-10-13T07:41:05.413Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[info] ┌──────────────────────┬────────────────────────────┬────────────────┬──────────────────────┐
+│ Project Display Name │ Project ID                 │ Project Number │ Resource Location ID │
+├──────────────────────┼────────────────────────────┼────────────────┼──────────────────────┤
+│ CampusHub            │ campushub-prm-g2 (current) │ 624735054316   │ [Not specified]      │
+├──────────────────────┼────────────────────────────┼────────────────┼──────────────────────┤
+│ Firebase app         │ studio-1527538381-9d991    │ 943731905884   │ [Not specified]      │
+└──────────────────────┴────────────────────────────┴────────────────┴──────────────────────┘
+[info] 
+[info] 2 project(s) total.
