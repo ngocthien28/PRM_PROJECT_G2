@@ -1,5 +1,8 @@
 import 'package:campushub/features/admin/presentation/screens/admin_dashboard_screen.dart';
+import 'package:campushub/features/admin/data/admin_repository.dart';
+import 'package:campushub/features/admin/presentation/viewmodels/admin_dashboard_view_model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,7 +15,10 @@ void main() {
       routes: [
         GoRoute(
           path: '/admin',
-          builder: (_, _) => const AdminDashboardScreen(),
+          builder: (_, _) => ProviderScope(
+            overrides: [adminStatsProvider.overrideWith(_adminStats)],
+            child: const AdminDashboardScreen(),
+          ),
         ),
         GoRoute(
           path: '/clubs',
@@ -47,3 +53,10 @@ void main() {
     expect(find.text('Admin Dashboard'), findsOneWidget);
   });
 }
+
+Future<AdminStats> _adminStats(Ref ref) async => const AdminStats(
+  userCount: 2,
+  clubCount: 1,
+  eventCount: 3,
+  activeMembershipCount: 1,
+);

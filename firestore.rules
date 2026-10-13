@@ -111,7 +111,8 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
       // Profile updates, status changes and role assignment are future work.
-      allow list, update, delete: if false;
+      allow list: if isAdmin();
+      allow update, delete: if false;
     }
     match /registrations/{registrationId} {
       allow read: if activeUser() && (
