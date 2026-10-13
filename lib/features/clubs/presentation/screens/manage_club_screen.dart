@@ -14,6 +14,7 @@ import '../../../notifications/presentation/viewmodels/notification_view_model.d
 import '../../data/club_repository.dart';
 import '../../data/models/club_model.dart';
 import '../../domain/usecases/create_club.dart';
+import '../../domain/usecases/update_club.dart';
 import '../viewmodels/club_form_validators.dart';
 import 'club_list_screen.dart';
 
@@ -161,7 +162,7 @@ class _ManageClubScreenState extends ConsumerState<ManageClubScreen> {
       }
       final repository = ref.read(clubRepositoryProvider);
       final result = _isEditing
-          ? await repository.updateClub(
+          ? await UpdateClub(repository)(
               clubId: widget.club!.id,
               name: _nameController.text.trim(),
               description: _descriptionController.text.trim(),
