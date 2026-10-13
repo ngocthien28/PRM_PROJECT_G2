@@ -11,6 +11,10 @@ import '../../features/profile/data/profile_repository_impl.dart';
 import '../../features/registration/data/registration_repository.dart';
 import '../../features/registration/data/registration_repository_impl.dart';
 import '../../local/dao/ticket_dao.dart';
+import '../../features/clubs/data/club_repository.dart';
+import '../../features/clubs/data/club_repository_impl.dart';
+import 'club_logo_service.dart';
+import 'cloudinary_club_logo_service.dart';
 
 final firebaseInitializationProvider = FutureProvider<void>((ref) async {
   try {
@@ -42,5 +46,15 @@ final registrationRepositoryProvider = Provider<RegistrationRepository>(
   (ref) => RegistrationRepositoryImpl(
     ref.watch(firestoreProvider),
     ref.watch(ticketDaoProvider),
+  ),
+);
+
+final clubLogoServiceProvider = Provider<ClubLogoService>(
+  (_) => CloudinaryClubLogoService(),
+);
+final clubRepositoryProvider = Provider<ClubRepository>(
+  (ref) => ClubRepositoryImpl(
+    ref.watch(firestoreProvider),
+    ref.watch(clubLogoServiceProvider),
   ),
 );
