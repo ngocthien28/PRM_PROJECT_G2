@@ -90,6 +90,7 @@ void main() {
       overrides: [
         clubRepositoryProvider.overrideWithValue(repository),
         viewClubListActionProvider.overrideWithValue(repository.watchClubs),
+        viewClubDetailsActionProvider.overrideWithValue(repository.watchClub),
       ],
     );
     addTearDown(container.dispose);
