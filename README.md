@@ -11,17 +11,17 @@ Read [the Iteration 1 report](docs/authentication_iteration_1.md) for the initia
 - Flutter >= 3.44.0 and Dart >= 3.12.0. Verified with Flutter 3.47.3 / Dart 3.13.3.
 - Dependencies are resolved in `pubspec.lock`; commit and reuse this lockfile.
 - Android/iOS/Web scaffolds are included. iOS builds require macOS.
-- Firebase configuration is intentionally missing. No credentials or fake production data are supplied.
+- Firebase is configured for the team project `campushub-prm-g2` on Windows and Web. Do not commit service-account keys or user passwords.
 
 ## Configure and run
 
 1. Run `flutter pub get`.
-2. Choose the final Android application ID / iOS bundle ID before registering apps in Firebase.
+2. Choose the final Android application ID / iOS bundle ID before registering those platforms in Firebase.
 3. Install FlutterFire CLI: `dart pub global activate flutterfire_cli`.
-4. Run `flutterfire configure` against your team's Firebase project. This replaces `lib/firebase_options.dart`. Follow the [official Firebase setup guide](https://firebase.google.com/docs/flutter/setup).
+4. Re-run `flutterfire configure --project=campushub-prm-g2` when adding a new platform. Follow the [official Firebase setup guide](https://firebase.google.com/docs/flutter/setup).
 5. Enable Firebase Authentication → Email/Password and create Cloud Firestore.
-6. Review and deploy `firestore.rules` to that project using Firebase CLI or the Firebase console. These rules cover Iteration 1 only and deny other collections; merge reviewed feature rules before later integrations.
-7. Run `flutter run` on a connected Android device or `flutter run -d chrome`. Without Firebase configuration, the app displays a configuration error with Retry.
+6. Deploy rule/index changes with `npx firebase-tools deploy --only firestore --project campushub-prm-g2`.
+7. Run `flutter run -d windows` or `flutter run -d chrome`.
 
 ## Club logo uploads (Cloudinary)
 
