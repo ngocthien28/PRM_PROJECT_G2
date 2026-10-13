@@ -4,10 +4,10 @@ import 'package:flutter/foundation.dart';
 import '../../../core/constants/firestore_collections.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/services/club_logo_service.dart';
-import '../../../shared/enums/club_status.dart';
 import '../../../shared/enums/user_role.dart';
 import '../../auth/data/models/app_user.dart';
 import '../domain/usecases/create_club.dart';
+import '../domain/usecases/deactivate_club.dart';
 import '../domain/usecases/update_club.dart';
 import '../domain/usecases/view_club_list.dart';
 import '../domain/usecases/view_club_details.dart';
@@ -101,15 +101,7 @@ class ClubRepositoryImpl implements ClubRepository {
   Future<ClubModel> cancelClub({
     required String clubId,
     required AppUser actor,
-  }) async {
-    final c = await getClub(clubId);
-    owner(actor, c);
-    await clubs.doc(clubId).update({
-      'status': 'cancelled',
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-    return c.copyWith(status: ClubStatus.cancelled);
-  }
+  }) => DeactivateClub(db)(clubId: clubId, actor: actor);
 
   @override
   Future<void> joinClub({required String clubId, required AppUser actor}) =>
