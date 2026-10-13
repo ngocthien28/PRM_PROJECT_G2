@@ -47,17 +47,11 @@ class _State extends ConsumerState<ClubDetailScreen> {
           final manage =
               user != null &&
               (user.role.name == 'admin' || club.ownerId == user.uid);
-          final membership = user == null
+          final membershipAsync = user == null
               ? null
-              : ref
-                    .watch(
-                      clubMembershipProvider((
-                        clubId: club.id,
-                        userId: user.uid,
-                      )),
-                    )
-                    .asData
-                    ?.value;
+              : ref.watch(
+                  clubMembershipProvider((clubId: club.id, userId: user.uid)),
+                );
           return ListView(
             padding: const EdgeInsets.all(24),
             children: [
@@ -70,21 +64,49 @@ class _State extends ConsumerState<ClubDetailScreen> {
               Text(club.description),
               Text('${club.memberCount} members'),
               const SizedBox(height: 20),
-              if (user?.role.name == 'student')
-                FilledButton(
-                  onPressed: busy
-                      ? null
-                      : () => action(
-                          () => membership?.isActive == true
-                              ? ref
-                                    .read(clubRepositoryProvider)
-                                    .leaveClub(clubId: club.id, actor: user!)
-                              : ref
-                                    .read(clubRepositoryProvider)
-                                    .joinClub(clubId: club.id, actor: user!),
-                        ),
-                  child: Text(
-                    membership?.isActive == true ? 'Leave Club' : 'Join Club',
+              if (user?.role.name == 'student' && membershipAsync != null)
+                membershipAsync.when(
+                  loading: () => const FilledButton(
+                    onPressed: null,
+                    child: Text('Checking membership...'),
+                  ),
+                  error: (error, _) => OutlinedButton.icon(
+                    onPressed: () => ref.invalidate(
+                      clubMembershipProvider((
+                        clubId: club.id,
+                        userId: user!.uid,
+                      )),
+                    ),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry membership status'),
+                  ),
+                  data: (membership) => FilledButton(
+                    onPressed: busy
+                        ? null
+                        : () => action(() async {
+                            final repository = ref.read(clubRepositoryProvider);
+                            if (membership?.isActive == true) {
+                              await repository.leaveClub(
+                                clubId: club.id,
+                                actor: user!,
+                              );
+                            } else {
+                              await repository.joinClub(
+                                clubId: club.id,
+                                actor: user!,
+                              );
+                            }
+                            ref.invalidate(
+                              clubMembershipProvider((
+                                clubId: club.id,
+                                userId: user.uid,
+                              )),
+                            );
+                            ref.invalidate(clubProvider(club.id));
+                          }),
+                    child: Text(
+                      membership?.isActive == true ? 'Leave Club' : 'Join Club',
+                    ),
                   ),
                 ),
               if (manage) ...[
