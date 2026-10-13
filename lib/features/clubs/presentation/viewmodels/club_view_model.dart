@@ -1,2 +1,17 @@
-// CampusHub skeleton • lib/features/clubs/presentation/viewmodels/club_view_model.dart
-// TODO: Implement according to 00_Master_Coder_Implementation_Blueprint.
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/firebase_providers.dart';
+import '../../data/models/club_membership.dart';
+import '../../data/models/club_model.dart';
+
+final clubsProvider = StreamProvider.autoDispose<List<ClubModel>>(
+  (ref) => ref.watch(clubRepositoryProvider).watchClubs(),
+);
+final clubProvider = StreamProvider.autoDispose.family<ClubModel?, String>(
+  (ref, id) => ref.watch(clubRepositoryProvider).watchClub(id),
+);
+final clubMembershipProvider = StreamProvider.autoDispose
+    .family<ClubMembership?, ({String clubId, String userId})>(
+      (ref, key) => ref
+          .watch(clubRepositoryProvider)
+          .watchMembership(key.clubId, key.userId),
+    );

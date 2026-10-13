@@ -14,6 +14,12 @@ import '../../features/organizer_events/presentation/screens/organizer_create_ev
 import '../../features/organizer_events/presentation/screens/organizer_dashboard_screen.dart';
 import '../../features/registration/presentation/screens/my_events_screen.dart';
 import '../../features/registration/presentation/screens/ticket_screen.dart';
+import '../../features/clubs/data/models/club_model.dart';
+import '../../features/clubs/presentation/screens/club_detail_screen.dart';
+import '../../features/clubs/presentation/screens/club_list_screen.dart';
+import '../../features/clubs/presentation/screens/manage_club_screen.dart';
+import '../../features/notifications/presentation/screens/notification_screen.dart';
+import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import 'route_guards.dart';
 import 'route_names.dart';
 
@@ -49,6 +55,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: RouteNames.home, builder: (_, _) => const StudentShell()),
       GoRoute(
+        path: RouteNames.clubs,
+        builder: (_, _) => const ClubListScreen(),
+      ),
+      GoRoute(
+        path: '${RouteNames.clubs}/:clubId',
+        builder: (_, state) =>
+            ClubDetailScreen(clubId: state.pathParameters['clubId']!),
+      ),
+      GoRoute(
+        path: RouteNames.createClub,
+        builder: (_, _) => const ManageClubScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.notifications,
+        builder: (_, _) => const NotificationScreen(),
+      ),
+      GoRoute(
+        path: '/organizer/clubs/:clubId/edit',
+        builder: (_, state) => ManageClubScreen(
+          club: state.extra is ClubModel ? state.extra as ClubModel : null,
+        ),
+      ),
+      GoRoute(
         path: RouteNames.events,
         builder: (_, _) => const EventListScreen(),
       ),
@@ -61,10 +90,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: RouteNames.organizer,
         builder: (context, _) => OrganizerDashboardScreen(
           onCreateEvent: () => context.go(RouteNames.organizerCreateEvent),
-          onEditEvent: (event) => context.go(
-            RouteNames.organizerEditEvent(event.id),
-            extra: event,
-          ),
+          onEditEvent: (event) =>
+              context.go(RouteNames.organizerEditEvent(event.id), extra: event),
         ),
       ),
       GoRoute(
@@ -77,7 +104,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final event = state.extra;
           if (event is! EventModel) {
             return const Scaffold(
-              body: Center(child: Text('Event details are no longer available.')),
+              body: Center(
+                child: Text('Event details are no longer available.'),
+              ),
             );
           }
           return OrganizerEditEventScreen(event: event);
@@ -85,7 +114,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: RouteNames.admin,
-        builder: (_, _) => const StudentShell(title: 'Admin'),
+        builder: (_, _) => const AdminDashboardScreen(),
       ),
       GoRoute(
         path: RouteNames.myEvents,

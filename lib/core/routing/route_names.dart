@@ -13,5 +13,12 @@ class RouteNames {
   static const admin = '/admin';
   static const myEvents = '/my-events';
   static const tickets = '/tickets';
-  static String ticketDetail(String id) => '$tickets/${Uri.encodeComponent(id)}';
+  static const clubs = '/clubs';
+  static String clubDetail(String id) => '$clubs/${Uri.encodeComponent(id)}';
+  static const createClub = '/organizer/clubs/new';
+  static String editClub(String id) =>
+      '/organizer/clubs/${Uri.encodeComponent(id)}/edit';
+  static const notifications = '/notifications';
+  static String ticketDetail(String id) =>
+      '$tickets/${Uri.encodeComponent(id)}';
 }
