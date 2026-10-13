@@ -147,7 +147,14 @@ service cloud.firestore {
       allow delete: if false;
     }
     match /club_memberships/{membershipId} {
-      allow read: if activeUser() && (
+      // A join transaction must read the deterministic membership document
+      // before it exists. In that case resource.data is unavailable, so use
+      // the `{clubId}_{uid}` document ID to authorize the owner lookup.
+      allow get: if activeUser() && (
+        membershipId.matches('.*_' + request.auth.uid)
+        || isEventManager()
+      );
+      allow list: if activeUser() && (
         resource.data.userId == request.auth.uid || isEventManager()
       );
       allow create: if activeUser() && (
