@@ -32,10 +32,16 @@ class ClubRepositoryImpl implements ClubRepository {
       .snapshots()
       .map((d) => d.exists ? ClubModel.fromFirestore(d) : null);
   @override
-  Stream<ClubMembership?> watchMembership(String c, String u) => members
-      .doc(ClubMembership.documentId(c, u))
-      .snapshots()
-      .map((d) => d.exists ? ClubMembership.fromFirestore(d) : null);
+  Stream<ClubMembership?> watchMembership(String c, String u) async* {
+    final reference = members.doc(ClubMembership.documentId(c, u));
+    final initial = await reference.get();
+    yield initial.exists ? ClubMembership.fromFirestore(initial) : null;
+    yield* reference.snapshots().map(
+      (document) =>
+          document.exists ? ClubMembership.fromFirestore(document) : null,
+    );
+  }
+
   void manager(AppUser a) {
     if (!a.isActive || !a.role.canOrganize) {
       throw const AppException('Organizer or admin access is required.');
