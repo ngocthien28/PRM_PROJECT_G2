@@ -50,23 +50,23 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyBWjV3MsvBRQVczqw_O2Ww8vQxP5mNlJxQ',
-    appId: '1:943731905884:web:2bd4984359adbbd5de9d99',
-    messagingSenderId: '943731905884',
-    projectId: 'studio-1527538381-9d991',
-    authDomain: 'studio-1527538381-9d991.firebaseapp.com',
-    storageBucket: 'studio-1527538381-9d991.firebasestorage.app',
+    apiKey: 'AIzaSyBMtR9QsJcwSJMQiSDIIPsYC7CB4IIrDFE',
+    appId: '1:624735054316:web:e571d16abad3bf568b78c9',
+    messagingSenderId: '624735054316',
+    projectId: 'campushub-prm-g2',
+    authDomain: 'campushub-prm-g2.firebaseapp.com',
+    storageBucket: 'campushub-prm-g2.firebasestorage.app',
   );
 
   // Firebase console registers Windows targets as Web Apps. The project
   // already has this configuration, so it also supplies the Flutter Web
   // target instead of failing before Firebase can initialise.
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBWjV3MsvBRQVczqw_O2Ww8vQxP5mNlJxQ',
-    appId: '1:943731905884:web:2bd4984359adbbd5de9d99',
-    messagingSenderId: '943731905884',
-    projectId: 'studio-1527538381-9d991',
-    authDomain: 'studio-1527538381-9d991.firebaseapp.com',
-    storageBucket: 'studio-1527538381-9d991.firebasestorage.app',
+    apiKey: 'AIzaSyBMtR9QsJcwSJMQiSDIIPsYC7CB4IIrDFE',
+    appId: '1:624735054316:web:e571d16abad3bf568b78c9',
+    messagingSenderId: '624735054316',
+    projectId: 'campushub-prm-g2',
+    authDomain: 'campushub-prm-g2.firebaseapp.com',
+    storageBucket: 'campushub-prm-g2.firebasestorage.app',
   );
 }
