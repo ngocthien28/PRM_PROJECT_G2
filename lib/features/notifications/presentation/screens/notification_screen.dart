@@ -7,6 +7,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/campus_scaffold.dart';
 import '../../../auth/presentation/viewmodels/auth_view_model.dart';
 import '../../data/models/app_notification.dart';
+import '../../domain/usecases/mark_notification_as_read.dart';
 import '../viewmodels/notification_view_model.dart';
 
 class NotificationScreen extends ConsumerStatefulWidget {
@@ -50,7 +51,9 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     if (!item.isRead) {
       setState(() => _saving.add(item.id));
       try {
-        await ref.read(notificationRepositoryProvider).markRead(item.id);
+        await MarkNotificationAsRead(
+          ref.read(notificationRepositoryProvider),
+        )(item.id);
       } catch (_) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
