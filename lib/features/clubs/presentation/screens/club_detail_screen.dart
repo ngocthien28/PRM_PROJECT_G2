@@ -14,8 +14,19 @@ import '../../data/models/club_membership.dart';
 import '../../data/models/club_model.dart';
 import '../../domain/usecases/deactivate_club.dart';
 import '../../domain/usecases/join_club.dart';
+import '../../domain/usecases/leave_club.dart';
 import '../viewmodels/club_view_model.dart';
 import 'club_list_screen.dart';
+
+typedef LeaveClubAction = Future<void> Function({
+  required String clubId,
+  required AppUser actor,
+});
+
+final leaveClubActionProvider = Provider<LeaveClubAction>((ref) {
+  final useCase = LeaveClub(ref.watch(firestoreProvider));
+  return useCase.call;
+});
 
 class ClubDetailScreen extends ConsumerStatefulWidget {
   const ClubDetailScreen({super.key, required this.clubId});
@@ -487,9 +498,11 @@ class _ClubDetailScreenState extends ConsumerState<ClubDetailScreen> {
                   onPressed: _busy || !club.isActive
                       ? null
                       : () => _action(() async {
-                          final repo = ref.read(clubRepositoryProvider);
                           if (value?.isActive == true) {
-                            await repo.leaveClub(clubId: club.id, actor: user!);
+                            await ref.read(leaveClubActionProvider)(
+                              clubId: club.id,
+                              actor: user!,
+                            );
                           } else {
                             await JoinClub(
                               ref.read(firestoreProvider),
