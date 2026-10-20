@@ -14,6 +14,9 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:campushub/features/events/data/event_repository_impl.dart';
 
 import '../auth/auth_fakes.dart';
+import '../events/event_fakes.dart';
+import 'package:campushub/features/events/presentation/viewmodels/event_detail_view_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() {
   late FakeAuth auth;
@@ -156,6 +159,195 @@ void main() {
 
     expect(currentPath(), RouteNames.organizerCreateEvent);
     expect(find.byKey(const Key('titleField')), findsOneWidget);
+  });
+
+  Future<void> seedEditEvent({
+    String id = 'edit-1',
+    String title = 'Current Firestore title',
+    String owner = 'uid',
+  }) => db
+      .collection('events')
+      .doc(id)
+      .set(testEvent(id: id, organizerId: owner, title: title).toMap());
+
+  testWidgets(
+    'edit loads by ID without extra, ignores stale extra and re-enters',
+    (tester) async {
+      restoreActiveUser(UserRole.organizer);
+      await seedEditEvent();
+      await mount(tester);
+      final router = container.read(appRouterProvider);
+      router.go(RouteNames.organizerEditEvent('edit-1'));
+      await tester.pumpAndSettle();
+      expect(find.text('Current Firestore title'), findsOneWidget);
+      expect(find.text('Hall A'), findsOneWidget);
+      expect(find.text('100'), findsOneWidget);
+      router.go(RouteNames.organizer);
+      await tester.pumpAndSettle();
+      router.go(
+        RouteNames.organizerEditEvent('edit-1'),
+        extra: testEvent(id: 'wrong', title: 'Stale extra'),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Current Firestore title'), findsOneWidget);
+      expect(find.text('Stale extra'), findsNothing);
+      expect(find.text('Save Changes'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'edit saves via transaction, refreshes managed list and Student detail provider',
+    (tester) async {
+      restoreActiveUser(UserRole.organizer);
+      await seedEditEvent();
+      await mount(tester);
+      final detail = container.listen(eventDetailProvider('edit-1'), (_, _) {});
+      addTearDown(detail.close);
+      expect(
+        (await container.read(eventDetailProvider('edit-1').future)).title,
+        'Current Firestore title',
+      );
+      container.read(appRouterProvider).go(RouteNames.organizerManagedEvents);
+      await tester.pumpAndSettle();
+      container
+          .read(appRouterProvider)
+          .go(RouteNames.organizerEditEvent('edit-1'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('titleField')),
+        'Edited through UI',
+      );
+      final submit = find.byKey(const Key('submitEventFormButton'));
+      await tester.ensureVisible(submit);
+      await tester.tap(submit);
+      await tester.pumpAndSettle();
+      expect(currentPath(), RouteNames.organizerManagedEvents);
+      expect(find.text('Edited through UI'), findsOneWidget);
+      expect(find.text('Event updated successfully.'), findsOneWidget);
+      expect(
+        (await container.read(eventDetailProvider('edit-1').future)).title,
+        'Edited through UI',
+      );
+      expect((await db.collection('events').get()).docs, hasLength(1));
+    },
+  );
+
+  testWidgets(
+    'switching edit ID resets fields and does not retain unsaved data',
+    (tester) async {
+      restoreActiveUser(UserRole.organizer);
+      await seedEditEvent();
+      await seedEditEvent(id: 'edit-2', title: 'Second event');
+      await mount(tester);
+      container
+          .read(appRouterProvider)
+          .go(RouteNames.organizerEditEvent('edit-1'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('titleField')),
+        'Unsaved first',
+      );
+      profiles.update(testUser(role: UserRole.organizer));
+      await tester.pumpAndSettle();
+      expect(find.text('Unsaved first'), findsOneWidget);
+      container
+          .read(appRouterProvider)
+          .go(RouteNames.organizerEditEvent('edit-2'));
+      await tester.pumpAndSettle();
+      expect(find.text('Second event'), findsOneWidget);
+      expect(find.text('Unsaved first'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'conflict keeps edits until the user confirms reloading latest data',
+    (tester) async {
+      restoreActiveUser(UserRole.organizer);
+      await seedEditEvent();
+      await mount(tester);
+      container
+          .read(appRouterProvider)
+          .go(RouteNames.organizerEditEvent('edit-1'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('titleField')),
+        'My unsaved edit',
+      );
+      await db.collection('events').doc('edit-1').update({
+        'title': 'Newer server title',
+        'updatedAt': Timestamp.fromDate(DateTime.utc(2031)),
+      });
+      final button = find.byKey(const Key('submitEventFormButton'));
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(find.text('My unsaved edit'), findsOneWidget);
+      expect(
+        find.text(
+          'This event changed while you were editing. Reload the latest event before saving again.',
+        ),
+        findsOneWidget,
+      );
+      expect(currentPath(), RouteNames.organizerEditEvent('edit-1'));
+      final reload = find.text('Reload latest event');
+      await tester.ensureVisible(reload);
+      await tester.pumpAndSettle();
+      await tester.tap(reload);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Keep editing'));
+      await tester.pumpAndSettle();
+      expect(find.text('My unsaved edit'), findsOneWidget);
+      await tester.ensureVisible(reload);
+      await tester.pumpAndSettle();
+      await tester.tap(reload);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Reload'));
+      await tester.pumpAndSettle();
+      expect(find.text('Newer server title'), findsOneWidget);
+      expect(find.text('My unsaved edit'), findsNothing);
+    },
+  );
+
+  testWidgets('missing and invalid edit IDs show error with Retry', (
+    tester,
+  ) async {
+    restoreActiveUser(UserRole.organizer);
+    await mount(tester);
+    for (final id in ['missing', 'bad/path']) {
+      container.read(appRouterProvider).go(RouteNames.organizerEditEvent(id));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('editEventLoadError')), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+      expect(find.byKey(const Key('titleField')), findsNothing);
+    }
+  });
+
+  testWidgets('non-owner cannot open edit; admin can load it', (tester) async {
+    restoreActiveUser(UserRole.organizer);
+    await seedEditEvent(owner: 'other-organizer');
+    await mount(tester);
+    container
+        .read(appRouterProvider)
+        .go(RouteNames.organizerEditEvent('edit-1'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('editEventLoadError')), findsOneWidget);
+    expect(find.byKey(const Key('titleField')), findsNothing);
+    profiles.update(testUser(role: UserRole.admin));
+    await tester.pumpAndSettle();
+    expect(find.text('Current Firestore title'), findsOneWidget);
+  });
+
+  testWidgets('Student edit deep link redirects away from organizer routes', (
+    tester,
+  ) async {
+    restoreActiveUser(UserRole.student);
+    await mount(tester);
+    container
+        .read(appRouterProvider)
+        .go(RouteNames.organizerEditEvent('edit-1'));
+    await tester.pumpAndSettle();
+    expect(currentPath(), RouteNames.home);
+    expect(find.byKey(const Key('titleField')), findsNothing);
   });
 
   testWidgets('organizer can sign out from the dashboard', (tester) async {

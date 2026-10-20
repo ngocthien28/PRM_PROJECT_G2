@@ -60,8 +60,9 @@ class FakeEvents implements EventRepository {
   }
 
   @override
-  Future<EventModel> getEventById(String eventId) async {
+  Future<EventModel> getEventById(String eventId, {AppUser? actor}) async {
     if (failure != null) throw failure!;
+    if (actor != null) return _ownedEvent(eventId, actor);
     final matching = events.where((event) => event.id == eventId);
     if (matching.isEmpty) {
       throw const AppException(
@@ -130,6 +131,7 @@ class FakeEvents implements EventRepository {
     required String eventId,
     required EventFormInput input,
     required AppUser actor,
+    DateTime? expectedUpdatedAt,
   }) async {
     final existing = _ownedEvent(eventId, actor);
     if (existing.status == EventStatus.cancelled) {
@@ -161,7 +163,10 @@ class FakeEvents implements EventRepository {
     _requireManager(actor);
     final event = events.where((event) => event.id == eventId).firstOrNull;
     if (event == null) {
-      throw const AppException('This event is unavailable.', code: 'event-not-found');
+      throw const AppException(
+        'This event is unavailable.',
+        code: 'event-not-found',
+      );
     }
     if (actor.role.name != 'admin' && event.organizerId != actor.uid) {
       throw const AppException(
