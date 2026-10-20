@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/routing/route_names.dart';
 
 import '../../../events/data/models/event_model.dart';
 import '../../data/models/event_form_input.dart';
@@ -20,7 +21,7 @@ class OrganizerCreateEventScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Event created successfully.')),
         );
-        context.go('/organizer');
+        context.go(RouteNames.organizerManagedEvents);
       },
     );
   }
@@ -43,9 +44,8 @@ class OrganizerEditEventScreen extends ConsumerWidget {
         endAt: event.endAt,
         capacity: event.capacity,
       ),
-      onSubmit: (input) => ref
-          .read(organizerEventActionsProvider)
-          .updateEvent(event.id, input),
+      onSubmit: (input) =>
+          ref.read(organizerEventActionsProvider).updateEvent(event.id, input),
       onSuccess: () {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Event updated successfully.')),

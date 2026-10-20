@@ -7,7 +7,7 @@ import '../../data/models/event_form_input.dart';
 /// Submission states for the organizer event form.
 enum EventFormSubmissionStatus { idle, validating, submitting, success, error }
 
-/// Pure-Dart state that a future Riverpod EventFormViewModel can expose.
+/// Submission state exposed by the Riverpod EventFormViewModel.
 class EventFormSubmissionState {
   const EventFormSubmissionState({
     required this.status,
@@ -16,9 +16,9 @@ class EventFormSubmissionState {
   });
 
   const EventFormSubmissionState.idle()
-      : status = EventFormSubmissionStatus.idle,
-        validationErrors = const {},
-        errorMessage = null;
+    : status = EventFormSubmissionStatus.idle,
+      validationErrors = const {},
+      errorMessage = null;
 
   final EventFormSubmissionStatus status;
   final Map<String, String> validationErrors;
@@ -33,9 +33,13 @@ typedef EventFormSubmissionStateListener =
 
 /// Coordinates validation and an injected async save operation.
 ///
-/// This has no Riverpod, Firebase, repository, or UI dependency. It is a
-/// temporary coordinator to be wrapped by the production ViewModel later.
+/// The production ViewModel delegates to this coordinator so the same
+/// validation and in-flight lock can also be tested without Firebase.
 class EventFormSubmissionController {
+  EventFormSubmissionController({DateTime Function()? now})
+    : _now = now ?? DateTime.now;
+
+  final DateTime Function() _now;
   EventFormSubmissionState _state = const EventFormSubmissionState.idle();
   bool _submissionLocked = false;
   final Set<EventFormSubmissionStateListener> _listeners = {};
@@ -53,39 +57,56 @@ class EventFormSubmissionController {
     }
   }
 
-  Future<bool> submit(EventFormInput input, EventFormSaveCallback save) async {
+  Future<bool> submit(
+    EventFormInput input,
+    EventFormSaveCallback save, {
+    bool requireFutureStart = false,
+  }) async {
     if (_submissionLocked) return false;
 
-    _setState(const EventFormSubmissionState(
-      status: EventFormSubmissionStatus.validating,
-    ));
-    final errors = input.validate();
+    _setState(
+      const EventFormSubmissionState(
+        status: EventFormSubmissionStatus.validating,
+      ),
+    );
+    final errors = input.validate(
+      requireFutureStart: requireFutureStart,
+      now: _now(),
+    );
     if (errors.isNotEmpty) {
-      _setState(EventFormSubmissionState(
-        status: EventFormSubmissionStatus.error,
-        validationErrors: Map.unmodifiable(errors),
-      ));
+      _setState(
+        EventFormSubmissionState(
+          status: EventFormSubmissionStatus.error,
+          validationErrors: Map.unmodifiable(errors),
+        ),
+      );
       return false;
     }
 
     _submissionLocked = true;
-    _setState(const EventFormSubmissionState(
-      status: EventFormSubmissionStatus.submitting,
-    ));
+    _setState(
+      const EventFormSubmissionState(
+        status: EventFormSubmissionStatus.submitting,
+      ),
+    );
     try {
       await save(input);
-      _setState(const EventFormSubmissionState(
-        status: EventFormSubmissionStatus.success,
-      ));
+      _setState(
+        const EventFormSubmissionState(
+          status: EventFormSubmissionStatus.success,
+        ),
+      );
       return true;
     } catch (error, stack) {
       final message = error is AppException
           ? error.message
           : mapError(error, stack).message;
-      _setState(EventFormSubmissionState(
-        status: EventFormSubmissionStatus.error,
-        errorMessage: message,
-      ));
+      _setState(
+        EventFormSubmissionState(
+          status: EventFormSubmissionStatus.error,
+          errorMessage: message,
+        ),
+      );
       return false;
     } finally {
       _submissionLocked = false;
@@ -94,7 +115,7 @@ class EventFormSubmissionController {
 }
 
 final eventFormViewModelProvider =
-    NotifierProvider<EventFormViewModel, EventFormSubmissionState>(
+    NotifierProvider.autoDispose<EventFormViewModel, EventFormSubmissionState>(
       EventFormViewModel.new,
     );
 
@@ -118,6 +139,9 @@ class EventFormViewModel extends Notifier<EventFormSubmissionState> {
     return _controller.state;
   }
 
-  Future<bool> submit(EventFormInput input, EventFormSaveCallback save) =>
-      _controller.submit(input, save);
+  Future<bool> submit(
+    EventFormInput input,
+    EventFormSaveCallback save, {
+    bool requireFutureStart = false,
+  }) => _controller.submit(input, save, requireFutureStart: requireFutureStart);
 }
