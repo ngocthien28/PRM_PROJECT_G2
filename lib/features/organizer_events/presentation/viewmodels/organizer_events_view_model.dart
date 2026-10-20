@@ -11,6 +11,7 @@ import '../../../events/presentation/viewmodels/event_list_view_model.dart';
 import '../../../events/presentation/viewmodels/event_detail_view_model.dart';
 import '../../../../shared/enums/event_status.dart';
 import '../../data/models/event_form_input.dart';
+export 'participant_summary_view_model.dart';
 
 /// The organizer's server-backed event list. The dashboard that consumes this
 /// provider is intentionally a later task; keeping it here makes the CRUD
