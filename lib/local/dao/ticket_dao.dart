@@ -139,6 +139,18 @@ class TicketDao {
 
     return rows.map(OfflineTicketRecord.fromMap).toList();
   }
+
+  Future<void> deleteTicket(String registrationId) async {
+    _webCache.remove(registrationId);
+    final db = await _db.database;
+    if (db == null) return;
+
+    await db.delete(
+      LocalTables.offlineTickets,
+      where: '${LocalTables.colRegistrationId} = ?',
+      whereArgs: [registrationId],
+    );
+  }
 }
 
 final ticketDaoProvider = Provider<TicketDao>((ref) => TicketDao());

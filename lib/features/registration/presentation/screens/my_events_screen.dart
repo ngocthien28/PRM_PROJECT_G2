@@ -194,23 +194,34 @@ class _RegistrationCard extends ConsumerWidget {
                   ),
                 ],
                 const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FilledButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => TicketScreen(
-                            registrationId: registration.id,
-                            initialRegistration: registration,
-                            initialEvent: event,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (registration.canCancel)
+                      TextButton.icon(
+                        key: const Key('myEventsCancelTicketButton'),
+                        style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
+                        onPressed: () => _confirmCancelRegistration(context, ref, registration),
+                        icon: const Icon(Icons.cancel_outlined, size: 16),
+                        label: const Text('Hủy vé'),
+                      ),
+                    const SizedBox(width: 8),
+                    FilledButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => TicketScreen(
+                              registrationId: registration.id,
+                              initialRegistration: registration,
+                              initialEvent: event,
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.qr_code, size: 18),
-                    label: const Text('Xem Vé QR'),
-                  ),
+                        );
+                      },
+                      icon: const Icon(Icons.qr_code, size: 18),
+                      label: const Text('Xem Vé QR'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -218,5 +229,54 @@ class _RegistrationCard extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Future<void> _confirmCancelRegistration(
+    BuildContext context,
+    WidgetRef ref,
+    RegistrationModel registration,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hủy đăng ký sự kiện?'),
+        content: const Text(
+          'Bạn có chắc chắn muốn hủy vé đăng ký sự kiện này không? Chỗ trống sẽ được nhường cho sinh viên khác.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Giữ lại'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Xác nhận hủy'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      try {
+        await ref
+            .read(registrationActionProvider.notifier)
+            .cancelRegistration(
+              registrationId: registration.id,
+              eventId: registration.eventId,
+            );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Đã hủy đăng ký thành công')),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
   }
 }
