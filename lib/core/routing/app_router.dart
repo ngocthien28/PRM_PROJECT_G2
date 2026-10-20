@@ -22,6 +22,7 @@ import '../../features/clubs/presentation/screens/manage_club_screen.dart';
 import '../../features/notifications/presentation/screens/notification_screen.dart';
 import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/admin/presentation/screens/moderation_screen.dart';
+import '../../features/favorites/presentation/screens/favorites_screen.dart';
 import 'route_guards.dart';
 import 'route_names.dart';
 
