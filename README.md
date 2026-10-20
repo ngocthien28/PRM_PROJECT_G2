@@ -8,6 +8,9 @@ Read [the Iteration 1 report](docs/authentication_iteration_1.md) for the initia
 
 ## Requirements
 
+For UC-065/066/073/074/075 notification setup, local Node push worker and Android
+testing, see [Notifications setup](docs/notifications-setup.md).
+
 - Flutter >= 3.44.0 and Dart >= 3.12.0. Verified with Flutter 3.47.3 / Dart 3.13.3.
 - Dependencies are resolved in `pubspec.lock`; commit and reuse this lockfile.
 - Android/iOS/Web scaffolds are included. iOS builds require macOS.

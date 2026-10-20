@@ -90,6 +90,16 @@ service cloud.firestore {
       allow delete: if false;
     }
     match /users/{uid} {
+      match /device_tokens/{tokenId} {
+        allow read, delete: if owns(uid);
+        allow create, update: if owns(uid) && activeUser()
+          && request.resource.data.keys().hasOnly(['token', 'platform', 'updatedAt'])
+          && request.resource.data.token is string
+          && request.resource.data.token.size() > 0
+          && request.resource.data.token.size() < 1024
+          && request.resource.data.platform == 'android'
+          && request.resource.data.updatedAt == request.time;
+      }
       allow get: if owns(uid);
       allow create: if owns(uid)
         && request.resource.data.keys().hasAll([
@@ -165,6 +175,32 @@ service cloud.firestore {
         && resource.data.userId == request.auth.uid
         && request.resource.data.userId == resource.data.userId
         && request.resource.data.clubId == resource.data.clubId;
+      allow delete: if false;
+    }
+    match /notifications/{notificationId} {
+      allow read: if activeUser() && resource.data.userId == request.auth.uid;
+      // Join/Leave creates an inbox entry in the same atomic transaction.
+      allow create: if activeUser() && currentRole() == 'student'
+        && request.resource.data.keys().hasOnly([
+          'userId', 'title', 'body', 'type', 'referenceId', 'membershipStatus',
+          'isRead', 'createdAt', 'pushStatus'
+        ])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.type == 'club_membership'
+        && request.resource.data.referenceId is string
+        && request.resource.data.membershipStatus in ['active', 'left']
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.body is string
+        && request.resource.data.body.size() <= 1000
+        && request.resource.data.isRead == false
+        && request.resource.data.pushStatus == 'pending'
+        && request.resource.data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/club_memberships/$(request.resource.data.referenceId + '_' + request.auth.uid)).data.status == request.resource.data.membershipStatus
+        && getAfter(/databases/$(database)/documents/club_memberships/$(request.resource.data.referenceId + '_' + request.auth.uid)).data.updatedAt == request.time;
+      allow update: if activeUser() && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead'])
+        && request.resource.data.isRead == true;
       allow delete: if false;
     }
     match /{document=**} {
