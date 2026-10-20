@@ -13,11 +13,11 @@ import '../../../events/presentation/viewmodels/event_list_view_model.dart';
 import '../../../events/presentation/viewmodels/event_detail_view_model.dart';
 import '../../../../shared/enums/event_status.dart';
 import '../../data/models/event_form_input.dart';
+import 'organizer_dashboard_view_model.dart';
 export 'participant_summary_view_model.dart';
 
-/// The organizer's server-backed event list. The dashboard that consumes this
-/// provider is intentionally a later task; keeping it here makes the CRUD
-/// operations share the same repository and authenticated profile.
+/// The bounded server-backed management list. Dashboard totals use their own
+/// full-data summary provider so this list's page limit cannot truncate KPIs.
 final organizerEventsProvider = FutureProvider.autoDispose<List<EventModel>>((
   ref,
 ) async {
@@ -83,6 +83,7 @@ final organizerEventActionsProvider = Provider<OrganizerEventActions>((ref) {
     // session.
     currentActor: () => ref.read(currentUserProvider.future),
     refresh: () {
+      ref.invalidate(organizerDashboardProvider);
       ref.invalidate(organizerEventsProvider);
       ref.invalidate(eventListProvider);
       ref.invalidate(homeEventsProvider);
@@ -100,9 +101,9 @@ class OrganizerEventActions {
     required FutureOr<AppUser?> Function() currentActor,
     required void Function() refresh,
     this.refreshEvent,
-  })  : _repository = repository,
-        _currentActor = currentActor,
-        _refresh = refresh;
+  }) : _repository = repository,
+       _currentActor = currentActor,
+       _refresh = refresh;
 
   final EventRepository _repository;
   final FutureOr<AppUser?> Function() _currentActor;
