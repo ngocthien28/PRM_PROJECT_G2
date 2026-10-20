@@ -14,6 +14,7 @@ EventModel testEvent({
   DateTime? startAt,
   int capacity = 100,
   int registeredCount = 20,
+  int checkedInCount = 0,
   String? posterUrl,
 }) => EventModel(
   id: id,
@@ -29,7 +30,7 @@ EventModel testEvent({
   ),
   capacity: capacity,
   registeredCount: registeredCount,
-  checkedInCount: 0,
+  checkedInCount: checkedInCount,
   status: status,
   createdAt: DateTime.utc(2030),
   updatedAt: DateTime.utc(2030),

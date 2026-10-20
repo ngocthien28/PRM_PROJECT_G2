@@ -115,4 +115,45 @@ void main() {
 
     expect(errors['endAt'], 'End time must be after start time.');
   });
+
+  test('rejects a past start when publishing a new event', () {
+    final now = DateTime.utc(2030, 1, 1, 9);
+    final errors = validInput(
+      start: now,
+      end: now.add(const Duration(hours: 2)),
+    ).validate(requireFutureStart: true, now: now);
+
+    expect(errors['startAt'], contains('future'));
+  });
+
+  test('allows an existing event start in the past during an edit', () {
+    final now = DateTime.utc(2030, 1, 2);
+    final errors = validInput(
+      start: DateTime.utc(2030, 1, 1, 9),
+      end: DateTime.utc(2030, 1, 1, 11),
+    ).validate(now: now);
+
+    expect(errors, isEmpty);
+  });
+
+  test('keeps local poster metadata separate from an uploaded URL', () {
+    final selection = EventPosterSelection(
+      localUri: Uri.parse('file:///temporary/poster.png'),
+      mimeType: 'image/png',
+      byteLength: 123,
+    );
+    final input = EventFormInput(
+      title: 'Flutter Workshop',
+      description: 'Learn Flutter fundamentals in this hands-on workshop.',
+      category: 'technology',
+      locationName: 'Hall A',
+      startAt: startAt,
+      endAt: endAt,
+      capacity: 100,
+      posterSelection: selection,
+    );
+
+    expect(input.posterSelection, same(selection));
+    expect(input.validate(), isEmpty);
+  });
 }

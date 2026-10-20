@@ -120,7 +120,7 @@ class EventRepositoryImpl implements EventRepository {
     required AppUser actor,
   }) => _request(() async {
     _requireEventManager(actor);
-    _requireValidInput(input);
+    _requireValidInput(input, requireFutureStart: true);
     final ref = firestore.collection(FirestoreCollections.events).doc();
     await ref.set(_createMap(input, actor.uid));
     final snapshot = await ref.get(const GetOptions(source: Source.server));
@@ -136,9 +136,7 @@ class EventRepositoryImpl implements EventRepository {
     _requireEventManager(actor);
     _requireValidInput(input);
     final ref = _eventDocument(eventId);
-    final existing = EventModel.fromFirestore(
-      await ref.get(const GetOptions(source: Source.server)),
-    );
+    final existing = await _loadEvent(ref);
     _requireOwnerOrAdmin(existing, actor);
     if (existing.status == EventStatus.cancelled) {
       throw const AppException(
@@ -159,9 +157,7 @@ class EventRepositoryImpl implements EventRepository {
   }) => _request(() async {
     _requireEventManager(actor);
     final ref = _eventDocument(eventId);
-    final existing = EventModel.fromFirestore(
-      await ref.get(const GetOptions(source: Source.server)),
-    );
+    final existing = await _loadEvent(ref);
     _requireOwnerOrAdmin(existing, actor);
     if (existing.status == EventStatus.cancelled) return existing;
     await ref.update({
@@ -184,6 +180,19 @@ class EventRepositoryImpl implements EventRepository {
     return firestore.collection(FirestoreCollections.events).doc(id);
   }
 
+  Future<EventModel> _loadEvent(
+    DocumentReference<Map<String, dynamic>> ref,
+  ) async {
+    final snapshot = await ref.get(const GetOptions(source: Source.server));
+    if (!snapshot.exists) {
+      throw const AppException(
+        'This event is unavailable.',
+        code: 'event-not-found',
+      );
+    }
+    return EventModel.fromFirestore(snapshot);
+  }
+
   void _requireEventManager(AppUser actor) {
     if (!actor.isActive || !actor.role.canOrganize) {
       throw const AppException(
@@ -202,8 +211,14 @@ class EventRepositoryImpl implements EventRepository {
     }
   }
 
-  void _requireValidInput(EventFormInput input) {
-    final errors = input.validate();
+  void _requireValidInput(
+    EventFormInput input, {
+    bool requireFutureStart = false,
+  }) {
+    final errors = input.validate(
+      requireFutureStart: requireFutureStart,
+      now: _now(),
+    );
     if (errors.isNotEmpty) {
       throw AppException(
         errors.values.first,
