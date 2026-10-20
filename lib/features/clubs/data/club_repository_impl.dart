@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 
 import '../../../core/constants/firestore_collections.dart';
 import '../../../core/errors/app_exception.dart';
@@ -9,6 +8,7 @@ import '../../auth/data/models/app_user.dart';
 import '../domain/usecases/create_club.dart';
 import '../domain/usecases/deactivate_club.dart';
 import '../domain/usecases/join_club.dart';
+import '../domain/usecases/leave_club.dart';
 import '../domain/usecases/update_club.dart';
 import '../domain/usecases/view_club_list.dart';
 import '../domain/usecases/view_club_details.dart';
@@ -37,10 +37,7 @@ class ClubRepositoryImpl implements ClubRepository {
     );
   }
 
-  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
-  /// MODULE: Testing & Integration
   /// DESCRIPTION: Yêu cầu actor active và canOrganize để quản lý club.
-  /// ROLE: Cross-module role/access integration
   /// CALLED FROM: createClub và owner.
   /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
   /// TECHNOLOGY: Dart, Cloud Firestore SDK.
@@ -109,7 +106,7 @@ class ClubRepositoryImpl implements ClubRepository {
       JoinClub(db)(clubId: clubId, actor: actor);
   @override
   Future<void> leaveClub({required String clubId, required AppUser actor}) =>
-      membership(clubId, actor, false);
+      LeaveClub(db)(clubId: clubId, actor: actor);
 
   /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
   /// MODULE: Testing & Integration
@@ -117,62 +114,4 @@ class ClubRepositoryImpl implements ClubRepository {
   /// ROLE: Cross-module role/access integration
   /// CALLED FROM: joinClub và leaveClub.
   /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
-  /// TECHNOLOGY: Dart, Cloud Firestore SDK.
-  Future<void> membership(String id, AppUser a, bool join) {
-    final timer = Stopwatch()..start();
-    final notification = db.collection('notifications').doc();
-    return db
-        .runTransaction((tx) async {
-          if (!a.isActive || a.role != UserRole.student) {
-            throw const AppException('Only active students can join Clubs.');
-          }
-          final cr = clubs.doc(id),
-              mr = members.doc(ClubMembership.documentId(id, a.uid)),
-              cd = await tx.get(cr),
-              md = await tx.get(mr);
-          if (!cd.exists) throw const AppException('Club not found.');
-          final c = ClubModel.fromFirestore(cd),
-              active = md.exists && md.data()?['status'] == 'active';
-          if (!c.isActive) throw const AppException('Club is not active.');
-          if (join == active) {
-            throw AppException(
-              join
-                  ? 'You already joined this Club.'
-                  : 'You are not an active member.',
-            );
-          }
-          tx.set(mr, {
-            'clubId': id,
-            'userId': a.uid,
-            'role': 'member',
-            'status': join ? 'active' : 'left',
-            'joinedAt': md.data()?['joinedAt'] ?? FieldValue.serverTimestamp(),
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
-          tx.update(cr, {
-            'memberCount': join
-                ? c.memberCount + 1
-                : (c.memberCount > 0 ? c.memberCount - 1 : 0),
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
-          tx.set(notification, {
-            'userId': a.uid,
-            'title': join ? 'Club joined' : 'Club left',
-            'body': join ? 'You joined ${c.name}.' : 'You left ${c.name}.',
-            'type': 'club_membership',
-            'referenceId': id,
-            'membershipStatus': join ? 'active' : 'left',
-            'isRead': false,
-            'createdAt': FieldValue.serverTimestamp(),
-            'pushStatus': 'pending',
-          });
-        })
-        .whenComplete(() {
-          if (kDebugMode) {
-            debugPrint(
-              '[CampusHub perf] club.${join ? 'join' : 'leave'}.transaction: ${timer.elapsedMilliseconds} ms',
-            );
-          }
-        });
-  }
 }
