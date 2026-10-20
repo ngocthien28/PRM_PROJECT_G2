@@ -15,7 +15,7 @@ import '../../../events/presentation/widgets/event_poster.dart';
 import '../../../notifications/presentation/viewmodels/notification_view_model.dart';
 import '../../data/models/organizer_dashboard_summary.dart';
 import '../viewmodels/organizer_dashboard_view_model.dart';
-import '../viewmodels/organizer_events_view_model.dart';
+import '../widgets/cancel_event_dialog.dart';
 
 class OrganizerDashboardScreen extends ConsumerWidget {
   const OrganizerDashboardScreen({
@@ -226,83 +226,61 @@ class OrganizerDashboardScreen extends ConsumerWidget {
     List<EventModel> events,
     DateTime asOf,
   ) {
-    return Column(
-      children: [
-        for (final event in events) ...[
-          _DashboardEventCard(
-            event: event,
-            asOf: asOf,
-            onOpen: () async {
-              await context.push(RouteNames.organizerEventDetail(event.id));
-              if (context.mounted) await _refresh(ref);
-            },
-            onAction: (action) {
-              switch (action) {
-                case _EventAction.edit:
-                  onEditEvent(event);
-                case _EventAction.participants:
-                  if (onViewParticipants != null) {
-                    onViewParticipants!(event);
-                  } else {
-                    context.push(
-                      RouteNames.organizerEventParticipants(event.id),
+    return LayoutBuilder(
+      builder: (context, box) {
+        final columns = box.maxWidth >= 960
+            ? 3
+            : box.maxWidth >= 580
+            ? 2
+            : 1;
+        const gap = 18.0;
+        final width = (box.maxWidth - (columns - 1) * gap) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final event in events)
+              SizedBox(
+                width: width,
+                child: _DashboardEventCard(
+                  event: event,
+                  asOf: asOf,
+                  onOpen: () async {
+                    await context.push(
+                      RouteNames.organizerEventDetail(event.id),
                     );
-                  }
-                case _EventAction.cancel:
-                  _confirmCancel(context, ref, event);
-              }
-            },
-          ),
-          const SizedBox(height: 12),
-        ],
-      ],
+                    if (context.mounted) await _refresh(ref);
+                  },
+                  onAction: (action) {
+                    switch (action) {
+                      case _EventAction.edit:
+                        onEditEvent(event);
+                      case _EventAction.participants:
+                        if (onViewParticipants != null) {
+                          onViewParticipants!(event);
+                        } else {
+                          context.push(
+                            RouteNames.organizerEventParticipants(event.id),
+                          );
+                        }
+                      case _EventAction.cancel:
+                        _confirmCancel(context, event);
+                    }
+                  },
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
-  Future<void> _confirmCancel(
-    BuildContext context,
-    WidgetRef ref,
-    EventModel event,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Cancel event?'),
-        content: Text(
-          '“${event.title}” will be cancelled and kept in your management history.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Keep event'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Cancel event'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !context.mounted) return;
-    try {
-      await ref.read(organizerEventActionsProvider).cancelEvent(event.id);
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Event cancelled.')));
-      }
-    } catch (error) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              error is AppException
-                  ? error.message
-                  : 'Unable to cancel this event.',
-            ),
-          ),
-        );
-      }
+  Future<void> _confirmCancel(BuildContext context, EventModel event) async {
+    final cancelled = await showCancelEventDialog(context, event);
+    if (cancelled && context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Event cancelled.')));
     }
   }
 }
@@ -458,7 +436,7 @@ class _DashboardEventCard extends StatelessWidget {
             EventPoster(
               url: event.posterUrl,
               category: event.category,
-              height: 110,
+              height: 155,
             ),
             Padding(
               padding: const EdgeInsets.all(16),
@@ -491,7 +469,7 @@ class _DashboardEventCard extends StatelessWidget {
                           if (event.status != EventStatus.cancelled)
                             const PopupMenuItem(
                               value: _EventAction.cancel,
-                              child: Text('Cancel event'),
+                              child: Text('Cancel Event'),
                             ),
                         ],
                       ),

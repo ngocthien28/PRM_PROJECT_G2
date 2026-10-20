@@ -72,9 +72,9 @@ final organizerEditEventProvider = FutureProvider.autoDispose
 /// Thin presentation-layer entry point for organizer mutations.
 ///
 /// Form validation and the in-flight submission lock remain in
-/// [EventFormSubmissionController]. This type only obtains the active profile,
-/// calls the shared repository, and refreshes dependent event lists after a
-/// successful mutation.
+/// [EventFormSubmissionController]. Cancellation coalesces requests per
+/// actor/event and bounds waiting time. All successful mutations refresh the
+/// existing dependent event providers.
 final organizerEventActionsProvider = Provider<OrganizerEventActions>((ref) {
   return OrganizerEventActions(
     repository: ref.watch(eventRepositoryProvider),
@@ -83,12 +83,14 @@ final organizerEventActionsProvider = Provider<OrganizerEventActions>((ref) {
     // session.
     currentActor: () => ref.read(currentUserProvider.future),
     refresh: () {
+      if (!ref.mounted) return;
       ref.invalidate(organizerDashboardProvider);
       ref.invalidate(organizerEventsProvider);
       ref.invalidate(eventListProvider);
       ref.invalidate(homeEventsProvider);
     },
     refreshEvent: (id) {
+      if (!ref.mounted) return;
       ref.invalidate(eventDetailProvider(id));
       ref.invalidate(managedEventDetailProvider(id));
     },
@@ -96,11 +98,12 @@ final organizerEventActionsProvider = Provider<OrganizerEventActions>((ref) {
 });
 
 class OrganizerEventActions {
-  const OrganizerEventActions({
+  OrganizerEventActions({
     required EventRepository repository,
     required FutureOr<AppUser?> Function() currentActor,
     required void Function() refresh,
     this.refreshEvent,
+    this.cancelTimeout = const Duration(seconds: 20),
   }) : _repository = repository,
        _currentActor = currentActor,
        _refresh = refresh;
@@ -109,6 +112,8 @@ class OrganizerEventActions {
   final FutureOr<AppUser?> Function() _currentActor;
   final void Function() _refresh;
   final void Function(String)? refreshEvent;
+  final Duration cancelTimeout;
+  final _cancellations = <(String, String), Future<void>>{};
 
   Future<void> createEvent(EventFormInput input) async {
     await _repository.createEvent(input: input, actor: await _requireActor());
@@ -131,13 +136,36 @@ class OrganizerEventActions {
   }
 
   Future<void> cancelEvent(String eventId) async {
-    await _repository.cancelEvent(
-      eventId: eventId,
-      actor: await _requireActor(),
+    final actor = await _requireActor().timeout(
+      cancelTimeout,
+      onTimeout: _cancelTimedOut,
     );
-    _refresh();
-    refreshEvent?.call(eventId);
+    final key = (actor.uid, eventId.trim());
+    final pending = _cancellations.putIfAbsent(key, () {
+      final attempt = () async {
+        await _repository.cancelEvent(eventId: eventId, actor: actor);
+        _refresh();
+        refreshEvent?.call(eventId);
+      }();
+      unawaited(
+        attempt.then<void>(
+          (_) {
+            _cancellations.remove(key);
+          },
+          onError: (Object _, StackTrace _) {
+            _cancellations.remove(key);
+          },
+        ),
+      );
+      return attempt;
+    });
+    await pending.timeout(cancelTimeout, onTimeout: _cancelTimedOut);
   }
+
+  Never _cancelTimedOut() => throw const AppException(
+    'Cancellation could not be confirmed yet. Check your connection and retry.',
+    code: 'event-cancel-timeout',
+  );
 
   Future<AppUser> _requireActor() async {
     final actor = await _currentActor();
