@@ -4,7 +4,6 @@ import 'package:campushub/features/admin/presentation/screens/admin_dashboard_sc
 import 'package:campushub/features/admin/presentation/viewmodels/admin_dashboard_view_model.dart';
 import 'package:campushub/features/auth/data/models/app_user.dart';
 import 'package:campushub/features/auth/presentation/viewmodels/auth_view_model.dart';
-import 'package:campushub/features/events/data/event_repository.dart';
 import 'package:campushub/features/events/data/models/event_model.dart';
 import 'package:campushub/features/events/presentation/screens/event_detail_screen.dart';
 import 'package:campushub/features/events/presentation/viewmodels/event_list_view_model.dart';
@@ -94,10 +93,7 @@ class _FakeEventRepository extends FakeEvents {
 }
 
 void main() {
-  final adminUser = testUser(
-    uid: 'admin-1',
-    role: UserRole.admin,
-  );
+  final adminUser = testUser(uid: 'admin-1', role: UserRole.admin);
 
   group('Admin Event Management UI and Permissions', () {
     testWidgets('Admin Dashboard has clear buttons to enter event management', (
@@ -106,9 +102,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentUserProvider.overrideWith(
-              (ref) => Stream.value(adminUser),
-            ),
+            currentUserProvider.overrideWith((ref) => Stream.value(adminUser)),
             adminStatsProvider.overrideWith(
               (ref) => const AdminStats(
                 userCount: 10,
@@ -161,9 +155,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentUserProvider.overrideWith(
-              (ref) => Stream.value(adminUser),
-            ),
+            currentUserProvider.overrideWith((ref) => Stream.value(adminUser)),
             eventRepositoryProvider.overrideWithValue(repo),
           ],
           child: const MaterialApp(home: ManageEventsScreen()),
@@ -183,118 +175,126 @@ void main() {
       expect(find.text('Old Meetup'), findsOneWidget);
     });
 
-    testWidgets('Cancel event dialog: Keep event leaves event unchanged, Cancel marks cancelled', (
-      tester,
-    ) async {
-      final organizerEvent = testEvent(
-        id: 'org-event-1',
-        organizerId: 'organizer-42',
-        title: 'Test Event To Cancel',
-        status: EventStatus.published,
-      );
+    testWidgets(
+      'Cancel event dialog: Keep event leaves event unchanged, Cancel marks cancelled',
+      (tester) async {
+        final organizerEvent = testEvent(
+          id: 'org-event-1',
+          organizerId: 'organizer-42',
+          title: 'Test Event To Cancel',
+          status: EventStatus.published,
+        );
 
-      final repo = _FakeEventRepository([organizerEvent]);
+        final repo = _FakeEventRepository([organizerEvent]);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            currentUserProvider.overrideWith(
-              (ref) => Stream.value(adminUser),
-            ),
-            eventRepositoryProvider.overrideWithValue(repo),
-          ],
-          child: const MaterialApp(home: ManageEventsScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Open popup menu
-      await tester.tap(find.byTooltip('Manage event').first);
-      await tester.pumpAndSettle();
-
-      // Tap Cancel event menu option
-      await tester.tap(find.text('Cancel event'));
-      await tester.pumpAndSettle();
-
-      // Dialog appears with Keep event and Cancel event
-      expect(find.text('Cancel event?'), findsOneWidget);
-      expect(find.text('Keep event'), findsOneWidget);
-
-      // Tap Keep event first -> should NOT cancel
-      await tester.tap(find.text('Keep event'));
-      await tester.pumpAndSettle();
-
-      expect(repo.events.first.status, EventStatus.published);
-
-      // Open popup menu again
-      await tester.tap(find.byTooltip('Manage event').first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Cancel event'));
-      await tester.pumpAndSettle();
-
-      // Tap Cancel event in dialog -> should cancel
-      await tester.tap(find.widgetWithText(FilledButton, 'Cancel event'));
-      await tester.pumpAndSettle();
-
-      expect(repo.events.first.status, EventStatus.cancelled);
-      expect(repo.events.first.organizerId, 'organizer-42'); // Preserved!
-      expect(repo.events.first.registeredCount, 20); // Preserved!
-    });
-
-    testWidgets('EventDetailScreen shows cancellation banner and disables join button when cancelled', (
-      tester,
-    ) async {
-      final cancelledEvent = testEvent(
-        id: 'cancelled-event-1',
-        title: 'Cancelled Festival',
-        status: EventStatus.cancelled,
-      );
-
-      final repo = _FakeEventRepository([cancelledEvent]);
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            authStateProvider.overrideWith((ref) => Stream.value(testIdentity)),
-            eventRepositoryProvider.overrideWithValue(repo),
-          ],
-          child: const MaterialApp(
-            home: EventDetailScreen(eventId: 'cancelled-event-1'),
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              currentUserProvider.overrideWith(
+                (ref) => Stream.value(adminUser),
+              ),
+              eventRepositoryProvider.overrideWithValue(repo),
+            ],
+            child: const MaterialApp(home: ManageEventsScreen()),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Banner should be visible
-      expect(find.text('Sự kiện đã bị hủy'), findsWidgets);
+        // Open popup menu
+        await tester.tap(find.byTooltip('Manage event').first);
+        await tester.pumpAndSettle();
 
-      // Join button should have label 'Sự kiện đã bị hủy' and be disabled
-      final buttonFinder = find.widgetWithText(FilledButton, 'Sự kiện đã bị hủy');
-      expect(buttonFinder, findsOneWidget);
-      final FilledButton button = tester.widget(buttonFinder);
-      expect(button.onPressed, isNull);
-    });
+        // Tap Cancel event menu option
+        await tester.tap(find.text('Cancel event'));
+        await tester.pumpAndSettle();
 
-    testWidgets('Admin CampusScaffold has Manage Events destination in sidebar and navigates', (
-      tester,
-    ) async {
-      const scaffold = CampusScaffold(
-        title: 'Admin Dashboard',
-        section: CampusSection.admin,
-        role: 'admin',
-        body: Text('Admin body'),
-      );
+        // Dialog appears with Keep event and Cancel event
+        expect(find.text('Cancel event?'), findsOneWidget);
+        expect(find.text('Keep event'), findsOneWidget);
 
-      // Verify destinations list contains Manage Events
-      expect(
-        scaffold.destinations.any(
-          (d) =>
-              d.$1 == 'Manage Events' &&
-              d.$4 == RouteNames.organizerManagedEvents,
-        ),
-        isTrue,
-      );
-    });
+        // Tap Keep event first -> should NOT cancel
+        await tester.tap(find.text('Keep event'));
+        await tester.pumpAndSettle();
+
+        expect(repo.events.first.status, EventStatus.published);
+
+        // Open popup menu again
+        await tester.tap(find.byTooltip('Manage event').first);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Cancel event'));
+        await tester.pumpAndSettle();
+
+        // Tap Cancel event in dialog -> should cancel
+        await tester.tap(find.widgetWithText(FilledButton, 'Cancel event'));
+        await tester.pumpAndSettle();
+
+        expect(repo.events.first.status, EventStatus.cancelled);
+        expect(repo.events.first.organizerId, 'organizer-42'); // Preserved!
+        expect(repo.events.first.registeredCount, 20); // Preserved!
+      },
+    );
+
+    testWidgets(
+      'EventDetailScreen shows cancellation banner and disables join button when cancelled',
+      (tester) async {
+        final cancelledEvent = testEvent(
+          id: 'cancelled-event-1',
+          title: 'Cancelled Festival',
+          status: EventStatus.cancelled,
+        );
+
+        final repo = _FakeEventRepository([cancelledEvent]);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authStateProvider.overrideWith(
+                (ref) => Stream.value(testIdentity),
+              ),
+              eventRepositoryProvider.overrideWithValue(repo),
+            ],
+            child: const MaterialApp(
+              home: EventDetailScreen(eventId: 'cancelled-event-1'),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Banner should be visible
+        expect(find.text('Sự kiện đã bị hủy'), findsWidgets);
+
+        // Join button should have label 'Sự kiện đã bị hủy' and be disabled
+        final buttonFinder = find.widgetWithText(
+          FilledButton,
+          'Sự kiện đã bị hủy',
+        );
+        expect(buttonFinder, findsOneWidget);
+        final FilledButton button = tester.widget(buttonFinder);
+        expect(button.onPressed, isNull);
+      },
+    );
+
+    testWidgets(
+      'Admin CampusScaffold has Manage Events destination in sidebar and navigates',
+      (tester) async {
+        const scaffold = CampusScaffold(
+          title: 'Admin Dashboard',
+          section: CampusSection.admin,
+          role: 'admin',
+          body: Text('Admin body'),
+        );
+
+        // Verify destinations list contains Manage Events
+        expect(
+          scaffold.destinations.any(
+            (d) =>
+                d.$1 == 'Manage Events' &&
+                d.$4 == RouteNames.organizerManagedEvents,
+          ),
+          isTrue,
+        );
+      },
+    );
 
     testWidgets('Admin dashboard quick actions have equal uniform heights', (
       tester,
@@ -325,15 +325,41 @@ void main() {
       await tester.pumpAndSettle();
 
       // Find all 4 quick action cards by their unique subtitles
-      expect(find.text('Review, edit, and cancel campus events'), findsOneWidget);
+      expect(
+        find.text('Review, edit, and cancel campus events'),
+        findsOneWidget,
+      );
       expect(find.text('Explore and manage communities'), findsOneWidget);
-      expect(find.text('Keep up with updates and notifications'), findsOneWidget);
+      expect(
+        find.text('Keep up with updates and notifications'),
+        findsOneWidget,
+      );
       expect(find.text('Open the moderation workspace'), findsOneWidget);
 
-      final card1 = tester.getSize(find.ancestor(of: find.text('Review, edit, and cancel campus events'), matching: find.byType(Card)));
-      final card2 = tester.getSize(find.ancestor(of: find.text('Explore and manage communities'), matching: find.byType(Card)));
-      final card3 = tester.getSize(find.ancestor(of: find.text('Keep up with updates and notifications'), matching: find.byType(Card)));
-      final card4 = tester.getSize(find.ancestor(of: find.text('Open the moderation workspace'), matching: find.byType(Card)));
+      final card1 = tester.getSize(
+        find.ancestor(
+          of: find.text('Review, edit, and cancel campus events'),
+          matching: find.byType(Card),
+        ),
+      );
+      final card2 = tester.getSize(
+        find.ancestor(
+          of: find.text('Explore and manage communities'),
+          matching: find.byType(Card),
+        ),
+      );
+      final card3 = tester.getSize(
+        find.ancestor(
+          of: find.text('Keep up with updates and notifications'),
+          matching: find.byType(Card),
+        ),
+      );
+      final card4 = tester.getSize(
+        find.ancestor(
+          of: find.text('Open the moderation workspace'),
+          matching: find.byType(Card),
+        ),
+      );
 
       expect(card3.height, equals(card1.height));
       expect(card3.height, equals(card2.height));

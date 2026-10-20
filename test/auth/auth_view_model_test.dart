@@ -1,3 +1,4 @@
+import 'package:campushub/features/profile/data/local_profile_cache.dart';
 import 'dart:async';
 import 'package:campushub/features/auth/data/auth_repository.dart';
 import 'package:campushub/core/errors/app_exception.dart';
@@ -18,6 +19,7 @@ void main() {
       overrides: [
         authRepositoryProvider.overrideWithValue(auth),
         profileRepositoryProvider.overrideWithValue(profiles),
+        localProfileCacheProvider.overrideWithValue(FakeLocalProfileCache()),
       ],
     );
   });
@@ -44,6 +46,35 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect((await container.read(currentUserProvider.future))?.uid, 'uid');
   });
+  test(
+    'startup auth error is exposed as state and a later login recovers',
+    () async {
+      final sessions = StreamController<AuthIdentity?>();
+      final scoped = ProviderContainer(
+        overrides: [
+          authStateProvider.overrideWith((ref) => sessions.stream),
+          profileRepositoryProvider.overrideWithValue(profiles),
+          localProfileCacheProvider.overrideWithValue(FakeLocalProfileCache()),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      addTearDown(sessions.close);
+      scoped.listen(currentUserProvider, (_, _) {});
+      final failed = expectLater(
+        scoped.read(currentUserProvider.future),
+        throwsA(isA<AppException>()),
+      );
+      sessions.addError(
+        const AppException('Cannot connect.', code: 'network-request-failed'),
+      );
+      await failed;
+      expect(scoped.read(currentUserProvider).hasError, isTrue);
+      profiles.users['uid'] = testUser();
+      sessions.add(testIdentity);
+      await Future<void>.delayed(Duration.zero);
+      expect((await scoped.read(currentUserProvider.future))?.uid, 'uid');
+    },
+  );
   test('request error stops loading with a readable error', () async {
     auth.failure = const AppException('Email or password is incorrect.');
     await container
