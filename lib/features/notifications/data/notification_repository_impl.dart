@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../local/dao/notification_cache_dao.dart';
 import '../domain/usecases/view_notifications.dart';
+import '../domain/usecases/mark_notification_as_read.dart';
 import 'models/app_notification.dart';
 import 'notification_repository.dart';
 
@@ -18,12 +19,8 @@ class NotificationRepositoryImpl implements NotificationRepository {
       ViewNotifications(db, cache)(userId);
 
   @override
-  Future<void> markRead(String notificationId) async {
-    await db.collection('notifications').doc(notificationId).update({
-      'isRead': true,
-    });
-    await cache.markRead(notificationId);
-  }
+  Future<void> markRead(String notificationId) =>
+      MarkNotificationAsRead(db, cache)(notificationId);
 
   /// FEATURE: UC-007 - Log Out
   /// MODULE: Authentication & Authorization
