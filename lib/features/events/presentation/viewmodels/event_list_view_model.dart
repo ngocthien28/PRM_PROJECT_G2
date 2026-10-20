@@ -24,6 +24,7 @@ class EventFilterViewModel extends Notifier<EventFilter> {
 
   void setFilter(EventFilter filter) => state = filter;
   void setKeyword(String value) => state = state.withKeyword(value);
+  void setSort(EventSort sort) => state = state.withSort(sort);
   void reset() => state = const EventFilter();
 }
 
