@@ -105,18 +105,13 @@ class _EventFilterSheetState extends State<_EventFilterSheet> {
         const SizedBox(height: 12),
         DropdownButtonFormField<EventSort>(
           key: ValueKey('sort-$_sort'),
-          initialValue: _sort,
-          decoration: const InputDecoration(labelText: 'Sort by'),
-          items: const [
-            DropdownMenuItem(
-              value: EventSort.nearest,
-              child: Text('Soonest first'),
-            ),
-            DropdownMenuItem(
-              value: EventSort.popular,
-              child: Text('Most popular'),
-            ),
-          ],
+          value: _sort,
+          decoration: const InputDecoration(labelText: 'Sắp xếp theo'),
+          items: EventSort.values
+              .map(
+                (s) => DropdownMenuItem(value: s, child: Text(s.label)),
+              )
+              .toList(),
           onChanged: (value) =>
               setState(() => _sort = value ?? EventSort.nearest),
         ),
