@@ -4,6 +4,7 @@ import 'package:campushub/features/events/data/event_repository.dart';
 import 'package:campushub/features/events/data/models/event_filter.dart';
 import 'package:campushub/features/events/data/models/event_model.dart';
 import 'package:campushub/features/organizer_events/data/models/event_form_input.dart';
+import 'package:campushub/features/organizer_events/data/models/organizer_dashboard_summary.dart';
 import 'package:campushub/shared/enums/event_status.dart';
 
 EventModel testEvent({
@@ -46,6 +47,23 @@ class FakeEvents implements EventRepository {
   int reads = 0;
   int mutations = 0;
   final categories = <String?>[];
+  int dashboardReads = 0;
+
+  @override
+  Future<OrganizerDashboardSummary> getOrganizerDashboard({
+    required AppUser actor,
+    required DateTime asOf,
+  }) async {
+    dashboardReads++;
+    _requireManager(actor);
+    if (pending != null) await pending;
+    if (failure != null) throw failure!;
+    return OrganizerDashboardSummary.fromEvents(
+      events.where((event) => event.organizerId == actor.uid),
+      organizerId: actor.uid,
+      asOf: asOf,
+    );
+  }
 
   @override
   Future<List<EventModel>> getUpcomingEvents({

@@ -67,7 +67,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('CampusHub Organizer'), findsOneWidget);
+      expect(find.text('Organizer Dashboard'), findsOneWidget);
       expect(find.text('Create Event'), findsOneWidget);
       expect(find.text('TODO'), findsNothing);
 
@@ -164,7 +164,7 @@ void main() {
       // Go to Organizer Dashboard
       router.go(RouteNames.organizer);
       await tester.pumpAndSettle();
-      expect(find.text('CampusHub Organizer'), findsOneWidget);
+      expect(find.text('Organizer Dashboard'), findsOneWidget);
 
       // Dashboard -> Managed Events
       await tester.tap(find.text('View all managed events'));
