@@ -4,6 +4,7 @@ import 'package:campushub/features/auth/presentation/viewmodels/auth_view_model.
 import 'package:campushub/features/clubs/data/models/club_membership.dart';
 import 'package:campushub/features/clubs/data/models/club_model.dart';
 import 'package:campushub/features/clubs/presentation/screens/club_detail_screen.dart';
+import 'package:campushub/features/clubs/presentation/viewmodels/club_view_model.dart';
 import 'package:campushub/features/notifications/presentation/viewmodels/notification_view_model.dart';
 import 'package:campushub/shared/enums/club_status.dart';
 import 'package:campushub/shared/enums/membership_status.dart';
@@ -65,6 +66,8 @@ void main() {
         ProviderScope(
           overrides: [
             clubRepositoryProvider.overrideWithValue(repo),
+            viewClubDetailsActionProvider.overrideWithValue(repo.watchClub),
+            leaveClubActionProvider.overrideWithValue(repo.leaveClub),
             currentUserProvider.overrideWith((ref) => Stream.value(testUser())),
             notificationInboxProvider.overrideWith((ref) => Stream.value([])),
           ],
