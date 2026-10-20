@@ -139,6 +139,26 @@ void main() {
     expect((await repo.getManagedEvents(actor: admin)).single.id, created.id);
   });
 
+  test('managed events are owner-filtered, ordered, and retain cancelled history', () async {
+    final organizer = testUser(uid: 'organizer-1', role: UserRole.organizer);
+    await save(testEvent(id: 'older', startAt: now.add(const Duration(days: 1))));
+    await save(testEvent(id: 'newer', startAt: now.add(const Duration(days: 2))));
+    await save(testEvent(
+      id: 'cancelled',
+      startAt: now.add(const Duration(days: 3)),
+      status: EventStatus.cancelled,
+    ));
+    await save(testEvent(
+      id: 'other-owner',
+      organizerId: 'organizer-2',
+      startAt: now.add(const Duration(days: 4)),
+    ));
+
+    final events = await repo.getManagedEvents(actor: organizer);
+
+    expect(events.map((event) => event.id), ['cancelled', 'newer', 'older']);
+  });
+
   test('create rejects a new published event that starts now or in the past',
       () async {
     final organizer = testUser(uid: 'organizer-1', role: UserRole.organizer);

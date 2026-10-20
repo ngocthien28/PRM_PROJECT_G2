@@ -8,6 +8,7 @@ import 'package:campushub/shared/enums/event_status.dart';
 
 EventModel testEvent({
   String id = 'event-1',
+  String organizerId = 'organizer-1',
   String title = 'Flutter Workshop',
   String category = 'technology',
   EventStatus status = EventStatus.published,
@@ -18,7 +19,7 @@ EventModel testEvent({
   String? posterUrl,
 }) => EventModel(
   id: id,
-  organizerId: 'organizer-1',
+  organizerId: organizerId,
   title: title,
   description:
       'Learn Flutter with fellow students through a hands-on campus workshop.',
