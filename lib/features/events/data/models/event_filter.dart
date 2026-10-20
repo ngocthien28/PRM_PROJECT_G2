@@ -1,6 +1,24 @@
 import 'event_model.dart';
 
-enum EventSort { nearest, popular }
+/// Sort options for the Event Discovery screen (UC-024).
+enum EventSort {
+  /// Sắp xếp theo thời gian sắp diễn ra (gần nhất trước).
+  nearest,
+
+  /// Sắp xếp theo mức độ phổ biến (nhiều đăng ký nhất trước).
+  popular,
+
+  /// Sắp xếp sự kiện còn chỗ trống lên đầu (tiêu chí phù hợp).
+  available,
+}
+
+extension EventSortLabel on EventSort {
+  String get label => switch (this) {
+    EventSort.nearest => 'Sắp diễn ra',
+    EventSort.popular => 'Phổ biến nhất',
+    EventSort.available => 'Còn chỗ trống',
+  };
+}
 
 class EventFilter {
   const EventFilter({
@@ -34,6 +52,15 @@ class EventFilter {
     sort: sort,
   );
 
+  EventFilter withSort(EventSort value) => EventFilter(
+    keyword: keyword,
+    category: category,
+    fromDate: fromDate,
+    toDate: toDate,
+    onlyAvailable: onlyAvailable,
+    sort: value,
+  );
+
   List<EventModel> apply(Iterable<EventModel> events) {
     final query = keyword.trim().toLowerCase();
     final from = fromDate == null
@@ -50,10 +77,18 @@ class EventFilter {
           (until == null || start.isBefore(until)) &&
           (!onlyAvailable || !event.isFull);
     }).toList();
+
     result.sort((a, b) {
-      if (sort == EventSort.popular) {
-        final popularity = b.registeredCount.compareTo(a.registeredCount);
-        if (popularity != 0) return popularity;
+      switch (sort) {
+        case EventSort.popular:
+          final popularity = b.registeredCount.compareTo(a.registeredCount);
+          if (popularity != 0) return popularity;
+        case EventSort.available:
+          // Sắp xếp theo số chỗ trống còn lại (nhiều chỗ trống hơn lên trước)
+          final avail = b.availablePlaces.compareTo(a.availablePlaces);
+          if (avail != 0) return avail;
+        case EventSort.nearest:
+          break;
       }
       final date = a.startAt.compareTo(b.startAt);
       return date != 0 ? date : a.id.compareTo(b.id);
