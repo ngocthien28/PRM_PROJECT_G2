@@ -5,7 +5,7 @@ import '../../features/auth/presentation/viewmodels/auth_view_model.dart';
 import '../../core/routing/route_names.dart';
 import '../../core/theme/app_theme.dart';
 
-enum CampusSection { home, clubs, inbox, admin, moderation }
+enum CampusSection { home, clubs, inbox, admin, moderation, events }
 
 String campusHome(String role) => role == 'admin'
     ? RouteNames.admin
@@ -52,6 +52,13 @@ class CampusScaffold extends ConsumerWidget {
           ? RouteNames.organizer
           : RouteNames.home,
     ),
+    if (role == 'admin')
+      (
+        'Manage Events',
+        Icons.event_note_outlined,
+        CampusSection.events,
+        RouteNames.organizerManagedEvents,
+      ),
     ('Clubs', Icons.groups_outlined, CampusSection.clubs, RouteNames.clubs),
     (
       'Notifications',
@@ -183,23 +190,25 @@ class CampusScaffold extends ConsumerWidget {
                         children: [
                           const _BrandMark(),
                           const SizedBox(width: 10),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'campushub',
-                                style: Theme.of(context).textTheme.titleLarge
-                                    ?.copyWith(fontSize: 22, letterSpacing: -1),
-                              ),
-                              const Text(
-                                'YOUR CAMPUS. YOUR PEOPLE.',
-                                style: TextStyle(
-                                  fontSize: 8,
-                                  letterSpacing: 1.2,
-                                  color: CampusColors.muted,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'campushub',
+                                  style: Theme.of(context).textTheme.titleLarge
+                                      ?.copyWith(fontSize: 22, letterSpacing: -1),
                                 ),
-                              ),
-                            ],
+                                const Text(
+                                  'YOUR CAMPUS. YOUR PEOPLE.',
+                                  style: TextStyle(
+                                    fontSize: 8,
+                                    letterSpacing: 1.2,
+                                    color: CampusColors.muted,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -396,7 +405,11 @@ class CampusScaffold extends ConsumerWidget {
                       label: Text('$unreadCount'),
                       child: Icon(d.$2, size: 22),
                     ),
-                    label: d.$1 == 'Notifications' ? 'Inbox' : d.$1,
+                    label: d.$1 == 'Notifications'
+                        ? 'Inbox'
+                        : d.$1 == 'Manage Events'
+                        ? 'Events'
+                        : d.$1,
                   ),
               ],
             ),

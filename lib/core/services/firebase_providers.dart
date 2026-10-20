@@ -15,6 +15,8 @@ import '../../features/clubs/data/club_repository.dart';
 import '../../features/clubs/data/club_repository_impl.dart';
 import 'club_logo_service.dart';
 import 'cloudinary_club_logo_service.dart';
+import '../../features/auth/data/models/app_user.dart';
+import '../errors/app_exception.dart';
 
 final firebaseInitializationProvider = FutureProvider<void>((ref) async {
   try {
@@ -32,6 +34,29 @@ final firebaseAuthProvider = Provider<FirebaseAuth>(
 final firestoreProvider = Provider<FirebaseFirestore>(
   (ref) => FirebaseFirestore.instance,
 );
+
+// Fresh authenticated context for security-sensitive repository actions.
+final authenticatedActorProvider = Provider<Future<AppUser?> Function()>((ref) {
+  final auth = ref.watch(firebaseAuthProvider);
+  final firestore = ref.watch(firestoreProvider);
+  return () async {
+    final uid = auth.currentUser?.uid;
+    if (uid == null) return null;
+    final snapshot = await firestore
+        .collection('users')
+        .doc(uid)
+        .get(const GetOptions(source: Source.server));
+    if (auth.currentUser?.uid != uid || !snapshot.exists) return null;
+    final actor = AppUser.fromMap(snapshot.data()!);
+    if (actor.uid != uid) {
+      throw const AppException(
+        'Your session is invalid. Please sign in again.',
+        code: 'unauthenticated',
+      );
+    }
+    return actor;
+  };
+});
 final profileRepositoryProvider = Provider<ProfileRepository>(
   (ref) => ProfileRepositoryImpl(ref.watch(firestoreProvider)),
 );
@@ -46,6 +71,7 @@ final registrationRepositoryProvider = Provider<RegistrationRepository>(
   (ref) => RegistrationRepositoryImpl(
     ref.watch(firestoreProvider),
     ref.watch(ticketDaoProvider),
+    ref.watch(authenticatedActorProvider),
   ),
 );
 

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/event_categories.dart';
+import '../../../../core/routing/route_names.dart';
+import '../../../../shared/enums/event_status.dart';
+import '../../../../shared/widgets/app_back_button.dart';
 import '../../../favorites/presentation/viewmodels/favorite_view_model.dart';
 import '../../../registration/data/models/registration_model.dart';
 import '../../../registration/presentation/screens/ticket_screen.dart';
@@ -12,79 +15,91 @@ import '../widgets/event_results.dart';
 import '../widgets/event_format.dart';
 
 class EventDetailScreen extends ConsumerWidget {
-  const EventDetailScreen({super.key, required this.eventId});
+  const EventDetailScreen({
+    super.key,
+    required this.eventId,
+    this.managed = false,
+  });
   final String eventId;
+  final bool managed;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final event = ref.watch(eventDetailProvider(eventId));
-    final isFav = ref.watch(isFavoriteProvider(eventId));
-    final toggleState = ref.watch(favoriteToggleProvider(eventId));
+    final detailProvider = managed
+        ? managedEventDetailProvider(eventId)
+        : eventDetailProvider(eventId);
+    final event = ref.watch(detailProvider);
+    final isFav = managed ? false : ref.watch(isFavoriteProvider(eventId));
+    final toggleState = managed
+        ? const FavoriteToggleState()
+        : ref.watch(favoriteToggleProvider(eventId));
 
     return Scaffold(
       appBar: AppBar(
+        leading: AppBackButton(
+          fallbackLocation: managed
+              ? RouteNames.organizerManagedEvents
+              : RouteNames.home,
+        ),
         title: const Text('Event details'),
         actions: [
           // ── UC-025: Nút yêu thích ──────────────────────────────────
-          toggleState.isLoading
-              ? const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                )
-              : IconButton(
-                  key: const Key('favorite-toggle'),
-                  tooltip: isFav
-                      ? 'Xóa khỏi yêu thích'
-                      : 'Thêm vào yêu thích',
-                  icon: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 250),
-                    child: Icon(
-                      isFav ? Icons.favorite : Icons.favorite_border,
-                      key: ValueKey(isFav),
-                      color: isFav ? Colors.red : null,
+          if (!managed)
+            toggleState.isLoading
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     ),
+                  )
+                : IconButton(
+                    key: const Key('favorite-toggle'),
+                    tooltip: isFav
+                        ? 'Xóa khỏi yêu thích'
+                        : 'Thêm vào yêu thích',
+                    icon: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: Icon(
+                        isFav ? Icons.favorite : Icons.favorite_border,
+                        key: ValueKey(isFav),
+                        color: isFav ? Colors.red : null,
+                      ),
+                    ),
+                    onPressed: () async {
+                      await ref
+                          .read(favoriteToggleProvider(eventId).notifier)
+                          .toggle();
+                      if (context.mounted &&
+                          ref.read(favoriteToggleProvider(eventId)).error !=
+                              null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              ref.read(favoriteToggleProvider(eventId)).error!,
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      } else if (context.mounted) {
+                        final nowFav = ref.read(isFavoriteProvider(eventId));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              nowFav
+                                  ? '❤️ Đã thêm vào danh sách yêu thích'
+                                  : '🤍 Đã xóa khỏi danh sách yêu thích',
+                            ),
+                          ),
+                        );
+                      }
+                    },
                   ),
-                  onPressed: () async {
-                    await ref
-                        .read(favoriteToggleProvider(eventId).notifier)
-                        .toggle();
-                    if (context.mounted &&
-                        ref
-                                .read(favoriteToggleProvider(eventId))
-                                .error !=
-                            null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            ref
-                                .read(favoriteToggleProvider(eventId))
-                                .error!,
-                          ),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    } else if (context.mounted) {
-                      final nowFav = ref.read(isFavoriteProvider(eventId));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            nowFav
-                                ? '❤️ Đã thêm vào danh sách yêu thích'
-                                : '🤍 Đã xóa khỏi danh sách yêu thích',
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                ),
           // ──────────────────────────────────────────────────────────
           IconButton(
             tooltip: 'Refresh event',
-            onPressed: () => ref.invalidate(eventDetailProvider(eventId)),
+            onPressed: () => ref.invalidate(detailProvider),
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -94,7 +109,7 @@ class EventDetailScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => EventFailure(
           error: error,
-          onRetry: () => ref.invalidate(eventDetailProvider(eventId)),
+          onRetry: () => ref.invalidate(detailProvider),
         ),
         data: (value) => SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -112,7 +127,43 @@ class EventDetailScreen extends ConsumerWidget {
                       height: 240,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  if (value.status == EventStatus.cancelled) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        border: Border.all(color: Colors.red.shade300),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.cancel_rounded, color: Colors.red.shade700, size: 28),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Sự kiện đã bị hủy',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    color: Colors.red.shade900,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Sự kiện này đã bị hủy bởi ban tổ chức hoặc ban quản trị.',
+                                  style: TextStyle(fontSize: 12, color: Colors.red.shade800),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   Text(
                     EventCategories.label(value.category).toUpperCase(),
                     style: TextStyle(
@@ -138,10 +189,7 @@ class EventDetailScreen extends ConsumerWidget {
                           const SizedBox(height: 12),
                           Text(
                             value.description,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              height: 1.6,
-                            ),
+                            style: const TextStyle(fontSize: 16, height: 1.6),
                           ),
                         ],
                       );
@@ -154,17 +202,11 @@ class EventDetailScreen extends ConsumerWidget {
                             children: [
                               _Detail(
                                 label: 'Starts',
-                                value: eventDateTime(
-                                  context,
-                                  value.startAt,
-                                ),
+                                value: eventDateTime(context, value.startAt),
                               ),
                               _Detail(
                                 label: 'Ends',
-                                value: eventDateTime(
-                                  context,
-                                  value.endAt,
-                                ),
+                                value: eventDateTime(context, value.endAt),
                               ),
                               _Detail(
                                 label: 'Location',
@@ -183,13 +225,11 @@ class EventDetailScreen extends ConsumerWidget {
                                     : '${value.availablePlaces} places available',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.primary,
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
                               const SizedBox(height: 20),
-                              _JoinEventButton(event: value),
+                              if (!managed) _JoinEventButton(event: value),
                             ],
                           ),
                         ),
@@ -322,8 +362,12 @@ class _JoinEventButton extends ConsumerWidget {
     required bool isFull,
     required AsyncValue<RegistrationModel?> actionState,
   }) {
-    final canJoin = !isPast && !isFull && !actionState.isLoading;
-    final label = isPast
+    final isCancelled = event.status == EventStatus.cancelled;
+    final canJoin =
+        !isPast && !isFull && !isCancelled && !actionState.isLoading;
+    final label = isCancelled
+        ? 'Sự kiện đã bị hủy'
+        : isPast
         ? 'Sự kiện đã kết thúc'
         : isFull
         ? 'Đã hết chỗ'
@@ -336,6 +380,7 @@ class _JoinEventButton extends ConsumerWidget {
       child: FilledButton.icon(
         style: FilledButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 14),
+          backgroundColor: isCancelled ? Colors.grey.shade400 : null,
         ),
         onPressed: canJoin
             ? () async {

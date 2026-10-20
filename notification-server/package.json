@@ -8,7 +8,8 @@
   "scripts": {
     "start": "node src/index.js",
     "test": "node --test test/message.test.js",
-    "test:rules": "node --test --test-concurrency=1 test/rules.integration.js test/worker.integration.js"
+    "test:rules": "node --test --test-concurrency=1 test/rules.integration.js test/worker.integration.js",
+    "test:ownership": "node --test --test-concurrency=1 test/event-ownership.integration.js test/rules.integration.js test/worker.integration.js"
   },
   "dependencies": {
     "firebase-admin": "^14.5.0"
