@@ -22,6 +22,7 @@ import '../../features/notifications/presentation/screens/notification_screen.da
 import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/admin/presentation/screens/moderation_screen.dart';
 import '../../features/favorites/presentation/screens/favorites_screen.dart';
+import '../../features/checkin/presentation/screens/qr_scanner_screen.dart';
 import 'route_guards.dart';
 import 'route_names.dart';
 
@@ -120,6 +121,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '${RouteNames.organizer}/events/:eventId/edit',
         builder: (_, state) =>
             OrganizerEditEventScreen(eventId: state.pathParameters['eventId']!),
+      ),
+      GoRoute(
+        path: '${RouteNames.organizer}/events/:eventId/scan',
+        builder: (_, state) => QrScannerScreen(
+          eventId: state.pathParameters['eventId']!,
+          eventTitle: state.extra is String ? state.extra as String : null,
+        ),
       ),
       GoRoute(
         path: RouteNames.admin,
