@@ -131,6 +131,11 @@ class _EventListScreenState extends ConsumerState<EventListScreen> {
                         icon: const Icon(Icons.tune),
                         label: const Text('Filters'),
                       ),
+                      OutlinedButton.icon(
+                        onPressed: () => context.push(RouteNames.favorites),
+                        icon: const Icon(Icons.favorite_border, size: 18),
+                        label: const Text('Saved'),
+                      ),
                       if (filter.category != null)
                         Chip(
                           label: Text(EventCategories.label(filter.category!)),
