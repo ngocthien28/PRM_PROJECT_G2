@@ -7,13 +7,15 @@ import '../../data/models/event_filter.dart';
 import '../../data/models/event_model.dart';
 
 final eventRepositoryProvider = Provider<EventRepository>(
-  (ref) => EventRepositoryImpl(firestore: ref.watch(firestoreProvider)),
+  (ref) => EventRepositoryImpl(
+    firestore: ref.watch(firestoreProvider),
+    authenticatedActor: ref.watch(authenticatedActorProvider),
+  ),
 );
 
-final eventFilterProvider =
-    NotifierProvider<EventFilterViewModel, EventFilter>(
-      EventFilterViewModel.new,
-    );
+final eventFilterProvider = NotifierProvider<EventFilterViewModel, EventFilter>(
+  EventFilterViewModel.new,
+);
 
 class EventFilterViewModel extends Notifier<EventFilter> {
   @override

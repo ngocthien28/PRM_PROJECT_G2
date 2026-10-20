@@ -84,7 +84,10 @@ final organizerEventActionsProvider = Provider<OrganizerEventActions>((ref) {
       ref.invalidate(eventListProvider);
       ref.invalidate(homeEventsProvider);
     },
-    refreshEvent: (id) => ref.invalidate(eventDetailProvider(id)),
+    refreshEvent: (id) {
+      ref.invalidate(eventDetailProvider(id));
+      ref.invalidate(managedEventDetailProvider(id));
+    },
   );
 });
 
@@ -129,6 +132,7 @@ class OrganizerEventActions {
       actor: await _requireActor(),
     );
     _refresh();
+    refreshEvent?.call(eventId);
   }
 
   Future<AppUser> _requireActor() async {

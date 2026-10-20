@@ -4,6 +4,7 @@ import 'package:campushub/core/routing/route_names.dart';
 import 'package:campushub/core/services/firebase_providers.dart';
 import 'package:campushub/features/events/presentation/viewmodels/event_list_view_model.dart';
 import 'package:campushub/shared/enums/user_role.dart';
+import 'package:campushub/shared/enums/event_status.dart';
 import 'package:campushub/features/notifications/presentation/viewmodels/notification_view_model.dart';
 import 'package:campushub/features/admin/presentation/viewmodels/admin_dashboard_view_model.dart';
 import 'package:campushub/features/admin/data/admin_repository.dart';
@@ -73,6 +74,15 @@ void main() {
     profiles.users[testIdentity.uid] = testUser(role: role);
   }
 
+  Future<void> seedEditEvent({
+    String id = 'edit-1',
+    String title = 'Current Firestore title',
+    String owner = 'uid',
+  }) => db
+      .collection('events')
+      .doc(id)
+      .set(testEvent(id: id, organizerId: owner, title: title).toMap());
+
   testWidgets('organizer navigates from organizer page to Create Event', (
     tester,
   ) async {
@@ -97,6 +107,89 @@ void main() {
 
     expect(currentPath(), RouteNames.organizerManagedEvents);
     expect(find.text('My Managed Events'), findsOneWidget);
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(currentPath(), RouteNames.organizer);
+  });
+
+  testWidgets('dashboard event opens detail and Back returns to dashboard', (
+    tester,
+  ) async {
+    restoreActiveUser(UserRole.organizer);
+    await seedEditEvent();
+    await mount(tester);
+    await tester.tap(find.text('Current Firestore title'));
+    await tester.pumpAndSettle();
+    expect(container.read(appRouterProvider).canPop(), isTrue);
+    expect(find.text('Event details'), findsOneWidget);
+    expect(find.text('Current Firestore title'), findsOneWidget);
+    expect(find.text('Tham gia sự kiện'), findsNothing);
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(currentPath(), RouteNames.organizer);
+  });
+
+  testWidgets(
+    'managed card opens detail; direct detail has a safe Back fallback',
+    (tester) async {
+      restoreActiveUser(UserRole.organizer);
+      await seedEditEvent();
+      await mount(tester);
+      final router = container.read(appRouterProvider);
+      router.go(RouteNames.organizerManagedEvents);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Current Firestore title'));
+      await tester.pumpAndSettle();
+      expect(find.text('Event details'), findsOneWidget);
+      expect(router.canPop(), isTrue);
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(currentPath(), RouteNames.organizerManagedEvents);
+      router.go(RouteNames.organizerEventDetail('edit-1'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(currentPath(), RouteNames.organizerManagedEvents);
+    },
+  );
+
+  for (final status in [
+    EventStatus.draft,
+    EventStatus.cancelled,
+    EventStatus.finished,
+  ]) {
+    testWidgets('owner can open ${status.name} managed detail', (tester) async {
+      restoreActiveUser(UserRole.organizer);
+      await seedEditEvent();
+      await db.collection('events').doc('edit-1').update({
+        'status': status.name,
+      });
+      await mount(tester);
+      container.read(appRouterProvider).go(RouteNames.organizerManagedEvents);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Current Firestore title'));
+      await tester.pumpAndSettle();
+      expect(find.text('Event details'), findsOneWidget);
+      expect(find.text('Current Firestore title'), findsOneWidget);
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(find.text('My Managed Events'), findsOneWidget);
+    });
+  }
+
+  testWidgets('managed detail rejects another organizer event', (tester) async {
+    restoreActiveUser(UserRole.organizer);
+    await seedEditEvent();
+    await db.collection('events').doc('edit-1').update({
+      'organizerId': 'someone-else',
+    });
+    await mount(tester);
+    container
+        .read(appRouterProvider)
+        .go(RouteNames.organizerEventDetail('edit-1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Current Firestore title'), findsNothing);
+    expect(find.byType(BackButton), findsOneWidget);
   });
 
   testWidgets(
@@ -160,15 +253,6 @@ void main() {
     expect(currentPath(), RouteNames.organizerCreateEvent);
     expect(find.byKey(const Key('titleField')), findsOneWidget);
   });
-
-  Future<void> seedEditEvent({
-    String id = 'edit-1',
-    String title = 'Current Firestore title',
-    String owner = 'uid',
-  }) => db
-      .collection('events')
-      .doc(id)
-      .set(testEvent(id: id, organizerId: owner, title: title).toMap());
 
   testWidgets(
     'edit loads by ID without extra, ignores stale extra and re-enters',
