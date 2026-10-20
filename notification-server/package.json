@@ -14,6 +14,7 @@
     "test:all-rules": "node --test --test-concurrency=1 test/event-ownership.integration.js test/storage-rules.integration.js test/rules.integration.js test/worker.integration.js",
     "test:seed": "node --test test/seed.integration.js",
     "test:dashboard": "node --test --test-concurrency=1 test/organizer-dashboard.integration.js",
+    "test:cancel": "node --test --test-concurrency=1 test/cancel-event.integration.js",
     "test:all": "node --test --test-concurrency=1 test/event-ownership.integration.js test/storage-rules.integration.js test/rules.integration.js test/worker.integration.js test/seed.integration.js",
     "seed": "node ../firebase/seed/seed.mjs"
   },
