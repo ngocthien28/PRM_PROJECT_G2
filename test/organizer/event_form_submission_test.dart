@@ -67,7 +67,7 @@ void main() {
 
     expect(result, isFalse);
     expect(controller.state.status, EventFormSubmissionStatus.error);
-    expect(controller.state.errorMessage, 'Unable to save event. Please try again.');
+    expect(controller.state.errorMessage, 'Something went wrong. Please try again.');
   });
 
   test('failure releases the submission lock', () async {

@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/event_categories.dart';
 import '../../../../core/routing/route_names.dart';
+import '../../../favorites/presentation/viewmodels/favorite_view_model.dart';
 import '../../data/models/event_model.dart';
 import 'event_poster.dart';
 import 'event_format.dart';
 
-class EventCard extends StatelessWidget {
+class EventCard extends ConsumerWidget {
   const EventCard({super.key, required this.event});
   final EventModel event;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
+    final isFav = ref.watch(isFavoriteProvider(event.id));
+    final toggleState = ref.watch(favoriteToggleProvider(event.id));
+
     return Card(
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
@@ -21,10 +26,55 @@ class EventCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            EventPoster(
-              url: event.posterUrl,
-              category: event.category,
-              height: 150,
+            Stack(
+              children: [
+                EventPoster(
+                  url: event.posterUrl,
+                  category: event.category,
+                  height: 150,
+                ),
+                // ── UC-025: Nút yêu thích trên card ─────────────────
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Material(
+                    color: Colors.black.withAlpha(100),
+                    borderRadius: BorderRadius.circular(20),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: toggleState.isLoading
+                          ? null
+                          : () => ref
+                              .read(favoriteToggleProvider(event.id).notifier)
+                              .toggle(),
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: toggleState.isLoading
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 200),
+                                child: Icon(
+                                  isFav
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  key: ValueKey(isFav),
+                                  size: 20,
+                                  color: isFav ? Colors.red : Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+                // ────────────────────────────────────────────────────
+              ],
             ),
             Padding(
               padding: const EdgeInsets.all(20),
@@ -52,7 +102,10 @@ class EventCard extends StatelessWidget {
                     text: eventDateTime(context, event.startAt),
                   ),
                   const SizedBox(height: 8),
-                  _Info(icon: Icons.place_outlined, text: event.locationName),
+                  _Info(
+                    icon: Icons.place_outlined,
+                    text: event.locationName,
+                  ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
@@ -62,7 +115,9 @@ class EventCard extends StatelessWidget {
                               ? 'Fully booked'
                               : '${event.availablePlaces} places left',
                           style: TextStyle(
-                            color: event.isFull ? colors.error : colors.primary,
+                            color: event.isFull
+                                ? colors.error
+                                : colors.primary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -93,7 +148,9 @@ class _Info extends StatelessWidget {
         color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
       const SizedBox(width: 8),
-      Expanded(child: Text(text, maxLines: 2, overflow: TextOverflow.ellipsis)),
+      Expanded(
+        child: Text(text, maxLines: 2, overflow: TextOverflow.ellipsis),
+      ),
     ],
   );
 }

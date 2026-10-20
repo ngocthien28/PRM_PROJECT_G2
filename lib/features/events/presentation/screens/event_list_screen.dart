@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/constants/event_categories.dart';
+import '../../../../core/routing/route_names.dart';
 import '../../../../core/utils/debouncer.dart';
 import '../../data/models/event_filter.dart';
 import '../viewmodels/event_list_view_model.dart';
@@ -43,7 +45,6 @@ class _EventListScreenState extends ConsumerState<EventListScreen> {
   Widget build(BuildContext context) {
     final filter = ref.watch(eventFilterProvider);
     final events = ref.watch(filteredEventsProvider);
-    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -129,6 +130,11 @@ class _EventListScreenState extends ConsumerState<EventListScreen> {
                         },
                         icon: const Icon(Icons.tune),
                         label: const Text('Filters'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () => context.push(RouteNames.favorites),
+                        icon: const Icon(Icons.favorite_border, size: 18),
+                        label: const Text('Saved'),
                       ),
                       if (filter.category != null)
                         Chip(
