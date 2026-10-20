@@ -12,6 +12,7 @@ import '../../features/events/presentation/screens/event_detail_screen.dart';
 import '../../features/organizer_events/presentation/screens/organizer_create_event_screen.dart';
 import '../../features/organizer_events/presentation/screens/organizer_dashboard_screen.dart';
 import '../../features/organizer_events/presentation/screens/manage_events_screen.dart';
+import '../../features/organizer_events/presentation/screens/participant_list_screen.dart';
 import '../../features/registration/presentation/screens/my_events_screen.dart';
 import '../../features/registration/presentation/screens/ticket_screen.dart';
 import '../../features/clubs/data/models/club_model.dart';
@@ -100,6 +101,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           onManageEvents: () => context.go(RouteNames.organizerManagedEvents),
           onEditEvent: (event) =>
               context.go(RouteNames.organizerEditEvent(event.id), extra: event),
+          onViewParticipants: (event) =>
+              context.push(RouteNames.organizerEventParticipants(event.id)),
         ),
       ),
       GoRoute(
@@ -128,6 +131,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           eventId: state.pathParameters['eventId']!,
           eventTitle: state.extra is String ? state.extra as String : null,
         ),
+      ),
+      GoRoute(
+        path: '${RouteNames.organizer}/events/:eventId/participants',
+        builder: (_, state) =>
+            ParticipantListScreen(eventId: state.pathParameters['eventId']!),
       ),
       GoRoute(
         path: RouteNames.admin,
