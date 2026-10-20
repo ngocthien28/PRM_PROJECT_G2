@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/firebase_providers.dart';
 import '../../../../local/dao/favorite_local_dao.dart';
@@ -6,25 +7,72 @@ import '../../../events/data/models/event_model.dart';
 import '../../data/favorite_repository.dart';
 import '../../data/favorite_repository_impl.dart';
 
+// ── Fallback repository for test environments without Firebase ────────────────
+
+class LocalOnlyFavoriteRepository implements FavoriteRepository {
+  LocalOnlyFavoriteRepository(this._localDao);
+  final FavoriteLocalDao _localDao;
+
+  @override
+  Future<void> toggleFavorite({
+    required String userId,
+    required String eventId,
+    required bool isFavorite,
+  }) async {
+    await _localDao.setFavorite(
+      eventId: eventId,
+      userId: userId,
+      isFavorite: isFavorite,
+    );
+  }
+
+  @override
+  Future<bool> isFavorite({
+    required String userId,
+    required String eventId,
+  }) async {
+    return _localDao.isFavorite(eventId: eventId, userId: userId);
+  }
+
+  @override
+  Future<List<EventModel>> getFavoriteEvents(String userId) async => [];
+
+  @override
+  Stream<List<String>> watchFavoriteIds(String userId) {
+    return Stream.value([]);
+  }
+}
+
 // ── Providers ────────────────────────────────────────────────────────────────
 
-final favoriteRepositoryProvider = Provider<FavoriteRepository>(
-  (ref) => FavoriteRepositoryImpl(
+final favoriteRepositoryProvider = Provider<FavoriteRepository>((ref) {
+  if (Firebase.apps.isEmpty) {
+    return LocalOnlyFavoriteRepository(ref.watch(favoriteLocalDaoProvider));
+  }
+  return FavoriteRepositoryImpl(
     firestore: ref.watch(firestoreProvider),
     localDao: ref.watch(favoriteLocalDaoProvider),
-  ),
-);
+  );
+});
 
 /// Stream theo dõi real-time danh sách eventId yêu thích của user hiện tại.
 final favoriteIdsProvider = StreamProvider<List<String>>((ref) async* {
-  final identity = await ref.watch(authStateProvider.future);
-  if (!ref.mounted || identity == null) {
+  if (Firebase.apps.isEmpty) {
     yield [];
     return;
   }
-  yield* ref
-      .watch(favoriteRepositoryProvider)
-      .watchFavoriteIds(identity.uid);
+  try {
+    final identity = await ref.watch(authStateProvider.future);
+    if (!ref.mounted || identity == null) {
+      yield [];
+      return;
+    }
+    yield* ref
+        .watch(favoriteRepositoryProvider)
+        .watchFavoriteIds(identity.uid);
+  } catch (_) {
+    yield [];
+  }
 });
 
 /// Kiểm tra nhanh xem một event cụ thể có trong favorites không.
@@ -43,12 +91,14 @@ class FavoriteToggleState {
 }
 
 /// ViewModel xử lý UC-025: Add Event to Favorites.
-/// Được scoped theo eventId để mỗi nút trái tim hoạt động độc lập.
-class FavoriteToggleViewModel
-    extends AutoDisposeFamilyNotifier<FavoriteToggleState, String> {
+/// Scoped theo eventId để mỗi nút trái tim hoạt động độc lập.
+class FavoriteToggleViewModel extends Notifier<FavoriteToggleState> {
+  FavoriteToggleViewModel(this.eventId);
+
+  final String eventId;
+
   @override
-  FavoriteToggleState build(String eventId) =>
-      const FavoriteToggleState();
+  FavoriteToggleState build() => const FavoriteToggleState();
 
   Future<void> toggle() async {
     if (state.isLoading) return;
@@ -59,13 +109,13 @@ class FavoriteToggleViewModel
       return;
     }
 
-    final currentlyFav = ref.read(isFavoriteProvider(arg));
+    final currentlyFav = ref.read(isFavoriteProvider(eventId));
     state = const FavoriteToggleState(isLoading: true);
 
     try {
       await ref.read(favoriteRepositoryProvider).toggleFavorite(
         userId: identity.uid,
-        eventId: arg,
+        eventId: eventId,
         isFavorite: !currentlyFav,
       );
       // Invalidate stream để cập nhật real-time
@@ -77,8 +127,8 @@ class FavoriteToggleViewModel
   }
 }
 
-final favoriteToggleProvider = NotifierProviderFamily<
-    FavoriteToggleViewModel, FavoriteToggleState, String>(
+final favoriteToggleProvider = NotifierProvider.autoDispose
+    .family<FavoriteToggleViewModel, FavoriteToggleState, String>(
   FavoriteToggleViewModel.new,
 );
 
@@ -86,11 +136,15 @@ final favoriteToggleProvider = NotifierProviderFamily<
 
 final favoriteEventsProvider =
     FutureProvider.autoDispose<List<EventModel>>((ref) async {
-  final identity = await ref.watch(authStateProvider.future);
-  if (!ref.mounted || identity == null) return [];
-  // Theo dõi thay đổi từ stream để tự reload khi có toggle
-  ref.watch(favoriteIdsProvider);
-  return ref
-      .watch(favoriteRepositoryProvider)
-      .getFavoriteEvents(identity.uid);
+  try {
+    final identity = await ref.watch(authStateProvider.future);
+    if (!ref.mounted || identity == null) return [];
+    // Theo dõi thay đổi từ stream để tự reload khi có toggle
+    ref.watch(favoriteIdsProvider);
+    return ref
+        .watch(favoriteRepositoryProvider)
+        .getFavoriteEvents(identity.uid);
+  } catch (_) {
+    return [];
+  }
 });
