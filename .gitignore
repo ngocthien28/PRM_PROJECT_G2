@@ -22,5 +22,7 @@ service-account*.json
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+# Generated emulator exports; recreate them from the seed scripts.
+firebase/seed/data/
 .env
 .env.*

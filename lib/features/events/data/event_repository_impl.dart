@@ -91,41 +91,62 @@ class EventRepositoryImpl implements EventRepository {
   });
 
   @override
-  Future<EventModel> getEventById(String eventId, {AppUser? actor}) => _request(
-    () async {
-      if (eventId.trim().isEmpty || eventId.contains('/')) {
-        throw const AppException(
-          'This event is unavailable.',
-          code: 'event-not-found',
-        );
-      }
-      Query<Map<String, dynamic>> query = firestore
-          .collection(FirestoreCollections.events)
-          .where(FieldPath.documentId, isEqualTo: eventId);
-      final supplied = actor;
-      final manager = supplied == null ? null : await _verifiedActor(supplied);
-      if (manager == null) {
-        query = query.where('status', isEqualTo: EventStatus.published.name);
-      } else {
-        _requireEventManager(manager);
-        if (manager.role != UserRole.admin) {
-          query = query.where('organizerId', isEqualTo: manager.uid);
-        }
-      }
-      final snapshot = await query
-          .limit(1)
-          .get(const GetOptions(source: Source.server));
-      if (snapshot.docs.isEmpty) {
+  Future<EventModel> getEventById(
+    String eventId, {
+    AppUser? actor,
+  }) => _request(() async {
+    if (eventId.trim().isEmpty || eventId.contains('/')) {
+      throw const AppException(
+        'This event is unavailable.',
+        code: 'event-not-found',
+      );
+    }
+    final supplied = actor;
+    final manager = supplied == null ? null : await _verifiedActor(supplied);
+    if (manager != null) _requireEventManager(manager);
+    // Ticket holders have get-only access to their event history. A query
+    // (even by document ID) uses list rules and cannot use that permission.
+    final snapshot = await firestore
+        .collection(FirestoreCollections.events)
+        .doc(eventId)
+        .get(const GetOptions(source: Source.server));
+    if (!snapshot.exists) {
+      throw const AppException(
+        'This event is unavailable or you do not have access to it.',
+        code: 'event-not-found',
+      );
+    }
+    final event = EventModel.fromFirestore(snapshot);
+    if (manager != null) {
+      if (manager.role != UserRole.admin && event.organizerId != manager.uid) {
         throw const AppException(
           'This event is unavailable or you do not have access to it.',
           code: 'event-not-found',
         );
       }
-      final event = EventModel.fromFirestore(snapshot.docs.single);
-      if (manager != null) _requireOwnerOrAdmin(event, manager);
-      return event;
-    },
-  );
+    } else if (event.status != EventStatus.published) {
+      final participant = await authenticatedActor?.call();
+      final registration =
+          participant == null ||
+              !participant.isActive ||
+              event.status == EventStatus.draft
+          ? null
+          : await firestore
+                .collection('registrations')
+                .doc('${eventId}_${participant.uid}')
+                .get(const GetOptions(source: Source.server));
+      final data = registration?.data();
+      if (data == null ||
+          data['userId'] != participant?.uid ||
+          data['eventId'] != eventId) {
+        throw const AppException(
+          'This event is unavailable or you do not have access to it.',
+          code: 'event-not-found',
+        );
+      }
+    }
+    return event;
+  });
 
   @override
   Future<List<EventModel>> getManagedEvents({required AppUser actor}) =>

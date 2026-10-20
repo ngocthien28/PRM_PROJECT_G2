@@ -12,6 +12,7 @@ abstract interface class EventRepository {
 
   /// Without [actor], preserves published-only Student discovery behavior.
   /// Manager reads are restricted to owner/admin, including unpublished events.
+  /// Authenticated ticket holders can also read their finished/cancelled events.
   Future<EventModel> getEventById(String eventId, {AppUser? actor});
   Future<List<EventModel>> getManagedEvents({required AppUser actor});
   Future<EventModel> createEvent({

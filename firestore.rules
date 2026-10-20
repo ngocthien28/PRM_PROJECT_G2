@@ -5,19 +5,22 @@ service cloud.firestore {
     function owns(uid) {
       return request.auth != null && request.auth.uid == uid;
     }
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
     function activeUser() {
       return request.auth != null
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active';
+        && userDoc().status == 'active';
     }
     function currentRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return userDoc().role;
     }
     function isEventManager() {
       return activeUser()
         && (currentRole() == 'organizer' || currentRole() == 'admin');
     }
     function isAdmin() {
-      return isEventManager() && currentRole() == 'admin';
+      return activeUser() && currentRole() == 'admin';
     }
     function isStudent() {
       return activeUser() && currentRole() == 'student';
@@ -93,7 +96,7 @@ service cloud.firestore {
         && afterEvent.registeredCount == beforeEvent.registeredCount + 1
         && afterEvent.diff(beforeEvent).affectedKeys().hasOnly(['registeredCount', 'updatedAt'])
         && afterEvent.updatedAt == request.time
-        && mayJoin(eventId, rid) && validRegistration(afterReg, rid)
+        && mayJoin(eventId, rid)
         && afterReg.userId == request.auth.uid && afterReg.eventId == eventId
         && afterReg.status == 'registered' && afterReg.registeredAt == request.time
         && afterReg.checkedInAt == null && afterReg.cancelledAt == null;
@@ -110,7 +113,6 @@ service cloud.firestore {
         && afterEvent.registeredCount == beforeEvent.registeredCount - 1
         && afterEvent.diff(beforeEvent).affectedKeys().hasOnly(['registeredCount', 'updatedAt'])
         && afterEvent.updatedAt == request.time
-        && validRegistration(afterReg, rid)
         && afterReg.diff(beforeReg).affectedKeys().hasOnly(['status', 'cancelledAt'])
         && afterReg.status == 'cancelled' && afterReg.cancelledAt == request.time;
     }
@@ -175,10 +177,10 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys()
               .hasOnly(['status', 'updatedAt']))
         );
-      allow update: if isStudent() && validEventFields(request.resource.data)
+      allow update: if isStudent()
         && (joinedAtomically(eventId, resource.data, request.resource.data)
           || cancelledAtomically(eventId, resource.data, request.resource.data));
-      allow update: if isEventManager() && validEventFields(request.resource.data)
+      allow update: if isEventManager()
         && request.resource.data.get('lastCheckInRegistrationId', null) is string
         && checkedInAtomically(eventId, request.resource.data.lastCheckInRegistrationId,
           resource.data, request.resource.data);
@@ -195,7 +197,10 @@ service cloud.firestore {
           && request.resource.data.platform == 'android'
           && request.resource.data.updatedAt == request.time;
       }
-      allow get: if owns(uid);
+      match /favorites/{eventId} {
+        allow read, write: if owns(uid) && activeUser();
+      }
+      allow get: if owns(uid) || isEventManager();
       allow create: if owns(uid)
         && request.resource.data.keys().hasAll([
           'uid', 'email', 'displayName', 'avatarUrl',
@@ -249,15 +254,21 @@ service cloud.firestore {
       allow get: if isStudent()
         && !exists(/databases/$(database)/documents/registrations/$(registrationId))
         && registrationId.matches('.*_' + request.auth.uid);
-      allow create, update: if isStudent()
+      allow create: if isStudent()
         && validRegistration(request.resource.data, registrationId)
         && request.resource.data.userId == request.auth.uid
-        && (joinedAtomically(request.resource.data.eventId,
-              get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data,
-              getAfter(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data)
-          || cancelledAtomically(request.resource.data.eventId,
-              get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data,
-              getAfter(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data));
+        && joinedAtomically(request.resource.data.eventId,
+             get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data,
+             getAfter(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data);
+      allow update: if isStudent()
+        && validRegistration(request.resource.data, registrationId)
+        && request.resource.data.userId == request.auth.uid
+        && (cancelledAtomically(request.resource.data.eventId,
+             get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data,
+             getAfter(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data)
+           || joinedAtomically(request.resource.data.eventId,
+             get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data,
+             getAfter(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data));
       allow update: if isEventManager()
         && checkedInAtomically(resource.data.eventId, registrationId,
           get(/databases/$(database)/documents/events/$(resource.data.eventId)).data,
