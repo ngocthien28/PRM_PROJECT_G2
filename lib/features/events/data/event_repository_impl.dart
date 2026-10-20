@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/firestore_collections.dart';
 import '../../../core/errors/app_exception.dart';
@@ -11,18 +13,27 @@ import 'models/event_filter.dart';
 import 'models/event_model.dart';
 
 class EventRepositoryImpl implements EventRepository {
-  EventRepositoryImpl({required this.firestore, DateTime Function()? now})
-    : _now = now ?? DateTime.now;
+  EventRepositoryImpl({
+    required this.firestore,
+    DateTime Function()? now,
+    this.requestTimeout = const Duration(seconds: 20),
+  }) : _now = now ?? DateTime.now;
   final FirebaseFirestore firestore;
   final DateTime Function() _now;
+  final Duration requestTimeout;
+  final Map<String, _EventCreateAttempt> _createAttempts = {};
 
-  Future<T> _request<T>(Future<T> Function() action) async {
+  Future<T> _request<T>(
+    Future<T> Function() action, {
+    String? timeoutMessage,
+  }) async {
     try {
       return await action().timeout(
-        const Duration(seconds: 20),
+        requestTimeout,
         onTimeout: () {
-          throw const AppException(
-            'Loading events took too long. Check your connection and try again.',
+          throw AppException(
+            timeoutMessage ??
+                'Loading events took too long. Check your connection and try again.',
             code: 'event-timeout',
           );
         },
@@ -103,8 +114,9 @@ class EventRepositoryImpl implements EventRepository {
   Future<List<EventModel>> getManagedEvents({required AppUser actor}) =>
       _request(() async {
         _requireEventManager(actor);
-        Query<Map<String, dynamic>> query =
-            firestore.collection(FirestoreCollections.events);
+        Query<Map<String, dynamic>> query = firestore.collection(
+          FirestoreCollections.events,
+        );
         if (actor.role != UserRole.admin) {
           query = query.where('organizerId', isEqualTo: actor.uid);
         }
@@ -119,14 +131,62 @@ class EventRepositoryImpl implements EventRepository {
   Future<EventModel> createEvent({
     required EventFormInput input,
     required AppUser actor,
-  }) => _request(() async {
-    _requireEventManager(actor);
-    _requireValidInput(input, requireFutureStart: true);
-    final ref = firestore.collection(FirestoreCollections.events).doc();
-    await ref.set(_createMap(input, actor.uid));
-    final snapshot = await ref.get(const GetOptions(source: Source.server));
-    return EventModel.fromFirestore(snapshot);
-  });
+  }) =>
+      _request(
+        () async {
+          _requireEventManager(actor);
+          // Keep the original write alive across a timeout. Retrying unchanged data
+          // confirms that write instead of allocating a second document or resetting
+          // server timestamps/counters. This protection lasts for this repository
+          // instance; it is not cross-device/restart idempotency.
+          final key = jsonEncode([
+            actor.uid,
+            input.title.trim(),
+            input.description.trim(),
+            input.category.trim(),
+            input.locationName.trim(),
+            input.startAt.microsecondsSinceEpoch,
+            input.endAt.microsecondsSinceEpoch,
+            input.capacity,
+          ]);
+          final existing = _createAttempts[key];
+          _requireValidInput(input, requireFutureStart: existing == null);
+          final attempt =
+              existing ??
+              _EventCreateAttempt(
+                firestore.collection(FirestoreCollections.events).doc(),
+                _createMap(input, actor.uid),
+              );
+          _createAttempts[key] = attempt;
+          try {
+            final event = await attempt.confirm();
+            // A timed-out caller must not evict a write which completed later.
+            // Eviction happens in the successful outer request below.
+            return event;
+          } on FirebaseException catch (error) {
+            // These errors explicitly reject the write. Read-back failures retain
+            // the acknowledged write so retry never creates another document.
+            if (!attempt.writeAcknowledged &&
+                {
+                  'permission-denied',
+                  'unauthenticated',
+                  'invalid-argument',
+                }.contains(error.code)) {
+              if (identical(_createAttempts[key], attempt)) {
+                _createAttempts.remove(key);
+              }
+            }
+            rethrow;
+          }
+        },
+        timeoutMessage:
+            'Saving could not be confirmed yet. Keep these details and retry to check the same event.',
+      ).then((event) {
+        _createAttempts.removeWhere(
+          (_, attempt) => attempt.reference.id == event.id,
+        );
+        return event;
+      });
 
   @override
   Future<EventModel> updateEvent({
@@ -221,10 +281,7 @@ class EventRepositoryImpl implements EventRepository {
       now: _now(),
     );
     if (errors.isNotEmpty) {
-      throw AppException(
-        errors.values.first,
-        code: 'invalid-event-input',
-      );
+      throw AppException(errors.values.first, code: 'invalid-event-input');
     }
   }
 
@@ -257,4 +314,28 @@ class EventRepositoryImpl implements EventRepository {
     'endAt': Timestamp.fromDate(input.endAt.toUtc()),
     'capacity': input.capacity,
   };
+}
+
+class _EventCreateAttempt {
+  _EventCreateAttempt(this.reference, Map<String, dynamic> data) {
+    _write = reference.set(data).then((_) => writeAcknowledged = true);
+  }
+
+  final DocumentReference<Map<String, dynamic>> reference;
+  late final Future<void> _write;
+  bool writeAcknowledged = false;
+
+  Future<EventModel> confirm() async {
+    await _write;
+    final snapshot = await reference.get(
+      const GetOptions(source: Source.server),
+    );
+    if (!snapshot.exists) {
+      throw const AppException(
+        'The event could not be confirmed. Retry with the same details to check again.',
+        code: 'event-create-unconfirmed',
+      );
+    }
+    return EventModel.fromFirestore(snapshot);
+  }
 }
