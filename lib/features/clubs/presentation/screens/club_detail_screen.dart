@@ -14,6 +14,7 @@ import '../../data/models/club_membership.dart';
 import '../../data/models/club_model.dart';
 import '../../domain/usecases/deactivate_club.dart';
 import '../../domain/usecases/join_club.dart';
+import '../../domain/usecases/leave_club.dart';
 import '../viewmodels/club_view_model.dart';
 import 'club_list_screen.dart';
 
@@ -489,7 +490,9 @@ class _ClubDetailScreenState extends ConsumerState<ClubDetailScreen> {
                       : () => _action(() async {
                           final repo = ref.read(clubRepositoryProvider);
                           if (value?.isActive == true) {
-                            await repo.leaveClub(clubId: club.id, actor: user!);
+                            await LeaveClub(
+                              repo,
+                            )(clubId: club.id, actor: user!);
                           } else {
                             await JoinClub(
                               repo,
