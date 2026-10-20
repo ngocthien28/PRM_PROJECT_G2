@@ -27,4 +27,14 @@ class Validators {
     final length = value?.trim().length ?? 0;
     return length < 2 || length > 50 ? 'Name must have 2–50 characters.' : null;
   }
+
+  static String? phone(String? value) {
+    final phone = value?.trim() ?? '';
+    if (phone.isEmpty) return null;
+    if (!RegExp(r'^\+?[0-9 ()-]{7,20}$').hasMatch(phone) ||
+        phone.replaceAll(RegExp(r'\D'), '').length < 7) {
+      return 'Please enter a valid phone number.';
+    }
+    return null;
+  }
 }
