@@ -1,2 +1,24 @@
-// CampusHub skeleton • lib/features/favorites/data/favorite_repository.dart
-// TODO: Implement according to 00_Master_Coder_Implementation_Blueprint.
+import '../../events/data/models/event_model.dart';
+
+/// Contract cho tính năng Favorites (UC-025, UC-026).
+abstract interface class FavoriteRepository {
+  /// Thêm hoặc xóa sự kiện khỏi danh sách yêu thích trên Firestore.
+  /// Tự động đồng bộ trạng thái local SQLite.
+  Future<void> toggleFavorite({
+    required String userId,
+    required String eventId,
+    required bool isFavorite,
+  });
+
+  /// Kiểm tra xem event có trong danh sách yêu thích không (Firestore + local).
+  Future<bool> isFavorite({
+    required String userId,
+    required String eventId,
+  });
+
+  /// Lấy danh sách sự kiện yêu thích đầy đủ của user từ Firestore.
+  Future<List<EventModel>> getFavoriteEvents(String userId);
+
+  /// Stream theo dõi real-time danh sách eventId yêu thích.
+  Stream<List<String>> watchFavoriteIds(String userId);
+}
