@@ -108,10 +108,11 @@ class EventRepositoryImpl implements EventRepository {
         if (actor.role != UserRole.admin) {
           query = query.where('organizerId', isEqualTo: actor.uid);
         }
-        final snapshot = await query.get(const GetOptions(source: Source.server));
-        final events = snapshot.docs.map(EventModel.fromFirestore).toList()
-          ..sort((a, b) => b.startAt.compareTo(a.startAt));
-        return events;
+        final snapshot = await query
+            .orderBy('startAt', descending: true)
+            .limit(100)
+            .get(const GetOptions(source: Source.server));
+        return snapshot.docs.map(EventModel.fromFirestore).toList();
       });
 
   @override
