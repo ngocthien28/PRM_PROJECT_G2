@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import '../../firebase_options.dart';
 import '../../features/notifications/data/notification_repository_impl.dart';
+import '../../features/notifications/domain/usecases/receive_push_notification.dart';
 import 'desktop_notification_listener.dart';
 import 'local_notification_service.dart';
 
@@ -49,25 +50,23 @@ class NotificationService {
       await _local.initialize((_) => openInbox());
       if (_isAndroid) {
         FirebaseMessaging.onBackgroundMessage(campusHubBackgroundMessage);
+        final receivePush = ReceivePushNotification(_local.show);
         _messages = FirebaseMessaging.onMessage.listen((message) async {
-          final recipient = message.data['userId'];
-          if (_uid == null || recipient != _uid) return;
-          final id = message.data['notificationId'] ?? message.messageId;
-          if (id == null || !_seen.add(id)) return;
-          if (_seen.length > 200) _seen.remove(_seen.first);
           try {
-            await _local.show(
-              id,
-              message.notification?.title ?? 'CampusHub',
-              message.notification?.body ?? 'You have a new update.',
+            await receivePush(
+              message: message,
+              signedInUserId: _uid,
+              seenNotificationIds: _seen,
             );
           } catch (error) {
             debugPrint('Local notification failed: $error');
           }
         });
         _opened = FirebaseMessaging.onMessageOpenedApp.listen((message) {
-          if (message.data['userId'] ==
-              FirebaseAuth.instance.currentUser?.uid) {
+          if (receivePush.shouldOpenInbox(
+            message,
+            FirebaseAuth.instance.currentUser?.uid,
+          )) {
             openInbox();
           }
         });
