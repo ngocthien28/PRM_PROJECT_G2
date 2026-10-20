@@ -14,7 +14,34 @@ class AuthRepositoryImpl implements AuthRepository {
       // Validate restored sessions, including accounts disabled on the server.
       // Reload once before listening, avoiding a userChanges/reload loop.
       final restoredUser = auth.currentUser;
-      if (restoredUser != null) await restoredUser.reload();
+      if (restoredUser != null) {
+        try {
+          await restoredUser.reload();
+        } on FirebaseAuthException catch (error) {
+          // A cached session may belong to a different backend (for example,
+          // after switching between the emulator and Firebase).
+          if (!{
+            'invalid-user-token',
+            'user-token-expired',
+            'user-not-found',
+          }.contains(error.code)) {
+            if ({
+              'unknown',
+              'unknown-error',
+              'internal-error',
+            }.contains(error.code)) {
+              throw AppException(
+                'Your saved session could not be restored. Retry, or sign out '
+                'and sign in again.',
+                code: error.code,
+                cause: error,
+              );
+            }
+            rethrow;
+          }
+          await auth.signOut();
+        }
+      }
       await for (final user in auth.userChanges()) {
         yield user == null
             ? null

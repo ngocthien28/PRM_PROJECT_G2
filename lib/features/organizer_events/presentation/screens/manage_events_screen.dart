@@ -355,9 +355,9 @@ class _MetricItem extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
     decoration: BoxDecoration(
-      color: color.withOpacity(0.08),
+      color: color.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: color.withOpacity(0.2)),
+      border: Border.all(color: color.withValues(alpha: 0.2)),
     ),
     child: Row(
       children: [
@@ -424,7 +424,9 @@ class _ManagedEventCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(
-          color: isCancelled ? Colors.red.withOpacity(0.3) : CampusColors.line,
+          color: isCancelled
+              ? Colors.red.withValues(alpha: 0.3)
+              : CampusColors.line,
         ),
       ),
       child: InkWell(
@@ -521,7 +523,9 @@ class _ManagedEventCard extends StatelessWidget {
                               Icon(
                                 Icons.badge_outlined,
                                 size: 13,
-                                color: CampusColors.muted.withOpacity(0.8),
+                                color: CampusColors.muted.withValues(
+                                  alpha: 0.8,
+                                ),
                               ),
                               const SizedBox(width: 4),
                               Expanded(
@@ -633,9 +637,9 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

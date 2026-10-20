@@ -10,28 +10,40 @@ import '../../../profile/data/local_profile_cache.dart';
 
 final authStateProvider = StreamProvider<AuthIdentity?>(
   (ref) => ref.watch(authRepositoryProvider).watchUser(),
+  retry: (_, _) => null,
 );
-final currentUserProvider = StreamProvider<AppUser?>((ref) async* {
-  final identity = await ref.watch(authStateProvider.future);
-  if (!ref.mounted) return;
-  if (identity == null) {
-    yield null;
-  } else {
-    final cached = await ref
-        .read(localProfileCacheProvider)
-        .readProfile(identity.uid);
-    if (cached != null) yield cached;
-    await for (final user
-        in ref.watch(profileRepositoryProvider).watchUser(identity.uid)) {
+final currentUserProvider = StreamProvider<AppUser?>((ref) {
+  final auth = ref.watch(authStateProvider);
+  if (auth.isLoading) return const Stream.empty();
+  if (auth.hasError) return Stream.error(auth.error!, auth.stackTrace);
+  final identity = auth.asData?.value;
+  if (identity == null) return Stream.value(null);
+  final profiles = ref.watch(profileRepositoryProvider);
+  final cache = ref.watch(localProfileCacheProvider);
+
+  Stream<AppUser?> watchProfile() async* {
+    try {
+      final cached = await cache.readProfile(identity.uid);
+      if (!ref.mounted) return;
+      if (cached != null && cached.uid == identity.uid) yield cached;
+    } catch (_) {
+      // Local cache failures must not prevent loading the remote profile.
+    }
+    if (!ref.mounted) return;
+    await for (final user in profiles.watchUser(identity.uid)) {
+      if (!ref.mounted) return;
       if (user != null) {
         try {
-          await ref.read(localProfileCacheProvider).saveProfile(user);
+          await cache.saveProfile(user);
         } catch (_) {}
       }
+      if (!ref.mounted) return;
       yield user;
     }
   }
-});
+
+  return watchProfile();
+}, retry: (_, _) => null);
 final authViewModelProvider =
     NotifierProvider<AuthViewModel, AsyncValue<String?>>(AuthViewModel.new);
 

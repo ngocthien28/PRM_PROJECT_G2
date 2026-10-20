@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_initializing_formals
+
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -98,9 +100,9 @@ class OrganizerEventActions {
     required FutureOr<AppUser?> Function() currentActor,
     required void Function() refresh,
     this.refreshEvent,
-  }) : _repository = repository,
-       _currentActor = currentActor,
-       _refresh = refresh;
+  })  : _repository = repository,
+        _currentActor = currentActor,
+        _refresh = refresh;
 
   final EventRepository _repository;
   final FutureOr<AppUser?> Function() _currentActor;

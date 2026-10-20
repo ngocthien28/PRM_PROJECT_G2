@@ -28,6 +28,12 @@ final firebaseInitializationProvider = FutureProvider<void>((ref) async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    const useEmulator = bool.fromEnvironment('USE_FIREBASE_EMULATOR', defaultValue: false);
+    if (useEmulator) {
+      const host = '127.0.0.1';
+      await FirebaseAuth.instance.useAuthEmulator(host, 9099);
+      FirebaseFirestore.instance.useFirestoreEmulator(host, 8087);
+    }
   } catch (error, stack) {
     debugPrint('Firebase initialization failed: ${error.runtimeType}\n$stack');
     rethrow;
