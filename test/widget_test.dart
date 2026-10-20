@@ -9,6 +9,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'auth/auth_fakes.dart';
 import 'events/event_fakes.dart';
+import 'package:campushub/features/notifications/presentation/viewmodels/notification_view_model.dart';
+import 'package:campushub/features/admin/presentation/viewmodels/admin_dashboard_view_model.dart';
+import 'package:campushub/features/admin/data/admin_repository.dart';
 import 'package:campushub/features/events/presentation/viewmodels/event_list_view_model.dart';
 
 void main() {
@@ -24,6 +27,15 @@ void main() {
         authRepositoryProvider.overrideWithValue(auth),
         profileRepositoryProvider.overrideWithValue(profiles),
         eventRepositoryProvider.overrideWithValue(FakeEvents([])),
+        notificationInboxProvider.overrideWith((ref) => Stream.value([])),
+        adminStatsProvider.overrideWith(
+          (ref) async => const AdminStats(
+            userCount: 1,
+            clubCount: 0,
+            eventCount: 0,
+            activeMembershipCount: 0,
+          ),
+        ),
       ],
     );
   });
