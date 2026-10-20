@@ -110,10 +110,12 @@ class RegistrationActionViewModel extends Notifier<AsyncValue<RegistrationModel?
     state = const AsyncLoading();
     try {
       final repo = ref.read(registrationRepositoryProvider);
+      final ticketDao = ref.read(ticketDaoProvider);
       await repo.cancelRegistration(
         registrationId: registrationId,
         userId: identity.uid,
       );
+      await ticketDao.deleteTicket(registrationId);
 
       state = const AsyncData(null);
 
