@@ -29,6 +29,8 @@ AppException mapError(Object error, StackTrace stack) {
     'invalid-credential' ||
     'INVALID_LOGIN_CREDENTIALS' => 'Email or password is incorrect.',
     'user-disabled' => 'This account has been disabled.',
+    'invalid-user-token' ||
+    'user-token-expired' => 'Your session has expired. Please sign in again.',
     'network-request-failed' || 'unavailable' || 'deadline-exceeded' =>
       'Cannot connect to the server. Check your connection and try again.',
     'too-many-requests' => 'Too many requests. Please try again later.',

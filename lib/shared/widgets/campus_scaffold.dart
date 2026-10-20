@@ -5,7 +5,7 @@ import '../../features/auth/presentation/viewmodels/auth_view_model.dart';
 import '../../core/routing/route_names.dart';
 import '../../core/theme/app_theme.dart';
 
-enum CampusSection { home, clubs, inbox, admin, moderation, events }
+enum CampusSection { home, clubs, inbox, admin, moderation, events, myEvents }
 
 String campusHome(String role) => role == 'admin'
     ? RouteNames.admin
@@ -58,6 +58,13 @@ class CampusScaffold extends ConsumerWidget {
         Icons.event_note_outlined,
         CampusSection.events,
         RouteNames.organizerManagedEvents,
+      ),
+    if (role == 'student')
+      (
+        'My Events',
+        Icons.confirmation_number_outlined,
+        CampusSection.myEvents,
+        RouteNames.myEvents,
       ),
     ('Clubs', Icons.groups_outlined, CampusSection.clubs, RouteNames.clubs),
     (

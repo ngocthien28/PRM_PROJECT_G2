@@ -1,9 +1,12 @@
+import 'package:campushub/features/profile/data/local_profile_cache.dart';
 import 'dart:async';
 import 'package:campushub/core/errors/app_exception.dart';
 import 'package:campushub/core/services/firebase_providers.dart';
 import 'package:campushub/features/auth/presentation/screens/login_screen.dart';
 import 'package:campushub/features/auth/presentation/screens/register_screen.dart';
 import 'package:campushub/features/auth/presentation/screens/forgot_password_screen.dart';
+import 'package:campushub/features/auth/presentation/screens/splash_screen.dart';
+import 'package:campushub/features/auth/presentation/viewmodels/auth_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,6 +29,7 @@ void main() {
         overrides: [
           authRepositoryProvider.overrideWithValue(auth),
           profileRepositoryProvider.overrideWithValue(profiles),
+          localProfileCacheProvider.overrideWithValue(FakeLocalProfileCache()),
         ],
         child: MaterialApp(home: screen),
       ),
@@ -143,4 +147,32 @@ void main() {
       isNotNull,
     );
   });
+
+  testWidgets(
+    'denied profile shows recovery actions without an uncaught error',
+    (tester) async {
+      auth.identity = testIdentity;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authRepositoryProvider.overrideWithValue(auth),
+            currentUserProvider.overrideWith(
+              (ref) => Stream.error(
+                const AppException('Access denied.', code: 'permission-denied'),
+              ),
+            ),
+          ],
+          child: const MaterialApp(home: SplashScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Your profile cannot be accessed'),
+        findsOneWidget,
+      );
+      expect(find.text('Sign out'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

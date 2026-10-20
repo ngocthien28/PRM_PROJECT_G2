@@ -51,7 +51,7 @@ class HomeScreen extends ConsumerWidget {
         ),
         IconButton(
           tooltip: 'My events',
-          onPressed: () => context.push(RouteNames.myEvents),
+          onPressed: () => context.go(RouteNames.myEvents),
           icon: const Icon(Icons.confirmation_number_outlined, size: 22),
         ),
       ],

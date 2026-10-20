@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/errors/app_exception.dart';
 import '../viewmodels/auth_view_model.dart';
 
 class SplashScreen extends ConsumerWidget {
@@ -23,7 +24,11 @@ class SplashScreen extends ConsumerWidget {
     final error = auth.hasError
         ? auth.error.toString()
         : profile.hasError
-        ? profile.error.toString()
+        ? profile.error is AppException &&
+                  (profile.error as AppException).code == 'permission-denied'
+              ? 'Your profile cannot be accessed. Sign out and sign in again. '
+                    'If the problem continues, contact the project administrator.'
+              : profile.error.toString()
         : disabled
         ? 'This account is disabled or unavailable. Contact the administrator.'
         : missing

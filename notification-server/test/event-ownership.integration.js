@@ -23,7 +23,9 @@ before(async () => {
   if (process.env.FIRESTORE_EMULATOR_HOST !== '127.0.0.1:8087') {
     throw new Error('Run with the local Firestore Emulator at 127.0.0.1:8087. Production is forbidden.');
   }
-  env = await initializeTestEnvironment({projectId: 'demo-campushub', firestore: {
+  const projectId = process.env.CAMPUSHUB_RULES_TEST_PROJECT || 'demo-campushub';
+  if (!projectId.startsWith('demo-')) throw new Error('Rules tests require a demo project.');
+  env = await initializeTestEnvironment({projectId, firestore: {
     host: '127.0.0.1', port: 8087, rules: readFileSync(new URL('../../firestore.rules', import.meta.url), 'utf8'),
   }});
 });
@@ -182,6 +184,29 @@ test('cancel and rejoin preserve correct counter and reject duplicate cancellati
   await assertFails(cancel(dbFor('s1')));
   await assertSucceeds(join(dbFor('s1'), 'e1', 's1'));
   assert.equal((await getDoc(doc(dbFor('s1'), 'events/e1'))).data().registeredCount, 1);
+});
+
+test('demo ticket cancellation stays within the rules expression budget', async () => {
+  const eid = 'demo_event_outdoor_badminton_04', uid = 'demo_student_01';
+  await env.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, 'users', uid), {uid, role: 'student', status: 'active'});
+    await setDoc(doc(db, 'events', eid), event('o1', {registeredCount: 1}));
+    await setDoc(doc(db, 'registrations', `${eid}_${uid}`), registration(eid, uid));
+  });
+  await assertSucceeds(cancel(dbFor(uid), eid, uid));
+  assert.equal((await getDoc(doc(dbFor(uid), 'events', eid))).data().registeredCount, 0);
+});
+
+test('ticket history uses get permission without exposing unpublished event lists', async () => {
+  await env.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, 'events/finished'), event('o1', {status: 'finished', registeredCount: 1, checkedInCount: 1}));
+    await setDoc(doc(db, 'registrations/finished_s1'), registration('finished', 's1', {status: 'checkedIn', checkedInAt: Timestamp.now()}));
+  });
+  await assertSucceeds(getDoc(doc(dbFor('s1'), 'events/finished')));
+  await assertFails(getDoc(doc(dbFor('s2'), 'events/finished')));
+  await assertFails(getDocs(query(collection(dbFor('s1'), 'events'), where('status', '==', 'finished'))));
 });
 test('cancel without counter, wrong-user cancel and late cancel are denied', async () => {
   await assertFails(updateDoc(doc(dbFor('s1'), 'registrations/e1_s1'), {status: 'cancelled', cancelledAt: serverTimestamp()}));
