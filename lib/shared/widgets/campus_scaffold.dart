@@ -27,8 +27,10 @@ class CampusScaffold extends ConsumerWidget {
     this.signingOut = false,
     this.unreadCount = 0,
     this.signOutKey,
+    this.sidebarWidth = 232,
   });
   final Key? signOutKey;
+  final double sidebarWidth;
   final int unreadCount;
   final String title, role, userName;
   final CampusSection section;
@@ -183,7 +185,7 @@ class CampusScaffold extends ConsumerWidget {
           children: [
             if (wide)
               Container(
-                width: 232,
+                width: sidebarWidth,
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   border: Border(right: BorderSide(color: CampusColors.line)),
@@ -204,7 +206,10 @@ class CampusScaffold extends ConsumerWidget {
                                 Text(
                                   'campushub',
                                   style: Theme.of(context).textTheme.titleLarge
-                                      ?.copyWith(fontSize: 22, letterSpacing: -1),
+                                      ?.copyWith(
+                                        fontSize: 22,
+                                        letterSpacing: -1,
+                                      ),
                                 ),
                                 const Text(
                                   'YOUR CAMPUS. YOUR PEOPLE.',

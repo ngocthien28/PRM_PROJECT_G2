@@ -1,5 +1,6 @@
 import '../../auth/data/models/app_user.dart';
 import '../../organizer_events/data/models/event_form_input.dart';
+import '../../organizer_events/data/models/organizer_dashboard_summary.dart';
 import 'models/event_filter.dart';
 import 'models/event_model.dart';
 
@@ -15,6 +16,13 @@ abstract interface class EventRepository {
   /// Authenticated ticket holders can also read their finished/cancelled events.
   Future<EventModel> getEventById(String eventId, {AppUser? actor});
   Future<List<EventModel>> getManagedEvents({required AppUser actor});
+
+  /// Full owner-scoped totals and bounded previews; never a single list page.
+  /// Admins also see only their own events here, unlike system management.
+  Future<OrganizerDashboardSummary> getOrganizerDashboard({
+    required AppUser actor,
+    required DateTime asOf,
+  });
   Future<EventModel> createEvent({
     required EventFormInput input,
     required AppUser actor,
