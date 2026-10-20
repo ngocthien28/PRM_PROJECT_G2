@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -28,6 +29,7 @@ class EventRepositoryImpl implements EventRepository {
   /// repository tests may supply their trusted actor directly without Firebase.
   final Future<AppUser?> Function()? authenticatedActor;
   final Map<String, _EventCreateAttempt> _createAttempts = {};
+  final _cancelAttempts = <(String, String), Future<EventModel>>{};
 
   Future<T> _request<T>(
     Future<T> Function() action, {
@@ -321,6 +323,28 @@ class EventRepositoryImpl implements EventRepository {
     actor = await _verifiedActor(actor);
     _requireEventManager(actor);
     final ref = _eventDocument(eventId);
+    final key = (actor.uid, ref.id);
+    final pending = _cancelAttempts[key];
+    if (pending != null) return pending;
+    // A caller timeout does not cancel a native transaction. Retry joins the
+    // original attempt until it settles, rather than starting another write.
+    final attempt = _cancelEvent(ref, actor);
+    _cancelAttempts[key] = attempt;
+    unawaited(
+      attempt.then<void>(
+        (_) => _cancelAttempts.remove(key),
+        onError: (Object _, StackTrace _) {
+          _cancelAttempts.remove(key);
+        },
+      ),
+    );
+    return attempt;
+  });
+
+  Future<EventModel> _cancelEvent(
+    DocumentReference<Map<String, dynamic>> ref,
+    AppUser actor,
+  ) async {
     await firestore.runTransaction((tx) async {
       final snapshot = await tx.get(ref);
       if (!snapshot.exists) {
@@ -340,7 +364,7 @@ class EventRepositoryImpl implements EventRepository {
     return EventModel.fromFirestore(
       await ref.get(const GetOptions(source: Source.server)),
     );
-  });
+  }
 
   DocumentReference<Map<String, dynamic>> _eventDocument(String eventId) {
     final id = eventId.trim();

@@ -205,15 +205,15 @@ void main() {
         await tester.pumpAndSettle();
 
         // Tap Cancel event menu option
-        await tester.tap(find.text('Cancel event'));
+        await tester.tap(find.text('Cancel Event'));
         await tester.pumpAndSettle();
 
         // Dialog appears with Keep event and Cancel event
-        expect(find.text('Cancel event?'), findsOneWidget);
-        expect(find.text('Keep event'), findsOneWidget);
+        expect(find.byKey(const Key('cancelEventDialog')), findsOneWidget);
+        expect(find.text('Keep Event'), findsOneWidget);
 
         // Tap Keep event first -> should NOT cancel
-        await tester.tap(find.text('Keep event'));
+        await tester.tap(find.text('Keep Event'));
         await tester.pumpAndSettle();
 
         expect(repo.events.first.status, EventStatus.published);
@@ -221,11 +221,11 @@ void main() {
         // Open popup menu again
         await tester.tap(find.byTooltip('Manage event').first);
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Cancel event'));
+        await tester.tap(find.text('Cancel Event'));
         await tester.pumpAndSettle();
 
         // Tap Cancel event in dialog -> should cancel
-        await tester.tap(find.widgetWithText(FilledButton, 'Cancel event'));
+        await tester.tap(find.widgetWithText(FilledButton, 'Cancel Event'));
         await tester.pumpAndSettle();
 
         expect(repo.events.first.status, EventStatus.cancelled);
