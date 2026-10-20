@@ -20,15 +20,19 @@ void main() {
   });
   Future<void> save(EventModel event) =>
       db.collection('events').doc(event.id).set(event.toMap());
-  EventFormInput formInput({String title = 'Organizer Flutter Workshop'}) =>
+  EventFormInput formInput({
+    String title = 'Organizer Flutter Workshop',
+    DateTime? startAt,
+    DateTime? endAt,
+  }) =>
       EventFormInput(
         title: title,
         description:
             'A practical hands-on Flutter workshop for CampusHub students.',
         category: 'technology',
         locationName: 'Hall A',
-        startAt: DateTime.utc(2030, 6, 1, 9),
-        endAt: DateTime.utc(2030, 6, 1, 11),
+        startAt: startAt ?? DateTime.utc(2030, 6, 1, 9),
+        endAt: endAt ?? DateTime.utc(2030, 6, 1, 11),
         capacity: 100,
       );
 
@@ -120,6 +124,10 @@ void main() {
       ),
       throwsA(isA<AppException>().having((e) => e.code, 'code', 'event-forbidden')),
     );
+    await expectLater(
+      repo.cancelEvent(eventId: created.id, actor: otherOrganizer),
+      throwsA(isA<AppException>().having((e) => e.code, 'code', 'event-forbidden')),
+    );
 
     final updated = await repo.updateEvent(
       eventId: created.id,
@@ -129,6 +137,94 @@ void main() {
     expect(updated.title, 'Admin override');
     expect((await repo.getManagedEvents(actor: owner)).single.id, created.id);
     expect((await repo.getManagedEvents(actor: admin)).single.id, created.id);
+  });
+
+  test('create rejects a new published event that starts now or in the past',
+      () async {
+    final organizer = testUser(uid: 'organizer-1', role: UserRole.organizer);
+    await expectLater(
+      repo.createEvent(
+        input: formInput(
+          startAt: now,
+          endAt: now.add(const Duration(hours: 2)),
+        ),
+        actor: organizer,
+      ),
+      throwsA(
+        isA<AppException>().having(
+          (error) => error.code,
+          'code',
+          'invalid-event-input',
+        ),
+      ),
+    );
+  });
+
+  test('update allows an existing event whose start is in the past', () async {
+    final organizer = testUser(uid: 'organizer-1', role: UserRole.organizer);
+    final existing = testEvent(
+      id: 'started-event',
+      startAt: now.subtract(const Duration(hours: 2)),
+    );
+    await save(existing);
+
+    final updated = await repo.updateEvent(
+      eventId: existing.id,
+      input: formInput(
+        title: 'Updated started event',
+        startAt: existing.startAt,
+        endAt: existing.endAt,
+      ),
+      actor: organizer,
+    );
+
+    expect(updated.title, 'Updated started event');
+  });
+
+  test('update preserves protected ownership, counters and poster URL', () async {
+    final organizer = testUser(uid: 'organizer-1', role: UserRole.organizer);
+    final existing = testEvent(
+      id: 'protected-fields',
+      registeredCount: 4,
+      checkedInCount: 2,
+      posterUrl: 'https://example.invalid/poster.png',
+    );
+    await save(existing);
+
+    final updated = await repo.updateEvent(
+      eventId: existing.id,
+      input: formInput(title: 'Updated title'),
+      actor: organizer,
+    );
+
+    expect(updated.organizerId, existing.organizerId);
+    expect(updated.registeredCount, existing.registeredCount);
+    expect(updated.checkedInCount, existing.checkedInCount);
+    expect(updated.posterUrl, existing.posterUrl);
+  });
+
+  test('update and cancel report a missing event as not found', () async {
+    final organizer = testUser(uid: 'organizer-1', role: UserRole.organizer);
+
+    for (final action in [
+      () => repo.updateEvent(
+            eventId: 'missing',
+            input: formInput(),
+            actor: organizer,
+          ),
+      () => repo.cancelEvent(eventId: 'missing', actor: organizer),
+    ]) {
+      await expectLater(
+        action(),
+        throwsA(
+          isA<AppException>().having(
+            (error) => error.code,
+            'code',
+            'event-not-found',
+          ),
+        ),
+      );
+    }
   });
 
   test(
