@@ -19,6 +19,13 @@ service cloud.firestore {
     function isAdmin() {
       return isEventManager() && currentRole() == 'admin';
     }
+    function isStudent() {
+      return activeUser() && currentRole() == 'student';
+    }
+    function managesEvent(eventId) {
+      return isEventManager() && (isAdmin()
+        || get(/databases/$(database)/documents/events/$(eventId)).data.organizerId == request.auth.uid);
+    }
     function validEventFields(data) {
       return data.keys().hasAll([
           'organizerId', 'clubId', 'title', 'titleLower', 'description',
@@ -30,15 +37,18 @@ service cloud.firestore {
           'organizerId', 'clubId', 'title', 'titleLower', 'description',
           'category', 'locationName', 'latitude', 'longitude', 'startAt',
           'endAt', 'capacity', 'registeredCount', 'checkedInCount',
-          'posterUrl', 'status', 'createdAt', 'updatedAt'
+          'posterUrl', 'status', 'createdAt', 'updatedAt', 'lastCheckInRegistrationId'
         ])
         && data.organizerId is string
         && (data.clubId == null || data.clubId is string)
         && data.title is string && data.title.size() >= 3 && data.title.size() <= 120
-        && data.titleLower is string
+        && data.title == data.title.trim()
+        && data.titleLower == data.title.lower()
         && data.description is string && data.description.size() >= 20
+        && data.description == data.description.trim()
         && data.category in ['technology', 'sport', 'workshop', 'music']
         && data.locationName is string && data.locationName.size() > 0
+        && data.locationName == data.locationName.trim()
         && (data.latitude == null || data.latitude is number)
         && (data.longitude == null || data.longitude is number)
         && data.startAt is timestamp && data.endAt is timestamp
@@ -50,7 +60,75 @@ service cloud.firestore {
         && data.checkedInCount <= data.registeredCount
         && (data.posterUrl == null || data.posterUrl is string)
         && data.status in ['draft', 'published', 'cancelled', 'finished']
-        && data.createdAt is timestamp && data.updatedAt is timestamp;
+        && data.createdAt is timestamp && data.updatedAt is timestamp
+        && (data.get('lastCheckInRegistrationId', null) == null
+          || data.lastCheckInRegistrationId is string);
+    }
+    function validRegistration(data, registrationId) {
+      return data.keys().hasAll(['eventId', 'userId', 'status', 'qrToken',
+          'registeredAt', 'cancelledAt', 'checkedInAt'])
+        && data.keys().hasOnly(['eventId', 'userId', 'status', 'qrToken',
+          'registeredAt', 'cancelledAt', 'checkedInAt'])
+        && data.eventId is string && data.eventId.size() > 0
+        && data.userId is string && data.userId.size() > 0
+        && registrationId == data.eventId + '_' + data.userId
+        && data.status in ['registered', 'cancelled', 'checkedIn']
+        && data.qrToken is string && data.qrToken.size() > 0 && data.qrToken.size() <= 1024
+        && data.registeredAt is timestamp
+        && (data.cancelledAt == null || data.cancelledAt is timestamp)
+        && (data.checkedInAt == null || data.checkedInAt is timestamp);
+    }
+    function mayJoin(eventId, registrationId) {
+      let path = /databases/$(database)/documents/registrations/$(registrationId);
+      return !exists(path) || (get(path).data.status == 'cancelled'
+        && get(path).data.checkedInAt == null
+        && get(path).data.userId == request.auth.uid
+        && get(path).data.eventId == eventId);
+    }
+    function joinedAtomically(eventId, beforeEvent, afterEvent) {
+      let rid = eventId + '_' + request.auth.uid;
+      let afterReg = getAfter(/databases/$(database)/documents/registrations/$(rid)).data;
+      return beforeEvent.status == 'published' && beforeEvent.startAt > request.time
+        && beforeEvent.registeredCount < beforeEvent.capacity
+        && afterEvent.registeredCount == beforeEvent.registeredCount + 1
+        && afterEvent.diff(beforeEvent).affectedKeys().hasOnly(['registeredCount', 'updatedAt'])
+        && afterEvent.updatedAt == request.time
+        && mayJoin(eventId, rid) && validRegistration(afterReg, rid)
+        && afterReg.userId == request.auth.uid && afterReg.eventId == eventId
+        && afterReg.status == 'registered' && afterReg.registeredAt == request.time
+        && afterReg.checkedInAt == null && afterReg.cancelledAt == null;
+    }
+    function cancelledAtomically(eventId, beforeEvent, afterEvent) {
+      let rid = eventId + '_' + request.auth.uid;
+      let path = /databases/$(database)/documents/registrations/$(rid);
+      let beforeReg = get(path).data;
+      let afterReg = getAfter(path).data;
+      return beforeReg.userId == request.auth.uid && beforeReg.eventId == eventId
+        && beforeReg.status == 'registered' && beforeReg.checkedInAt == null
+        && request.time <= beforeEvent.startAt - duration.value(2, 'h')
+        && beforeEvent.registeredCount > 0
+        && afterEvent.registeredCount == beforeEvent.registeredCount - 1
+        && afterEvent.diff(beforeEvent).affectedKeys().hasOnly(['registeredCount', 'updatedAt'])
+        && afterEvent.updatedAt == request.time
+        && validRegistration(afterReg, rid)
+        && afterReg.diff(beforeReg).affectedKeys().hasOnly(['status', 'cancelledAt'])
+        && afterReg.status == 'cancelled' && afterReg.cancelledAt == request.time;
+    }
+    function checkedInAtomically(eventId, registrationId, beforeEvent, afterEvent) {
+      let path = /databases/$(database)/documents/registrations/$(registrationId);
+      let beforeReg = get(path).data;
+      let afterReg = getAfter(path).data;
+      return managesEvent(eventId) && beforeEvent.status == 'published'
+        && beforeReg.eventId == eventId && beforeReg.status == 'registered'
+        && beforeReg.checkedInAt == null
+        && validRegistration(afterReg, registrationId)
+        && afterReg.diff(beforeReg).affectedKeys().hasOnly(['status', 'checkedInAt'])
+        && afterReg.status == 'checkedIn' && afterReg.checkedInAt == request.time
+        && afterEvent.checkedInCount == beforeEvent.checkedInCount + 1
+        && afterEvent.diff(beforeEvent).affectedKeys()
+          .hasOnly(['checkedInCount', 'updatedAt', 'lastCheckInRegistrationId'])
+        && afterEvent.lastCheckInRegistrationId == registrationId
+        && afterEvent.updatedAt == request.time;
     }
     match /events/{eventId} {
       // Discovery queries must include status == published.
@@ -60,12 +138,17 @@ service cloud.firestore {
           isAdmin() || resource.data.organizerId == request.auth.uid
         ))
       );
+      // Registered students may still read the event for cancellation/history.
+      // This is get-only; it does not broaden discovery list queries.
+      allow get: if activeUser()
+        && exists(/databases/$(database)/documents/registrations/$(eventId + '_' + request.auth.uid));
       allow create: if isEventManager()
         && request.resource.data.organizerId == request.auth.uid
         && request.resource.data.status == 'published'
         && request.resource.data.startAt > request.time
         && request.resource.data.registeredCount == 0
         && request.resource.data.checkedInCount == 0
+        && request.resource.data.get('lastCheckInRegistrationId', null) == null
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time
         && validEventFields(request.resource.data);
@@ -81,6 +164,10 @@ service cloud.firestore {
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.updatedAt == request.time
         && validEventFields(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title', 'titleLower', 'description', 'category', 'locationName',
+          'startAt', 'endAt', 'capacity', 'status', 'updatedAt'
+        ])
         && (
           (resource.data.status != 'cancelled'
             && request.resource.data.status == resource.data.status)
@@ -88,6 +175,13 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys()
               .hasOnly(['status', 'updatedAt']))
         );
+      allow update: if isStudent() && validEventFields(request.resource.data)
+        && (joinedAtomically(eventId, resource.data, request.resource.data)
+          || cancelledAtomically(eventId, resource.data, request.resource.data));
+      allow update: if isEventManager() && validEventFields(request.resource.data)
+        && request.resource.data.get('lastCheckInRegistrationId', null) is string
+        && checkedInAtomically(eventId, request.resource.data.lastCheckInRegistrationId,
+          resource.data, request.resource.data);
       allow delete: if false;
     }
     match /users/{uid} {
@@ -128,14 +222,25 @@ service cloud.firestore {
     match /registrations/{registrationId} {
       allow read: if activeUser() && (
         resource.data.userId == request.auth.uid
-        || isEventManager()
+        || managesEvent(resource.data.eventId)
       );
-      allow create: if activeUser()
-        && request.resource.data.userId == request.auth.uid;
-      allow update: if activeUser() && (
-        resource.data.userId == request.auth.uid
-        || isEventManager()
-      );
+      // joinEvent reads its deterministic document before the first create.
+      allow get: if isStudent()
+        && !exists(/databases/$(database)/documents/registrations/$(registrationId))
+        && registrationId.matches('.*_' + request.auth.uid);
+      allow create, update: if isStudent()
+        && validRegistration(request.resource.data, registrationId)
+        && request.resource.data.userId == request.auth.uid
+        && (joinedAtomically(request.resource.data.eventId,
+              get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data,
+              getAfter(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data)
+          || cancelledAtomically(request.resource.data.eventId,
+              get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data,
+              getAfter(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data));
+      allow update: if isEventManager()
+        && checkedInAtomically(resource.data.eventId, registrationId,
+          get(/databases/$(database)/documents/events/$(resource.data.eventId)).data,
+          getAfter(/databases/$(database)/documents/events/$(resource.data.eventId)).data);
       allow delete: if false;
     }
     match /clubs/{clubId} {
