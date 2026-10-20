@@ -3,6 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/routing/app_router.dart';
 import 'core/services/firebase_providers.dart';
 import 'core/theme/app_theme.dart';
+import 'core/services/notification_service.dart';
+import 'core/routing/route_names.dart';
+
+final pushInitializationProvider = FutureProvider<void>((ref) async {
+  await ref.watch(firebaseInitializationProvider.future);
+  final router = ref.watch(appRouterProvider);
+  await NotificationService.instance.start(
+    () => router.push(RouteNames.notifications),
+  );
+});
 
 String firebaseInitializationMessage(Object error) {
   if (error is UnsupportedError &&
@@ -20,6 +30,12 @@ class CampusHubApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final initialization = ref.watch(firebaseInitializationProvider);
+    if (initialization.hasValue) {
+      final push = ref.watch(pushInitializationProvider);
+      if (push.hasError) {
+        debugPrint('Push initialization failed: ${push.error}');
+      }
+    }
     return initialization.when(
       skipLoadingOnRefresh: false,
       data: (_) => MaterialApp.router(

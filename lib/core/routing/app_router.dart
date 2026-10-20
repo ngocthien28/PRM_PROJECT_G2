@@ -20,6 +20,7 @@ import '../../features/clubs/presentation/screens/club_list_screen.dart';
 import '../../features/clubs/presentation/screens/manage_club_screen.dart';
 import '../../features/notifications/presentation/screens/notification_screen.dart';
 import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
+import '../../features/admin/presentation/screens/moderation_screen.dart';
 import 'route_guards.dart';
 import 'route_names.dart';
 
@@ -42,6 +43,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       actionLoading: ref.read(authViewModelProvider).isLoading,
     ),
     routes: [
+      GoRoute(
+        path: '/admin/moderation',
+        builder: (_, _) => const ModerationScreen(),
+      ),
       GoRoute(path: '/', redirect: (_, _) => RouteNames.splash),
       GoRoute(path: RouteNames.splash, builder: (_, _) => const SplashScreen()),
       GoRoute(path: RouteNames.login, builder: (_, _) => const LoginScreen()),
@@ -124,6 +129,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '${RouteNames.tickets}/:id',
         builder: (_, state) =>
             TicketScreen(registrationId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: RouteNames.favorites,
+        builder: (_, _) => const FavoritesScreen(),
       ),
     ],
   );

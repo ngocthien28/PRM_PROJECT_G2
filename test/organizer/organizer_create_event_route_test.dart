@@ -4,6 +4,9 @@ import 'package:campushub/core/routing/route_names.dart';
 import 'package:campushub/core/services/firebase_providers.dart';
 import 'package:campushub/features/events/presentation/viewmodels/event_list_view_model.dart';
 import 'package:campushub/shared/enums/user_role.dart';
+import 'package:campushub/features/notifications/presentation/viewmodels/notification_view_model.dart';
+import 'package:campushub/features/admin/presentation/viewmodels/admin_dashboard_view_model.dart';
+import 'package:campushub/features/admin/data/admin_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,6 +28,15 @@ void main() {
         authRepositoryProvider.overrideWithValue(auth),
         profileRepositoryProvider.overrideWithValue(profiles),
         eventRepositoryProvider.overrideWithValue(FakeEvents([])),
+        notificationInboxProvider.overrideWith((ref) => Stream.value([])),
+        adminStatsProvider.overrideWith(
+          (ref) async => const AdminStats(
+            userCount: 1,
+            clubCount: 0,
+            eventCount: 0,
+            activeMembershipCount: 0,
+          ),
+        ),
       ],
     );
   });
@@ -45,12 +57,8 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  String currentPath() => container
-      .read(appRouterProvider)
-      .routeInformationProvider
-      .value
-      .uri
-      .path;
+  String currentPath() =>
+      container.read(appRouterProvider).routeInformationProvider.value.uri.path;
 
   void restoreActiveUser(UserRole role) {
     auth.identity = testIdentity;
@@ -123,23 +131,27 @@ void main() {
     expect(find.text('Sign in'), findsWidgets);
   });
 
-  testWidgets('create route injects persistence without a fake success message', (
-    tester,
-  ) async {
-    restoreActiveUser(UserRole.organizer);
-    await mount(tester);
-    container.read(appRouterProvider).go(RouteNames.organizerCreateEvent);
-    await tester.pumpAndSettle();
+  testWidgets(
+    'create route injects persistence without a fake success message',
+    (tester) async {
+      restoreActiveUser(UserRole.organizer);
+      await mount(tester);
+      container.read(appRouterProvider).go(RouteNames.organizerCreateEvent);
+      await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('eventSavingUnavailableMessage')), findsNothing);
-    expect(
-      tester
-          .widget<FilledButton>(
-            find.byKey(const Key('submitEventFormButton')),
-          )
-          .onPressed,
-      isNotNull,
-    );
-    expect(find.text('Event saved'), findsNothing);
-  });
+      expect(
+        find.byKey(const Key('eventSavingUnavailableMessage')),
+        findsNothing,
+      );
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const Key('submitEventFormButton')),
+            )
+            .onPressed,
+        isNotNull,
+      );
+      expect(find.text('Event saved'), findsNothing);
+    },
+  );
 }
