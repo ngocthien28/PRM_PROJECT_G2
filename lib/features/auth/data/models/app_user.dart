@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../../../shared/enums/user_role.dart';
 
 class AppUser {
@@ -6,6 +7,7 @@ class AppUser {
   final String email;
   final String displayName;
   final String? avatarUrl;
+  final String? phone;
   final UserRole role;
   final String status;
   final DateTime createdAt;
@@ -15,6 +17,7 @@ class AppUser {
     required this.email,
     required this.displayName,
     this.avatarUrl,
+    this.phone,
     required this.role,
     required this.status,
     required this.createdAt,
@@ -26,6 +29,7 @@ class AppUser {
     email: map['email'] as String,
     displayName: map['displayName'] as String,
     avatarUrl: map['avatarUrl'] as String?,
+    phone: map['phone'] as String?,
     role: UserRole.parse(map['role'] as String),
     status: map['status'] as String,
     createdAt: (map['createdAt'] as Timestamp).toDate().toUtc(),
@@ -36,6 +40,7 @@ class AppUser {
     'email': email,
     'displayName': displayName,
     'avatarUrl': avatarUrl,
+    if (phone != null) 'phone': phone,
     'role': role.name,
     'status': status,
     'createdAt': Timestamp.fromDate(createdAt.toUtc()),
