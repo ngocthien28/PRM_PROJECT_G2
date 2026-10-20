@@ -6,7 +6,7 @@ Ngày kiểm chứng: 21/10/2026, múi giờ Asia/Saigon. HEAD đầu phiên: `a
 
 **Trước: PARTIAL 65% → Sau: DONE trong phạm vi UC-039 — READY FOR REVIEW.**
 
-Working tree ban đầu sạch; đã chạy `git status --short`, `git diff --check` và kiểm tra implementation mới nhất. UC-035 đã có trong HEAD, được giữ nguyên phần KPI, aggregation, routing và responsive. Không commit, push hoặc deploy Firebase.
+Working tree ban đầu sạch; đã chạy `git status --short`, `git diff --check` và kiểm tra implementation mới nhất. UC-035 đã có trong HEAD; giữ nguyên phần KPI, aggregation và routing. Theo yêu cầu bổ sung, bố cục thẻ sự kiện được đổi giống Clubs và các thay đổi đã được commit/push. Không deploy Firebase.
 
 Audit cũ không còn hoàn toàn đúng: hai màn hình đã dùng chữ Cancel event và repository đã có soft cancellation bằng transaction. Phần cần hoàn thiện là loading/disable, giữ dialog khi lỗi, chống request trùng, safe retry và bằng chứng kiểm thử đầy đủ.
 
@@ -131,15 +131,15 @@ Production Firebase/native Windows E2E: **NOT VERIFIED**, không dùng productio
 
 **UC-039 — READY FOR REVIEW.** Đáp ứng soft cancellation, bảo toàn dữ liệu, Owner/Admin authorization, confirmation, loading/error/success, double-submit protection, idempotent retry và invalidation. Bằng chứng: 42 targeted tests, 241 regression tests và 20 Emulator tests PASS, analyzer không có issues mới, Windows build thành công.
 
-Commit message đề xuất, **chưa commit/push**:
+Commit message đã thực hiện theo yêu cầu:
 
 ```text
 UC-39 HuyTGCE182405: complete UC-039 cancel event
 ```
 
 
-## 8. B? c?c s? ki?n theo y?u c?u b? sung
+## 8. Bố cục sự kiện theo yêu cầu bổ sung
 
-Organizer Dashboard d?ng c?ng c?ch b? tr? v?i Clubs: 3 c?t khi v?ng n?i dung r?ng t? 960 px, 2 c?t t? 580 px, c?n l?i 1 c?t. Kho?ng c?ch ngang/d?c 18 px, ?nh cao 155 px; chi?u cao n?i dung th? t? gi?n khi ch? d?i ho?c c? ch? l?n. ?p d?ng cho c? Upcoming v? Recent/ongoing, gi? nguy?n c?c actions.
+Organizer Dashboard dùng cùng cách bố trí với Clubs: 3 cột khi vùng nội dung rộng từ 960 px, 2 cột từ 580 px, còn lại 1 cột. Khoảng cách ngang/dọc 18 px, ảnh cao 155 px; chiều cao nội dung thẻ tự giãn khi chữ dài hoặc cỡ chữ lớn. Áp dụng cho cả Upcoming và Recent/ongoing, giữ nguyên các actions.
 
-?? ch?y `flutter test test/organizer/organizer_dashboard_screen_test.dart test/organizer/cancel_event_screen_test.dart test/admin/admin_event_management_test.dart --reporter expanded`: **36 PASS**, g?m ki?m tra v? tr? 3/2/1 c?t, ch? l?n v? lu?ng Cancel Event. Log: `build/uc039-grid-tests.log`.
+Đã chạy `flutter test test/organizer/organizer_dashboard_screen_test.dart test/organizer/cancel_event_screen_test.dart test/admin/admin_event_management_test.dart --reporter expanded`: **36 PASS**, gồm kiểm tra vị trí 3/2/1 cột, chữ lớn và luồng Cancel Event. Log: `build/uc039-grid-tests.log`.
