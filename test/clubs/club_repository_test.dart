@@ -86,6 +86,10 @@ void main() {
       );
       final student = actor('student', UserRole.student);
       await repository.joinClub(clubId: club.id, actor: student);
+      var notices = await db.collection('notifications').get();
+      expect(notices.size, 1);
+      expect(notices.docs.single.data()['membershipStatus'], 'active');
+      expect(notices.docs.single.data()['pushStatus'], 'pending');
       final repositoryAfterSignIn = ClubRepositoryImpl(db, FakeLogos());
       final restoredMembership = await repositoryAfterSignIn
           .watchMembership(club.id, student.uid)
@@ -101,6 +105,12 @@ void main() {
         1,
       );
       await repository.leaveClub(clubId: club.id, actor: student);
+      notices = await db.collection('notifications').get();
+      expect(notices.size, 2);
+      expect(
+        notices.docs.map((d) => d.data()['membershipStatus']),
+        containsAll(['active', 'left']),
+      );
       expect(
         (await db.collection('clubs').doc(club.id).get())
             .data()?['memberCount'],
