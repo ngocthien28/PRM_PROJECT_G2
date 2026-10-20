@@ -1,9 +1,10 @@
 import 'package:sqflite/sqflite.dart';
+
 import 'local_tables.dart';
 
 /// Database schema initialization and version migrations for CampusHub.
 abstract final class DbMigrations {
-  static const int currentVersion = 2;
+  static const int currentVersion = 3;
 
   static Future<void> createNotificationCache(Database db) => db.execute('''
     CREATE TABLE IF NOT EXISTS cached_notifications (
@@ -17,6 +18,7 @@ abstract final class DbMigrations {
 
   static Future<void> onCreate(Database db, int version) async {
     await createNotificationCache(db);
+    await createProfileCache(db);
     // 1. cached_events
     await db.execute('''
       CREATE TABLE ${LocalTables.cachedEvents} (
@@ -66,5 +68,13 @@ abstract final class DbMigrations {
     int newVersion,
   ) async {
     if (oldVersion < 2) await createNotificationCache(db);
+    if (oldVersion < 3) await createProfileCache(db);
   }
+
+  static Future<void> createProfileCache(Database db) => db.execute('''
+    CREATE TABLE IF NOT EXISTS local_profile_cache (
+      user_id TEXT NOT NULL, cache_key TEXT NOT NULL, payload TEXT NOT NULL,
+      updated_at INTEGER NOT NULL, PRIMARY KEY(user_id, cache_key)
+    )
+  ''');
 }

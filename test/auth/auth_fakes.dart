@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:campushub/core/errors/app_exception.dart';
 import 'package:campushub/features/auth/data/auth_repository.dart';
 import 'package:campushub/features/auth/data/models/app_user.dart';
@@ -29,6 +30,17 @@ class FakeProfiles implements ProfileRepository {
   final changes = StreamController<String>.broadcast();
   Object? failure;
   int creates = 0;
+  @override
+  Future<void> updateProfile({
+    required String uid,
+    required String displayName,
+    required String phone,
+  }) async {}
+  @override
+  Future<void> updateAvatar({
+    required String uid,
+    required String avatarUrl,
+  }) async {}
   @override
   Stream<AppUser?> watchUser(String uid) async* {
     if (failure != null) throw failure!;

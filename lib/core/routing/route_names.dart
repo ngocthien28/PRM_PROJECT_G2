@@ -28,6 +28,8 @@ class RouteNames {
       '/organizer/clubs/${Uri.encodeComponent(id)}/edit';
   static const notifications = '/notifications';
   static const favorites = '/favorites';
+  static const profile = '/profile';
+  static const editProfile = '/profile/edit';
   static String ticketDetail(String id) =>
       '$tickets/${Uri.encodeComponent(id)}';
 }

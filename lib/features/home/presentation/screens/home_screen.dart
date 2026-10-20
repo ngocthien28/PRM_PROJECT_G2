@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../core/constants/event_categories.dart';
 import '../../../../core/routing/route_names.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -43,6 +44,11 @@ class HomeScreen extends ConsumerWidget {
       signingOut: action.isLoading,
       actions: [
         const RoleNavigationActions(),
+        IconButton(
+          tooltip: 'My profile',
+          onPressed: () => context.push(RouteNames.profile),
+          icon: const Icon(Icons.account_circle_outlined, size: 22),
+        ),
         IconButton(
           tooltip: 'My events',
           onPressed: () => context.push(RouteNames.myEvents),
@@ -174,12 +180,18 @@ class HomeScreen extends ConsumerWidget {
                                 label: const Text('Browse events'),
                               ),
                               OutlinedButton.icon(
-                                onPressed: () => context.push(RouteNames.favorites),
+                                onPressed: () =>
+                                    context.push(RouteNames.favorites),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: Colors.white,
-                                  side: const BorderSide(color: Color(0xFF5D7F6D)),
+                                  side: const BorderSide(
+                                    color: Color(0xFF5D7F6D),
+                                  ),
                                 ),
-                                icon: const Icon(Icons.favorite_border, size: 18),
+                                icon: const Icon(
+                                  Icons.favorite_border,
+                                  size: 18,
+                                ),
                                 label: const Text('Favorites'),
                               ),
                             ],

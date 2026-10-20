@@ -47,5 +47,6 @@ String? sessionRedirect({
   if (path.startsWith('/organizer') && !canAccessOrganizer(user)) {
     return to(roleHome(user.role));
   }
+  if (path.startsWith('/profile')) return null;
   return null;
 }
