@@ -110,6 +110,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const OrganizerCreateEventScreen(),
       ),
       GoRoute(
+        path: '${RouteNames.organizer}/events/:eventId',
+        builder: (_, state) => EventDetailScreen(
+          eventId: state.pathParameters['eventId']!,
+          managed: true,
+        ),
+      ),
+      GoRoute(
         path: '${RouteNames.organizer}/events/:eventId/edit',
         builder: (_, state) =>
             OrganizerEditEventScreen(eventId: state.pathParameters['eventId']!),
@@ -117,6 +124,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RouteNames.admin,
         builder: (_, _) => const AdminDashboardScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.adminEvents,
+        builder: (_, _) => const ManageEventsScreen(),
       ),
       GoRoute(
         path: RouteNames.myEvents,

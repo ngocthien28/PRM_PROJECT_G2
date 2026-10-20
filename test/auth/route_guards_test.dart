@@ -85,7 +85,10 @@ void main() {
     const createEvent = '/organizer/events/create';
 
     expect(
-      redirect(createEvent, profile: AsyncData(testUser(role: UserRole.organizer))),
+      redirect(
+        createEvent,
+        profile: AsyncData(testUser(role: UserRole.organizer)),
+      ),
       isNull,
     );
     expect(
@@ -93,10 +96,7 @@ void main() {
       isNull,
     );
     expect(redirect(createEvent), '/home');
-    expect(
-      redirect(createEvent, auth: const AsyncData(null)),
-      '/login',
-    );
+    expect(redirect(createEvent, auth: const AsyncData(null)), '/login');
   });
   test('registration keeps form stable until action completes', () {
     expect(
@@ -105,4 +105,35 @@ void main() {
     );
     expect(redirect('/register', profile: const AsyncData(null)), '/splash');
   });
+  test(
+    'all event management URLs fail closed for guest/student/loading/disabled',
+    () {
+      for (final path in [
+        '/organizer',
+        '/organizer/events',
+        '/organizer/events/create',
+        '/organizer/events/e1/edit',
+        '/organizer/events/e1/participants',
+      ]) {
+        expect(redirect(path), '/home');
+        expect(redirect(path, auth: const AsyncData(null)), '/login');
+        expect(redirect(path, profile: const AsyncLoading()), '/splash');
+        expect(
+          redirect(
+            path,
+            profile: AsyncData(
+              testUser(role: UserRole.organizer, status: 'disabled'),
+            ),
+          ),
+          '/splash',
+        );
+        for (final role in [UserRole.organizer, UserRole.admin]) {
+          expect(
+            redirect(path, profile: AsyncData(testUser(role: role))),
+            isNull,
+          );
+        }
+      }
+    },
+  );
 }

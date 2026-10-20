@@ -59,6 +59,12 @@ class AdminDashboardScreen extends ConsumerWidget {
       signOutKey: const Key('adminSignOutButton'),
       actions: [
         IconButton(
+          key: const Key('adminManageEventsButton'),
+          tooltip: 'My Managed Events',
+          onPressed: () => context.push(RouteNames.organizerManagedEvents),
+          icon: const Icon(Icons.event_note_outlined, size: 21),
+        ),
+        IconButton(
           tooltip: 'Refresh dashboard',
           onPressed: () => ref.invalidate(adminStatsProvider),
           icon: const Icon(Icons.refresh_rounded, size: 21),
@@ -148,6 +154,8 @@ class AdminDashboardScreen extends ConsumerWidget {
                             'Events in the workspace',
                             const Color(0xFFFFF0D5),
                             const Color(0xFFB88226),
+                            onTap: () =>
+                                context.push(RouteNames.organizerManagedEvents),
                           ),
                         ),
                         SizedBox(
@@ -263,15 +271,34 @@ class AdminDashboardScreen extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(height: 22),
-                          FilledButton.icon(
-                            onPressed: () =>
-                                context.push(RouteNames.createClub),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: CampusColors.gold,
-                              foregroundColor: CampusColors.ink,
-                            ),
-                            icon: const Icon(Icons.add, size: 18),
-                            label: const Text('Create Club'),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 10,
+                            children: [
+                              FilledButton.icon(
+                                onPressed: () =>
+                                    context.push(RouteNames.createClub),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: CampusColors.gold,
+                                  foregroundColor: CampusColors.ink,
+                                ),
+                                icon: const Icon(Icons.add, size: 18),
+                                label: const Text('Create Club'),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: () => context
+                                    .push(RouteNames.organizerManagedEvents),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  side: const BorderSide(
+                                    color: Color(0xFFB8D0C2),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.event_note_outlined,
+                                    size: 18),
+                                label: const Text('Manage Events'),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -307,12 +334,27 @@ class AdminDashboardScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           LayoutBuilder(
             builder: (context, box) {
-              final columns = box.maxWidth >= 780 ? 3 : 1;
+              final columns = box.maxWidth >= 900
+                  ? 4
+                  : box.maxWidth >= 500
+                  ? 2
+                  : 1;
               final width = (box.maxWidth - (columns - 1) * 16) / columns;
               return Wrap(
                 spacing: 16,
                 runSpacing: 14,
                 children: [
+                  SizedBox(
+                    width: width,
+                    child: _QuickAction(
+                      key: const Key('adminQuickActionManageEvents'),
+                      icon: Icons.event_note_outlined,
+                      title: 'My Managed Events',
+                      subtitle: 'Review, edit, and cancel campus events',
+                      onTap: () =>
+                          context.push(RouteNames.organizerManagedEvents),
+                    ),
+                  ),
                   SizedBox(
                     width: width,
                     child: _QuickAction(
@@ -327,7 +369,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                     child: _QuickAction(
                       icon: Icons.notifications_outlined,
                       title: 'Your inbox',
-                      subtitle: 'Keep up with your updates',
+                      subtitle: 'Keep up with updates and notifications',
                       onTap: () => context.push(RouteNames.notifications),
                     ),
                   ),
@@ -357,15 +399,18 @@ class _StatCard extends StatelessWidget {
     this.icon,
     this.caption,
     this.background,
-    this.color,
-  );
+    this.color, {
+    this.onTap,
+  });
   final String label, caption;
   final int value;
   final IconData icon;
   final Color background, color;
+  final VoidCallback? onTap;
+
   @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
+  Widget build(BuildContext context) {
+    final content = Padding(
       padding: const EdgeInsets.all(22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,6 +426,12 @@ class _StatCard extends StatelessWidget {
                 child: Icon(icon, color: color, size: 21),
               ),
               const Spacer(),
+              if (onTap != null)
+                const Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 16,
+                  color: CampusColors.muted,
+                ),
             ],
           ),
           const SizedBox(height: 18),
@@ -405,8 +456,18 @@ class _StatCard extends StatelessWidget {
           ),
         ],
       ),
-    ),
-  );
+    );
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: onTap != null
+          ? InkWell(
+              onTap: onTap,
+              child: content,
+            )
+          : content,
+    );
+  }
 }
 
 class _MetricBar extends StatelessWidget {
@@ -447,6 +508,7 @@ class _MetricBar extends StatelessWidget {
 
 class _QuickAction extends StatelessWidget {
   const _QuickAction({
+    super.key,
     required this.icon,
     required this.title,
     required this.subtitle,
@@ -455,34 +517,46 @@ class _QuickAction extends StatelessWidget {
   final IconData icon;
   final String title, subtitle;
   final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) => Card(
     clipBehavior: Clip.antiAlias,
     child: InkWell(
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 92),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Icon(icon, color: CampusColors.teal, size: 25),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
                     ),
                   ),
                   const SizedBox(height: 5),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      color: CampusColors.muted,
-                      fontSize: 10,
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 28),
+                    child: Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: CampusColors.muted,
+                        fontSize: 10,
+                        height: 1.4,
+                      ),
                     ),
                   ),
                 ],
