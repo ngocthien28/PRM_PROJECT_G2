@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/event_categories.dart';
 import '../../../../core/utils/debouncer.dart';
+import '../../data/models/event_filter.dart';
 import '../viewmodels/event_list_view_model.dart';
 import '../widgets/event_results.dart';
 import '../widgets/event_filter_sheet.dart';
@@ -42,6 +43,8 @@ class _EventListScreenState extends ConsumerState<EventListScreen> {
   Widget build(BuildContext context) {
     final filter = ref.watch(eventFilterProvider);
     final events = ref.watch(filteredEventsProvider);
+    final colors = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Discover events'),
@@ -101,6 +104,12 @@ class _EventListScreenState extends ConsumerState<EventListScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
+
+                  // ── UC-024: Sort bar ─────────────────────────────────
+                  _SortBar(currentSort: filter.sort),
+                  const SizedBox(height: 8),
+                  // ────────────────────────────────────────────────────
+
                   Wrap(
                     spacing: 12,
                     runSpacing: 8,
@@ -153,6 +162,55 @@ class _EventListScreenState extends ConsumerState<EventListScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// UC-024: Sort bar — hiển thị các lựa chọn sắp xếp dạng chip ngang.
+class _SortBar extends ConsumerWidget {
+  const _SortBar({required this.currentSort});
+  final EventSort currentSort;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = Theme.of(context).colorScheme;
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          Text(
+            'Sắp xếp:',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(width: 8),
+          ...EventSort.values.map((sort) {
+            final selected = currentSort == sort;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                key: ValueKey('sort-${sort.name}'),
+                label: Text(sort.label),
+                selected: selected,
+                selectedColor: colors.primaryContainer,
+                onSelected: (_) => ref
+                    .read(eventFilterProvider.notifier)
+                    .setSort(sort),
+                avatar: Icon(
+                  switch (sort) {
+                    EventSort.nearest => Icons.access_time_rounded,
+                    EventSort.popular => Icons.trending_up_rounded,
+                    EventSort.available => Icons.event_seat_outlined,
+                  },
+                  size: 16,
+                  color: selected ? colors.onPrimaryContainer : colors.onSurfaceVariant,
+                ),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
