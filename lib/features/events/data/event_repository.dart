@@ -9,7 +9,10 @@ abstract interface class EventRepository {
     EventFilter? filter,
     bool forceRefresh = false,
   });
-  Future<EventModel> getEventById(String eventId);
+
+  /// Without [actor], preserves published-only Student discovery behavior.
+  /// Manager reads are restricted to owner/admin, including unpublished events.
+  Future<EventModel> getEventById(String eventId, {AppUser? actor});
   Future<List<EventModel>> getManagedEvents({required AppUser actor});
   Future<EventModel> createEvent({
     required EventFormInput input,
@@ -19,6 +22,7 @@ abstract interface class EventRepository {
     required String eventId,
     required EventFormInput input,
     required AppUser actor,
+    DateTime? expectedUpdatedAt,
   });
   Future<EventModel> cancelEvent({
     required String eventId,

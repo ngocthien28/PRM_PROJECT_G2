@@ -86,29 +86,38 @@ class EventRepositoryImpl implements EventRepository {
   });
 
   @override
-  Future<EventModel> getEventById(String eventId) => _request(() async {
-    if (eventId.trim().isEmpty || eventId.contains('/')) {
-      throw const AppException(
-        'This event is unavailable.',
-        code: 'event-not-found',
-      );
-    }
-    // Status-constrained query also satisfies published-only rules for missing
-    // or unpublished IDs without leaking the underlying document.
-    final snapshot = await firestore
-        .collection(FirestoreCollections.events)
-        .where(FieldPath.documentId, isEqualTo: eventId)
-        .where('status', isEqualTo: EventStatus.published.name)
-        .limit(1)
-        .get(const GetOptions(source: Source.server));
-    if (snapshot.docs.isEmpty) {
-      throw const AppException(
-        'This event is unavailable or is no longer published.',
-        code: 'event-not-found',
-      );
-    }
-    return EventModel.fromFirestore(snapshot.docs.single);
-  });
+  Future<EventModel> getEventById(String eventId, {AppUser? actor}) =>
+      _request(() async {
+        if (eventId.trim().isEmpty || eventId.contains('/')) {
+          throw const AppException(
+            'This event is unavailable.',
+            code: 'event-not-found',
+          );
+        }
+        Query<Map<String, dynamic>> query = firestore
+            .collection(FirestoreCollections.events)
+            .where(FieldPath.documentId, isEqualTo: eventId);
+        if (actor == null) {
+          query = query.where('status', isEqualTo: EventStatus.published.name);
+        } else {
+          _requireEventManager(actor);
+          if (actor.role != UserRole.admin) {
+            query = query.where('organizerId', isEqualTo: actor.uid);
+          }
+        }
+        final snapshot = await query
+            .limit(1)
+            .get(const GetOptions(source: Source.server));
+        if (snapshot.docs.isEmpty) {
+          throw const AppException(
+            'This event is unavailable or you do not have access to it.',
+            code: 'event-not-found',
+          );
+        }
+        final event = EventModel.fromFirestore(snapshot.docs.single);
+        if (actor != null) _requireOwnerOrAdmin(event, actor);
+        return event;
+      });
 
   @override
   Future<List<EventModel>> getManagedEvents({required AppUser actor}) =>
@@ -193,19 +202,44 @@ class EventRepositoryImpl implements EventRepository {
     required String eventId,
     required EventFormInput input,
     required AppUser actor,
+    DateTime? expectedUpdatedAt,
   }) => _request(() async {
     _requireEventManager(actor);
     _requireValidInput(input);
     final ref = _eventDocument(eventId);
-    final existing = await _loadEvent(ref);
-    _requireOwnerOrAdmin(existing, actor);
-    if (existing.status == EventStatus.cancelled) {
-      throw const AppException(
-        'Cancelled events cannot be updated.',
-        code: 'event-cancelled',
-      );
-    }
-    await ref.update(_editableMap(input));
+    await firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(ref);
+      if (!snapshot.exists) {
+        throw const AppException(
+          'This event is unavailable.',
+          code: 'event-not-found',
+        );
+      }
+      final existing = EventModel.fromFirestore(snapshot);
+      _requireOwnerOrAdmin(existing, actor);
+      if (existing.status == EventStatus.cancelled) {
+        throw const AppException(
+          'Cancelled events cannot be updated.',
+          code: 'event-cancelled',
+        );
+      }
+      if (input.capacity < existing.registeredCount) {
+        throw AppException(
+          'Capacity must be at least ${existing.registeredCount}, the current number of registered participants.',
+          code: 'event-capacity-below-registered',
+        );
+      }
+      if (expectedUpdatedAt != null &&
+          !existing.updatedAt.isAtSameMomentAs(expectedUpdatedAt)) {
+        throw const AppException(
+          'This event changed while you were editing. Reload the latest event before saving again.',
+          code: 'event-edit-conflict',
+        );
+      }
+      // Read and validate the current counters/version on every transaction
+      // retry. Never write protected fields or another member's metadata.
+      transaction.update(ref, _editableMap(input));
+    }, timeout: requestTimeout);
     return EventModel.fromFirestore(
       await ref.get(const GetOptions(source: Source.server)),
     );
