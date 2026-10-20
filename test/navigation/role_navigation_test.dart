@@ -5,6 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:campushub/features/notifications/presentation/viewmodels/notification_view_model.dart';
+import 'package:campushub/features/auth/presentation/viewmodels/auth_view_model.dart';
+import 'package:campushub/shared/enums/user_role.dart';
+import '../auth/auth_fakes.dart';
 
 void main() {
   testWidgets('admin dashboard exposes Club and Notification navigation', (
@@ -16,7 +20,13 @@ void main() {
         GoRoute(
           path: '/admin',
           builder: (_, _) => ProviderScope(
-            overrides: [adminStatsProvider.overrideWith(_adminStats)],
+            overrides: [
+              adminStatsProvider.overrideWith(_adminStats),
+              currentUserProvider.overrideWith(
+                (ref) => Stream.value(testUser(role: UserRole.admin)),
+              ),
+              notificationInboxProvider.overrideWith((ref) => Stream.value([])),
+            ],
             child: const AdminDashboardScreen(),
           ),
         ),
@@ -41,14 +51,16 @@ void main() {
     await tester.tap(find.byTooltip('Clubs'));
     await tester.pumpAndSettle();
     expect(find.text('Club destination'), findsOneWidget);
-    await tester.binding.handlePopRoute();
+    expect(router.canPop(), isFalse);
+    router.go('/admin');
     await tester.pumpAndSettle();
     expect(find.text('Admin Dashboard'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Notifications'));
     await tester.pumpAndSettle();
     expect(find.text('Notification destination'), findsOneWidget);
-    await tester.binding.handlePopRoute();
+    expect(router.canPop(), isFalse);
+    router.go('/admin');
     await tester.pumpAndSettle();
     expect(find.text('Admin Dashboard'), findsOneWidget);
   });

@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../auth/auth_fakes.dart';
 import 'event_fakes.dart';
+import 'package:campushub/features/notifications/presentation/viewmodels/notification_view_model.dart';
 
 void main() {
   late FakeProfiles profiles;
@@ -35,6 +36,7 @@ void main() {
         authRepositoryProvider.overrideWithValue(auth),
         profileRepositoryProvider.overrideWithValue(profiles),
         eventRepositoryProvider.overrideWithValue(events),
+        notificationInboxProvider.overrideWith((ref) => Stream.value([])),
       ],
     );
   });
