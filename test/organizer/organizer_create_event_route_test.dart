@@ -120,6 +120,7 @@ void main() {
     restoreActiveUser(UserRole.organizer);
     await seedEditEvent();
     await mount(tester);
+    await tester.ensureVisible(find.text('Current Firestore title'));
     await tester.tap(find.text('Current Firestore title'));
     await tester.pumpAndSettle();
     expect(container.read(appRouterProvider).canPop(), isTrue);
