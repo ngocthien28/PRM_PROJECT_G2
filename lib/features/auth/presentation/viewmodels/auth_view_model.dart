@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/errors/error_mapper.dart';
 import '../../../../core/services/firebase_providers.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../data/auth_repository.dart';
 import '../../data/models/app_user.dart';
 
@@ -50,6 +51,7 @@ class AuthViewModel extends Notifier<AsyncValue<String?>> {
     'If an account exists for this email, a password reset email has been sent.',
   );
   Future<void> signOut() => _submit(() async {
+    await NotificationService.instance.unregister();
     await ref.read(authRepositoryProvider).signOut();
     ref.invalidate(authStateProvider);
     ref.invalidate(currentUserProvider);
