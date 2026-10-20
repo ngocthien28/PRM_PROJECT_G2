@@ -23,6 +23,7 @@ void main() {
 
     setUp(() {
       container = ProviderContainer();
+      container.listen(eventFormViewModelProvider, (_, _) {});
     });
 
     tearDown(() {
@@ -42,10 +43,7 @@ void main() {
     });
 
     test('exposes validation errors for invalid input', () async {
-      await viewModel().submit(
-        validInput(title: ''),
-        (_) async {},
-      );
+      await viewModel().submit(validInput(title: ''), (_) async {});
 
       expect(currentState().status, EventFormSubmissionStatus.error);
       expect(currentState().validationErrors, contains('title'));
@@ -54,20 +52,14 @@ void main() {
     test('does not invoke save callback for invalid input', () async {
       var calls = 0;
 
-      await viewModel().submit(
-        validInput(title: ''),
-        (_) async => calls += 1,
-      );
+      await viewModel().submit(validInput(title: ''), (_) async => calls += 1);
 
       expect(calls, 0);
     });
 
     test('exposes submitting state while a valid save is pending', () async {
       final completer = Completer<void>();
-      final pending = viewModel().submit(
-        validInput(),
-        (_) => completer.future,
-      );
+      final pending = viewModel().submit(validInput(), (_) => completer.future);
 
       expect(currentState().status, EventFormSubmissionStatus.submitting);
       completer.complete();
@@ -96,22 +88,25 @@ void main() {
       );
     });
 
-    test('executes save callback once for rapid overlapping submissions', () async {
-      final completer = Completer<void>();
-      var calls = 0;
-      Future<void> save(EventFormInput _) {
-        calls += 1;
-        return completer.future;
-      }
+    test(
+      'executes save callback once for rapid overlapping submissions',
+      () async {
+        final completer = Completer<void>();
+        var calls = 0;
+        Future<void> save(EventFormInput _) {
+          calls += 1;
+          return completer.future;
+        }
 
-      final first = viewModel().submit(validInput(), save);
-      final second = viewModel().submit(validInput(), save);
+        final first = viewModel().submit(validInput(), save);
+        final second = viewModel().submit(validInput(), save);
 
-      completer.complete();
-      expect(await first, isTrue);
-      expect(await second, isFalse);
-      expect(calls, 1);
-    });
+        completer.complete();
+        expect(await first, isTrue);
+        expect(await second, isFalse);
+        expect(calls, 1);
+      },
+    );
 
     test('allows another submission after a completed submission', () async {
       var calls = 0;
@@ -120,8 +115,10 @@ void main() {
       }
 
       expect(await viewModel().submit(validInput(), save), isTrue);
-      expect(await viewModel().submit(validInput(title: 'Dart Workshop'), save),
-          isTrue);
+      expect(
+        await viewModel().submit(validInput(title: 'Dart Workshop'), save),
+        isTrue,
+      );
       expect(calls, 2);
     });
 
@@ -138,4 +135,26 @@ void main() {
       await expectLater(pending, completes);
     });
   });
+
+  test(
+    'create validates future start before invoking the repository',
+    () async {
+      final input = validInput();
+      final controller = EventFormSubmissionController(
+        now: () => input.startAt,
+      );
+      var calls = 0;
+      expect(
+        await controller.submit(
+          input,
+          (_) async => calls++,
+          requireFutureStart: true,
+        ),
+        isFalse,
+      );
+      expect(calls, 0);
+      expect(controller.state.validationErrors, contains('startAt'));
+      expect(controller.state.isSubmitting, isFalse);
+    },
+  );
 }
