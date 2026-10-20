@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/event_categories.dart';
 import '../../data/models/event_form_input.dart';
 import '../viewmodels/event_form_view_model.dart';
+import '../../../events/presentation/widgets/event_poster.dart';
 
 typedef EventFormSubmitCallback = Future<void> Function(EventFormInput input);
 
@@ -14,11 +15,15 @@ class EventFormScreen extends ConsumerStatefulWidget {
     this.initialValue,
     this.onSubmit,
     this.onSuccess,
+    this.existingPosterUrl,
+    this.onReload,
   });
 
   final EventFormInput? initialValue;
   final EventFormSubmitCallback? onSubmit;
   final VoidCallback? onSuccess;
+  final String? existingPosterUrl;
+  final VoidCallback? onReload;
 
   @override
   ConsumerState<EventFormScreen> createState() => _EventFormScreenState();
@@ -164,6 +169,11 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                                 const SizedBox(height: 24),
+                                if (widget.existingPosterUrl != null)
+                                  EventPoster(
+                                    url: widget.existingPosterUrl,
+                                    category: _category ?? '',
+                                  ),
                                 _textField(
                                   'titleField',
                                   _title,
@@ -237,6 +247,14 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                                     'Event saving is not available yet.',
                                     key: Key('eventSavingUnavailableMessage'),
                                   ),
+                                if (submissionState.errorMessage != null &&
+                                    widget.onReload != null)
+                                  TextButton(
+                                    onPressed: isSubmitting
+                                        ? null
+                                        : widget.onReload,
+                                    child: const Text('Reload latest event'),
+                                  ),
                                 const SizedBox(height: 8),
                                 FilledButton.icon(
                                   key: const Key('submitEventFormButton'),
@@ -254,7 +272,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                                         ? 'Saving...'
                                         : _canSubmit
                                         ? (_isEditMode
-                                              ? 'Save event'
+                                              ? 'Save Changes'
                                               : 'Create Event')
                                         : 'Saving unavailable',
                                   ),

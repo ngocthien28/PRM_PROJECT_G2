@@ -8,6 +8,8 @@ import '../../../auth/presentation/viewmodels/auth_view_model.dart';
 import '../../../events/data/event_repository.dart';
 import '../../../events/data/models/event_model.dart';
 import '../../../events/presentation/viewmodels/event_list_view_model.dart';
+import '../../../events/presentation/viewmodels/event_detail_view_model.dart';
+import '../../../../shared/enums/event_status.dart';
 import '../../data/models/event_form_input.dart';
 
 /// The organizer's server-backed event list. The dashboard that consumes this
@@ -22,6 +24,47 @@ final organizerEventsProvider = FutureProvider.autoDispose<List<EventModel>>((
   }
   return ref.watch(eventRepositoryProvider).getManagedEvents(actor: actor);
 });
+
+final organizerEditEventProvider = FutureProvider.autoDispose
+    .family<EventModel, String>((ref, eventId) async {
+      // Profile data unrelated to authorization must not reset a dirty edit form.
+      ref.watch(
+        currentUserProvider.select((value) {
+          final user = value.asData?.value;
+          return (user?.uid, user?.role, user?.isActive);
+        }),
+      );
+      final repository = ref.watch(eventRepositoryProvider);
+      final actor = await ref
+          .read(currentUserProvider.future)
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () => throw const AppException(
+              'Your session could not be loaded. Please try again.',
+              code: 'session-timeout',
+            ),
+          );
+      if (!ref.mounted) {
+        throw const AppException(
+          'This edit session has ended.',
+          code: 'session-ended',
+        );
+      }
+      if (actor == null || !actor.isActive || !actor.role.canOrganize) {
+        throw const AppException(
+          'Only active organizers or admins can edit events.',
+          code: 'event-forbidden',
+        );
+      }
+      final event = await repository.getEventById(eventId, actor: actor);
+      if (event.status == EventStatus.cancelled) {
+        throw const AppException(
+          'Cancelled events cannot be updated.',
+          code: 'event-cancelled',
+        );
+      }
+      return event;
+    }, retry: (_, _) => null);
 
 /// Thin presentation-layer entry point for organizer mutations.
 ///
@@ -41,6 +84,7 @@ final organizerEventActionsProvider = Provider<OrganizerEventActions>((ref) {
       ref.invalidate(eventListProvider);
       ref.invalidate(homeEventsProvider);
     },
+    refreshEvent: (id) => ref.invalidate(eventDetailProvider(id)),
   );
 });
 
@@ -49,6 +93,7 @@ class OrganizerEventActions {
     required EventRepository repository,
     required FutureOr<AppUser?> Function() currentActor,
     required void Function() refresh,
+    this.refreshEvent,
   }) : _repository = repository,
        _currentActor = currentActor,
        _refresh = refresh;
@@ -56,19 +101,26 @@ class OrganizerEventActions {
   final EventRepository _repository;
   final FutureOr<AppUser?> Function() _currentActor;
   final void Function() _refresh;
+  final void Function(String)? refreshEvent;
 
   Future<void> createEvent(EventFormInput input) async {
     await _repository.createEvent(input: input, actor: await _requireActor());
     _refresh();
   }
 
-  Future<void> updateEvent(String eventId, EventFormInput input) async {
+  Future<void> updateEvent(
+    String eventId,
+    EventFormInput input, {
+    DateTime? expectedUpdatedAt,
+  }) async {
     await _repository.updateEvent(
       eventId: eventId,
       input: input,
       actor: await _requireActor(),
+      expectedUpdatedAt: expectedUpdatedAt,
     );
     _refresh();
+    refreshEvent?.call(eventId);
   }
 
   Future<void> cancelEvent(String eventId) async {
