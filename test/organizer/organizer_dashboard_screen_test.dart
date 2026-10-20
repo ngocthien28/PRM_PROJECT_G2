@@ -153,7 +153,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Participants'), findsOneWidget);
       expect(find.text('Edit'), findsNothing);
-      expect(find.text('Cancel event'), findsNothing);
+      expect(find.text('Cancel Event'), findsNothing);
     },
   );
 
@@ -323,6 +323,50 @@ void main() {
     expect(find.byKey(const Key('dashboardError')), findsOneWidget);
     expect(find.byKey(const Key('dashboardKpi-registrations')), findsNothing);
   });
+
+  testWidgets(
+    'event cards use three columns on desktop and wrap on smaller windows',
+    (tester) async {
+      repository.events = List.generate(
+        5,
+        (index) => testEvent(
+          id: 'grid-$index',
+          title: 'Dashboard workshop $index',
+          startAt: now.add(Duration(days: index + 1)),
+        ),
+      );
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      for (final (width, columns) in [(1440.0, 3), (1000.0, 2), (430.0, 1)]) {
+        await tester.pumpWidget(const SizedBox.shrink());
+        tester.view.physicalSize = Size(width, 1000);
+        await tester.pumpWidget(app());
+        await tester.pumpAndSettle();
+        final first = tester.getRect(
+          find.byKey(const Key('dashboardEvent-grid-0')),
+        );
+        for (var index = 1; index < columns; index++) {
+          final next = tester.getRect(
+            find.byKey(Key('dashboardEvent-grid-$index')),
+          );
+          expect(next.top, closeTo(first.top, 0.1));
+          expect(next.left, greaterThan(first.left));
+          expect(next.width, closeTo(first.width, 0.1));
+        }
+        final nextRow = tester.getRect(
+          find.byKey(Key('dashboardEvent-grid-$columns')),
+        );
+        expect(nextRow.top, greaterThan(first.bottom));
+        expect(nextRow.left, closeTo(first.left, 0.1));
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: '$columns columns at $width',
+        );
+      }
+    },
+  );
 
   testWidgets(
     'phone, landscape and tablet layouts support large counters and text',

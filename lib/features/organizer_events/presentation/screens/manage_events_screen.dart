@@ -14,6 +14,7 @@ import '../../../events/data/models/event_model.dart';
 import '../../../events/presentation/widgets/event_format.dart';
 import '../../../events/presentation/widgets/event_poster.dart';
 import '../viewmodels/organizer_events_view_model.dart';
+import '../widgets/cancel_event_dialog.dart';
 
 class ManageEventsScreen extends ConsumerStatefulWidget {
   const ManageEventsScreen({super.key});
@@ -93,45 +94,11 @@ class _ManageEventsScreenState extends ConsumerState<ManageEventsScreen> {
   }
 
   Future<void> _cancel(EventModel event) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        icon: const Icon(
-          Icons.warning_amber_rounded,
-          color: Colors.red,
-          size: 36,
-        ),
-        title: const Text('Cancel event?'),
-        content: Text(
-          '“${event.title}” will no longer be available to students.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Keep event'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Cancel event'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    try {
-      await ref.read(organizerEventActionsProvider).cancelEvent(event.id);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Event cancelled.')));
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to cancel this event.')),
-        );
-      }
+    final cancelled = await showCancelEventDialog(context, event);
+    if (cancelled && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Event cancelled.')));
     }
   }
 }
@@ -585,7 +552,7 @@ class _ManagedEventCard extends StatelessWidget {
                         if (event.status != EventStatus.cancelled)
                           const PopupMenuItem(
                             value: _ManagedAction.cancel,
-                            child: Text('Cancel event'),
+                            child: Text('Cancel Event'),
                           ),
                       ],
                     ),
