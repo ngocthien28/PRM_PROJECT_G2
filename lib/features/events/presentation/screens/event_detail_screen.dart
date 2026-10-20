@@ -8,6 +8,7 @@ import '../../../favorites/presentation/viewmodels/favorite_view_model.dart';
 import '../../../registration/data/models/registration_model.dart';
 import '../../../registration/presentation/screens/ticket_screen.dart';
 import '../../../registration/presentation/viewmodels/registration_view_model.dart';
+import '../../../checkin/presentation/screens/qr_scanner_screen.dart';
 import '../../data/models/event_model.dart';
 import '../viewmodels/event_detail_view_model.dart';
 import '../widgets/event_poster.dart';
@@ -229,7 +230,28 @@ class EventDetailScreen extends ConsumerWidget {
                                 ),
                               ),
                               const SizedBox(height: 20),
-                              if (!managed) _JoinEventButton(event: value),
+                              if (!managed)
+                                _JoinEventButton(event: value)
+                              else if (value.status != EventStatus.cancelled) ...[
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: FilledButton.icon(
+                                    key: const Key('organizerScanQrButton'),
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => QrScannerScreen(
+                                            eventId: value.id,
+                                            eventTitle: value.title,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.qr_code_scanner),
+                                    label: const Text('Quét QR Check-in Điểm Danh'),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
