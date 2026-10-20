@@ -137,6 +137,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, state) =>
             TicketScreen(registrationId: state.pathParameters['id']!),
       ),
+      GoRoute(
+        path: RouteNames.favorites,
+        builder: (_, _) => const FavoritesScreen(),
+      ),
     ],
   );
   ref.onDispose(() {
