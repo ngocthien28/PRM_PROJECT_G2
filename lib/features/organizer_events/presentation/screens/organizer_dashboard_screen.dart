@@ -13,10 +13,12 @@ class OrganizerDashboardScreen extends ConsumerWidget {
   const OrganizerDashboardScreen({
     super.key,
     required this.onCreateEvent,
+    required this.onManageEvents,
     required this.onEditEvent,
   });
 
   final VoidCallback onCreateEvent;
+  final VoidCallback onManageEvents;
   final ValueChanged<EventModel> onEditEvent;
 
   @override
@@ -90,6 +92,8 @@ class OrganizerDashboardScreen extends ConsumerWidget {
                 const Text('Create and manage campus experiences for your community.'),
                 const SizedBox(height: 20),
                 FilledButton.icon(key: const Key('createEventAction'), onPressed: onCreateEvent, icon: const Icon(Icons.add), label: const Text('Create Event')),
+                const SizedBox(height: 8),
+                TextButton.icon(onPressed: onManageEvents, icon: const Icon(Icons.list_alt_outlined), label: const Text('View all managed events')),
               ]),
             ),
             const SizedBox(height: 24),

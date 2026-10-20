@@ -80,6 +80,17 @@ void main() {
     expect(find.byKey(const Key('titleField')), findsOneWidget);
   });
 
+  testWidgets('organizer navigates to My Managed Events', (tester) async {
+    restoreActiveUser(UserRole.organizer);
+    await mount(tester);
+
+    await tester.tap(find.text('View all managed events'));
+    await tester.pumpAndSettle();
+
+    expect(currentPath(), RouteNames.organizerManagedEvents);
+    expect(find.text('My Managed Events'), findsOneWidget);
+  });
+
   testWidgets('admin can access Create Event by direct URL', (tester) async {
     restoreActiveUser(UserRole.admin);
     await mount(tester);

@@ -12,6 +12,7 @@ import '../../features/events/presentation/screens/event_detail_screen.dart';
 import '../../features/events/data/models/event_model.dart';
 import '../../features/organizer_events/presentation/screens/organizer_create_event_screen.dart';
 import '../../features/organizer_events/presentation/screens/organizer_dashboard_screen.dart';
+import '../../features/organizer_events/presentation/screens/manage_events_screen.dart';
 import '../../features/registration/presentation/screens/my_events_screen.dart';
 import '../../features/registration/presentation/screens/ticket_screen.dart';
 import '../../features/clubs/data/models/club_model.dart';
@@ -95,9 +96,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: RouteNames.organizer,
         builder: (context, _) => OrganizerDashboardScreen(
           onCreateEvent: () => context.go(RouteNames.organizerCreateEvent),
+          onManageEvents: () => context.go(RouteNames.organizerManagedEvents),
           onEditEvent: (event) =>
               context.go(RouteNames.organizerEditEvent(event.id), extra: event),
         ),
+      ),
+      GoRoute(
+        path: RouteNames.organizerManagedEvents,
+        builder: (_, _) => const ManageEventsScreen(),
       ),
       GoRoute(
         path: RouteNames.organizerCreateEvent,
@@ -129,10 +135,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '${RouteNames.tickets}/:id',
         builder: (_, state) =>
             TicketScreen(registrationId: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: RouteNames.favorites,
-        builder: (_, _) => const FavoritesScreen(),
       ),
     ],
   );
