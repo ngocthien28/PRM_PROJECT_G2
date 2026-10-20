@@ -13,6 +13,8 @@ class RouteNames {
       '$organizer/events/${Uri.encodeComponent(id)}';
   static String organizerEditEvent(String id) =>
       '$organizer/events/${Uri.encodeComponent(id)}/edit';
+  static String organizerEventScan(String id) =>
+      '$organizer/events/${Uri.encodeComponent(id)}/scan';
   static const admin = '/admin';
   static const adminEvents = '$admin/events';
   static const myEvents = '/my-events';

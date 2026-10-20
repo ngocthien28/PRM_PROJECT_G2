@@ -533,6 +533,10 @@ class _ManagedEventCard extends StatelessWidget {
                       tooltip: 'Manage event',
                       onSelected: (action) => switch (action) {
                         _ManagedAction.open => onOpen(),
+                        _ManagedAction.scan => context.push(
+                          RouteNames.organizerEventScan(event.id),
+                          extra: event.title,
+                        ),
                         _ManagedAction.edit => onEdit(),
                         _ManagedAction.cancel => onCancel(),
                       },
@@ -541,6 +545,11 @@ class _ManagedEventCard extends StatelessWidget {
                           value: _ManagedAction.open,
                           child: Text('View details'),
                         ),
+                        if (event.status != EventStatus.cancelled)
+                          const PopupMenuItem(
+                            value: _ManagedAction.scan,
+                            child: Text('Quét QR Check-in'),
+                          ),
                         if (event.status != EventStatus.cancelled)
                           const PopupMenuItem(
                             value: _ManagedAction.edit,
@@ -564,7 +573,7 @@ class _ManagedEventCard extends StatelessWidget {
   }
 }
 
-enum _ManagedAction { open, edit, cancel }
+enum _ManagedAction { open, scan, edit, cancel }
 
 class _InfoLine extends StatelessWidget {
   const _InfoLine({required this.icon, required this.text});
