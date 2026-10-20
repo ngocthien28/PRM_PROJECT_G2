@@ -17,10 +17,15 @@ class EventRepositoryImpl implements EventRepository {
     required this.firestore,
     DateTime Function()? now,
     this.requestTimeout = const Duration(seconds: 20),
+    this.authenticatedActor,
   }) : _now = now ?? DateTime.now;
   final FirebaseFirestore firestore;
   final DateTime Function() _now;
   final Duration requestTimeout;
+
+  /// Production injects a fresh Firebase identity/profile resolver. Isolated
+  /// repository tests may supply their trusted actor directly without Firebase.
+  final Future<AppUser?> Function()? authenticatedActor;
   final Map<String, _EventCreateAttempt> _createAttempts = {};
 
   Future<T> _request<T>(
@@ -86,42 +91,46 @@ class EventRepositoryImpl implements EventRepository {
   });
 
   @override
-  Future<EventModel> getEventById(String eventId, {AppUser? actor}) =>
-      _request(() async {
-        if (eventId.trim().isEmpty || eventId.contains('/')) {
-          throw const AppException(
-            'This event is unavailable.',
-            code: 'event-not-found',
-          );
+  Future<EventModel> getEventById(String eventId, {AppUser? actor}) => _request(
+    () async {
+      if (eventId.trim().isEmpty || eventId.contains('/')) {
+        throw const AppException(
+          'This event is unavailable.',
+          code: 'event-not-found',
+        );
+      }
+      Query<Map<String, dynamic>> query = firestore
+          .collection(FirestoreCollections.events)
+          .where(FieldPath.documentId, isEqualTo: eventId);
+      final supplied = actor;
+      final manager = supplied == null ? null : await _verifiedActor(supplied);
+      if (manager == null) {
+        query = query.where('status', isEqualTo: EventStatus.published.name);
+      } else {
+        _requireEventManager(manager);
+        if (manager.role != UserRole.admin) {
+          query = query.where('organizerId', isEqualTo: manager.uid);
         }
-        Query<Map<String, dynamic>> query = firestore
-            .collection(FirestoreCollections.events)
-            .where(FieldPath.documentId, isEqualTo: eventId);
-        if (actor == null) {
-          query = query.where('status', isEqualTo: EventStatus.published.name);
-        } else {
-          _requireEventManager(actor);
-          if (actor.role != UserRole.admin) {
-            query = query.where('organizerId', isEqualTo: actor.uid);
-          }
-        }
-        final snapshot = await query
-            .limit(1)
-            .get(const GetOptions(source: Source.server));
-        if (snapshot.docs.isEmpty) {
-          throw const AppException(
-            'This event is unavailable or you do not have access to it.',
-            code: 'event-not-found',
-          );
-        }
-        final event = EventModel.fromFirestore(snapshot.docs.single);
-        if (actor != null) _requireOwnerOrAdmin(event, actor);
-        return event;
-      });
+      }
+      final snapshot = await query
+          .limit(1)
+          .get(const GetOptions(source: Source.server));
+      if (snapshot.docs.isEmpty) {
+        throw const AppException(
+          'This event is unavailable or you do not have access to it.',
+          code: 'event-not-found',
+        );
+      }
+      final event = EventModel.fromFirestore(snapshot.docs.single);
+      if (manager != null) _requireOwnerOrAdmin(event, manager);
+      return event;
+    },
+  );
 
   @override
   Future<List<EventModel>> getManagedEvents({required AppUser actor}) =>
       _request(() async {
+        actor = await _verifiedActor(actor);
         _requireEventManager(actor);
         Query<Map<String, dynamic>> query = firestore.collection(
           FirestoreCollections.events,
@@ -143,6 +152,7 @@ class EventRepositoryImpl implements EventRepository {
   }) =>
       _request(
         () async {
+          actor = await _verifiedActor(actor);
           _requireEventManager(actor);
           // Keep the original write alive across a timeout. Retrying unchanged data
           // confirms that write instead of allocating a second document or resetting
@@ -204,6 +214,7 @@ class EventRepositoryImpl implements EventRepository {
     required AppUser actor,
     DateTime? expectedUpdatedAt,
   }) => _request(() async {
+    actor = await _verifiedActor(actor);
     _requireEventManager(actor);
     _requireValidInput(input);
     final ref = _eventDocument(eventId);
@@ -250,15 +261,25 @@ class EventRepositoryImpl implements EventRepository {
     required String eventId,
     required AppUser actor,
   }) => _request(() async {
+    actor = await _verifiedActor(actor);
     _requireEventManager(actor);
     final ref = _eventDocument(eventId);
-    final existing = await _loadEvent(ref);
-    _requireOwnerOrAdmin(existing, actor);
-    if (existing.status == EventStatus.cancelled) return existing;
-    await ref.update({
-      'status': EventStatus.cancelled.name,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+    await firestore.runTransaction((tx) async {
+      final snapshot = await tx.get(ref);
+      if (!snapshot.exists) {
+        throw const AppException(
+          'This event is unavailable.',
+          code: 'event-not-found',
+        );
+      }
+      final existing = EventModel.fromFirestore(snapshot);
+      _requireOwnerOrAdmin(existing, actor);
+      if (existing.status == EventStatus.cancelled) return;
+      tx.update(ref, {
+        'status': EventStatus.cancelled.name,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }, timeout: requestTimeout);
     return EventModel.fromFirestore(
       await ref.get(const GetOptions(source: Source.server)),
     );
@@ -275,21 +296,23 @@ class EventRepositoryImpl implements EventRepository {
     return firestore.collection(FirestoreCollections.events).doc(id);
   }
 
-  Future<EventModel> _loadEvent(
-    DocumentReference<Map<String, dynamic>> ref,
-  ) async {
-    final snapshot = await ref.get(const GetOptions(source: Source.server));
-    if (!snapshot.exists) {
+  Future<AppUser> _verifiedActor(AppUser supplied) async {
+    final resolver = authenticatedActor;
+    if (resolver == null) return supplied;
+    final actual = await resolver();
+    if (actual == null || actual.uid != supplied.uid) {
       throw const AppException(
-        'This event is unavailable.',
-        code: 'event-not-found',
+        'Your session is no longer valid. Please sign in again.',
+        code: 'unauthenticated',
       );
     }
-    return EventModel.fromFirestore(snapshot);
+    return actual;
   }
 
   void _requireEventManager(AppUser actor) {
-    if (!actor.isActive || !actor.role.canOrganize) {
+    if (actor.uid.trim().isEmpty ||
+        !actor.isActive ||
+        !actor.role.canOrganize) {
       throw const AppException(
         'Only active organizers or admins can manage events.',
         code: 'event-forbidden',
