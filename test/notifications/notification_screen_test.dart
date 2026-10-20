@@ -78,6 +78,9 @@ void main() {
       ProviderScope(
         overrides: [
           notificationRepositoryProvider.overrideWithValue(repository),
+          markNotificationAsReadActionProvider.overrideWithValue(
+            repository.markRead,
+          ),
           currentUserProvider.overrideWith((ref) => Stream.value(testUser())),
           notificationInboxProvider.overrideWith(
             (ref) => repository.watchInbox('u1'),
