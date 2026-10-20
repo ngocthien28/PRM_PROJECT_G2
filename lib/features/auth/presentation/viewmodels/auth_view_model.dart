@@ -1,10 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/errors/error_mapper.dart';
 import '../../../../core/services/firebase_providers.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../data/auth_repository.dart';
 import '../../data/models/app_user.dart';
+import '../../../profile/data/local_profile_cache.dart';
 
 final authStateProvider = StreamProvider<AuthIdentity?>(
   (ref) => ref.watch(authRepositoryProvider).watchUser(),
@@ -15,7 +17,19 @@ final currentUserProvider = StreamProvider<AppUser?>((ref) async* {
   if (identity == null) {
     yield null;
   } else {
-    yield* ref.watch(profileRepositoryProvider).watchUser(identity.uid);
+    final cached = await ref
+        .read(localProfileCacheProvider)
+        .readProfile(identity.uid);
+    if (cached != null) yield cached;
+    await for (final user
+        in ref.watch(profileRepositoryProvider).watchUser(identity.uid)) {
+      if (user != null) {
+        try {
+          await ref.read(localProfileCacheProvider).saveProfile(user);
+        } catch (_) {}
+      }
+      yield user;
+    }
   }
 });
 final authViewModelProvider =

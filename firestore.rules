@@ -215,9 +215,30 @@ service cloud.firestore {
         && request.resource.data.status == 'active'
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
-      // Profile updates, status changes and role assignment are future work.
       allow list: if isAdmin();
-      allow update, delete: if false;
+      allow update: if owns(uid) && activeUser()
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.keys().hasAll([
+          'uid', 'email', 'displayName', 'avatarUrl', 'role', 'status', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'uid', 'email', 'displayName', 'avatarUrl', 'phone', 'role', 'status', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() >= 2
+        && request.resource.data.displayName.size() <= 50
+        && (request.resource.data.avatarUrl == null || request.resource.data.avatarUrl is string)
+        && (!('phone' in request.resource.data) || request.resource.data.phone == null
+          || (request.resource.data.phone is string && request.resource.data.phone.size() <= 24))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName', 'avatarUrl', 'phone', 'updatedAt'
+        ]);
+      allow delete: if false;
     }
     match /registrations/{registrationId} {
       allow read: if activeUser() && (

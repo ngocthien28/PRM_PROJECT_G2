@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../../core/constants/firestore_collections.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/errors/error_mapper.dart';
@@ -8,6 +9,39 @@ import 'profile_repository.dart';
 class ProfileRepositoryImpl implements ProfileRepository {
   final FirebaseFirestore firestore;
   ProfileRepositoryImpl(this.firestore);
+
+  @override
+  Future<void> updateProfile({
+    required String uid,
+    required String displayName,
+    required String phone,
+  }) async {
+    try {
+      await firestore.collection(FirestoreCollections.users).doc(uid).update({
+        'displayName': displayName.trim(),
+        'phone': phone.trim().isEmpty ? null : phone.trim(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (error, stack) {
+      throw mapError(error, stack);
+    }
+  }
+
+  @override
+  Future<void> updateAvatar({
+    required String uid,
+    required String avatarUrl,
+  }) async {
+    try {
+      await firestore.collection(FirestoreCollections.users).doc(uid).update({
+        'avatarUrl': avatarUrl,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (error, stack) {
+      throw mapError(error, stack);
+    }
+  }
+
   @override
   Stream<AppUser?> watchUser(String uid) async* {
     try {
