@@ -10,6 +10,8 @@ void main() {
     'weak-password',
     'invalid-credential',
     'user-disabled',
+    'invalid-user-token',
+    'user-token-expired',
     'network-request-failed',
     'permission-denied',
     'unavailable',

@@ -15,6 +15,55 @@ class MockAuth extends Mock implements FirebaseAuth {}
 class MockAuthUser extends Mock implements User {}
 
 void main() {
+  for (final code in [
+    'invalid-user-token',
+    'user-token-expired',
+    'user-not-found',
+  ]) {
+    test('restored $code session signs out and returns to login', () async {
+      final auth = MockAuth();
+      final user = MockAuthUser();
+      final profiles = FakeProfiles();
+      addTearDown(profiles.dispose);
+      when(() => auth.currentUser).thenReturn(user);
+      when(user.reload).thenThrow(FirebaseAuthException(code: code));
+      when(auth.signOut).thenAnswer((_) async {});
+      when(auth.userChanges).thenAnswer((_) => Stream.value(null));
+
+      expect(
+        await AuthRepositoryImpl(auth, profiles).watchUser().first,
+        isNull,
+      );
+      verify(auth.signOut).called(1);
+      expect(profiles.creates, 0);
+    });
+  }
+
+  test(
+    'network failure while restoring a session preserves the session',
+    () async {
+      final auth = MockAuth();
+      final user = MockAuthUser();
+      final profiles = FakeProfiles();
+      addTearDown(profiles.dispose);
+      when(() => auth.currentUser).thenReturn(user);
+      when(
+        user.reload,
+      ).thenThrow(FirebaseAuthException(code: 'network-request-failed'));
+      await expectLater(
+        AuthRepositoryImpl(auth, profiles).watchUser().first,
+        throwsA(
+          isA<AppException>().having(
+            (e) => e.code,
+            'code',
+            'network-request-failed',
+          ),
+        ),
+      );
+      verifyNever(auth.signOut);
+    },
+  );
+
   test('restored disabled account fails before profile access', () async {
     final auth = MockAuth();
     final user = MockAuthUser();
@@ -30,6 +79,28 @@ void main() {
     expect(profiles.creates, 0);
     await profiles.dispose();
   });
+  test(
+    'unidentified restore failure offers recovery without signing out',
+    () async {
+      final auth = MockAuth();
+      final user = MockAuthUser();
+      final profiles = FakeProfiles();
+      addTearDown(profiles.dispose);
+      when(() => auth.currentUser).thenReturn(user);
+      when(user.reload).thenThrow(FirebaseAuthException(code: 'unknown-error'));
+      await expectLater(
+        AuthRepositoryImpl(auth, profiles).watchUser().first,
+        throwsA(
+          isA<AppException>().having(
+            (e) => e.message,
+            'message',
+            contains('saved session'),
+          ),
+        ),
+      );
+      verifyNever(auth.signOut);
+    },
+  );
   test(
     'profile creation writes agreed schema and never stores a password',
     () async {

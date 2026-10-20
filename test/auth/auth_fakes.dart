@@ -4,6 +4,7 @@ import 'package:campushub/core/errors/app_exception.dart';
 import 'package:campushub/features/auth/data/auth_repository.dart';
 import 'package:campushub/features/auth/data/models/app_user.dart';
 import 'package:campushub/features/profile/data/profile_repository.dart';
+import 'package:campushub/features/profile/data/local_profile_cache.dart';
 import 'package:campushub/shared/enums/user_role.dart';
 
 AppUser testUser({
@@ -24,6 +25,18 @@ const testIdentity = AuthIdentity(
   email: 'uid@example.com',
   displayName: 'Minh',
 );
+
+class FakeLocalProfileCache extends LocalProfileCache {
+  final users = <String, AppUser>{};
+
+  @override
+  Future<AppUser?> readProfile(String uid) async => users[uid];
+
+  @override
+  Future<void> saveProfile(AppUser user) async {
+    users[user.uid] = user;
+  }
+}
 
 class FakeProfiles implements ProfileRepository {
   final users = <String, AppUser>{};

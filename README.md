@@ -26,6 +26,39 @@ testing, see [Notifications setup](docs/notifications-setup.md).
 6. Deploy rule/index changes with `npx firebase-tools deploy --only firestore --project campushub-prm-g2`.
 7. Run `flutter run -d windows` or `flutter run -d chrome`.
 
+### Run with local demo data
+
+Plain `flutter run -d windows` connects to the configured Firebase project.
+For the seeded demo accounts, keep the local Auth (`9099`) and Firestore (`8087`)
+emulators running and start the app with:
+
+```powershell
+flutter run -d windows --dart-define=USE_FIREBASE_EMULATOR=true
+```
+
+See [the emulator and seed setup](firebase/README.md) for local data preparation.
+Changing the backend requires stopping and restarting the app. Cached sessions
+that are explicitly rejected as invalid or expired are cleared so the app can
+return to sign-in. Network failures and disabled accounts retain their error
+state; Retry and Sign out remain available. A profile permission error requires
+checking the selected backend and its deployed Firestore rules; Retry does not
+grant access.
+
+### Windows terminal output
+
+Use the filtered runner to hide VM Service links and Firestore transaction
+traces while keeping errors and connection status visible:
+
+```powershell
+.\scripts\run_windows.ps1
+# For the local demo accounts:
+.\scripts\run_windows.ps1 -Emulator
+```
+
+The runner disables DevTools startup and keeps the Flutter exit code. Additional
+Flutter arguments can be passed after the script options. Direct `flutter run`
+continues to show the standard Flutter/plugin output.
+
 ## Club logo uploads (Cloudinary)
 
 Club logos are uploaded directly from the app to Cloudinary with an unsigned

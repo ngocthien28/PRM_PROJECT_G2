@@ -1,3 +1,4 @@
+import 'package:campushub/features/profile/data/local_profile_cache.dart';
 import 'dart:async';
 import 'package:campushub/app.dart';
 import 'package:campushub/core/errors/app_exception.dart';
@@ -35,6 +36,7 @@ void main() {
         firebaseInitializationProvider.overrideWith((ref) async {}),
         authRepositoryProvider.overrideWithValue(auth),
         profileRepositoryProvider.overrideWithValue(profiles),
+        localProfileCacheProvider.overrideWithValue(FakeLocalProfileCache()),
         eventRepositoryProvider.overrideWithValue(events),
         notificationInboxProvider.overrideWith((ref) => Stream.value([])),
       ],
