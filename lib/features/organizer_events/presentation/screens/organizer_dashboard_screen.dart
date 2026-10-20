@@ -17,11 +17,13 @@ class OrganizerDashboardScreen extends ConsumerWidget {
     required this.onCreateEvent,
     required this.onManageEvents,
     required this.onEditEvent,
+    this.onViewParticipants,
   });
 
   final VoidCallback onCreateEvent;
   final VoidCallback onManageEvents;
   final ValueChanged<EventModel> onEditEvent;
+  final ValueChanged<EventModel>? onViewParticipants;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -133,8 +135,31 @@ class OrganizerDashboardScreen extends ConsumerWidget {
                   child: CircularProgressIndicator(),
                 ),
               ),
-              error: (_, _) => const _EmptyState(
-                message: 'Unable to load your events right now.',
+              error: (_, _) => Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 36,
+                        color: Colors.red,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Unable to load your events right now.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton(
+                        key: const Key('dashboardRetryButton'),
+                        onPressed: () =>
+                            ref.invalidate(organizerEventsProvider),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
               ),
               data: (items) {
                 final activeItems = items
@@ -163,6 +188,17 @@ class OrganizerDashboardScreen extends ConsumerWidget {
                                     onSelected: (action) {
                                       if (action == _EventAction.edit) {
                                         onEditEvent(event);
+                                      } else if (action ==
+                                          _EventAction.participants) {
+                                        if (onViewParticipants != null) {
+                                          onViewParticipants!(event);
+                                        } else {
+                                          context.push(
+                                            RouteNames.organizerEventParticipants(
+                                              event.id,
+                                            ),
+                                          );
+                                        }
                                       } else {
                                         _confirmCancel(context, ref, event);
                                       }
@@ -173,6 +209,13 @@ class OrganizerDashboardScreen extends ConsumerWidget {
                                         child: ListTile(
                                           leading: Icon(Icons.edit_outlined),
                                           title: Text('Edit'),
+                                        ),
+                                      ),
+                                      PopupMenuItem(
+                                        value: _EventAction.participants,
+                                        child: ListTile(
+                                          leading: Icon(Icons.people_outline),
+                                          title: Text('Participants'),
                                         ),
                                       ),
                                       PopupMenuItem(
@@ -240,7 +283,7 @@ class OrganizerDashboardScreen extends ConsumerWidget {
   }
 }
 
-enum _EventAction { edit, delete }
+enum _EventAction { edit, participants, delete }
 
 class _StatCard extends StatelessWidget {
   const _StatCard({
