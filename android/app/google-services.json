@@ -1,0 +1,17 @@
+{
+  "project_info": {
+    "project_number": "624735054316",
+    "project_id": "campushub-prm-g2",
+    "storage_bucket": "campushub-prm-g2.firebasestorage.app"
+  },
+  "client": [{
+    "client_info": {
+      "mobilesdk_app_id": "1:624735054316:android:4f6506ad7c0894868b78c9",
+      "android_client_info": {"package_name": "com.example.campushub"}
+    },
+    "oauth_client": [],
+    "api_key": [{"current_key": "AIzaSyAdoLCG0kKS1Wg2seJdvZ3uIQZpYEDWSvs"}],
+    "services": {"appinvite_service": {"other_platform_oauth_client": []}}
+  }],
+  "configuration_version": "1"
+}
