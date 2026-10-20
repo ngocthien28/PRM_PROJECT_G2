@@ -7,16 +7,15 @@ import 'favorite_repository.dart';
 /// Document chỉ lưu: { eventId, addedAt }
 class FavoriteRepositoryImpl implements FavoriteRepository {
   FavoriteRepositoryImpl({
-    required FirebaseFirestore firestore,
-    required FavoriteLocalDao localDao,
-  })  : _firestore = firestore,
-        _localDao = localDao;
+    required this.firestore,
+    required this.localDao,
+  });
 
-  final FirebaseFirestore _firestore;
-  final FavoriteLocalDao _localDao;
+  final FirebaseFirestore firestore;
+  final FavoriteLocalDao localDao;
 
   CollectionReference<Map<String, dynamic>> _favCol(String userId) =>
-      _firestore.collection('users').doc(userId).collection('favorites');
+      firestore.collection('users').doc(userId).collection('favorites');
 
   @override
   Future<void> toggleFavorite({
@@ -35,7 +34,7 @@ class FavoriteRepositoryImpl implements FavoriteRepository {
       await docRef.delete();
     }
     // 2. Đồng bộ local SQLite
-    await _localDao.setFavorite(
+    await localDao.setFavorite(
       eventId: eventId,
       userId: userId,
       isFavorite: isFavorite,
@@ -48,7 +47,7 @@ class FavoriteRepositoryImpl implements FavoriteRepository {
     required String eventId,
   }) async {
     // Ưu tiên local cache để phản hồi nhanh
-    final local = await _localDao.isFavorite(
+    final local = await localDao.isFavorite(
       eventId: eventId,
       userId: userId,
     );
@@ -69,7 +68,7 @@ class FavoriteRepositoryImpl implements FavoriteRepository {
         i,
         i + 10 > eventIds.length ? eventIds.length : i + 10,
       );
-      final eventsSnap = await _firestore
+      final eventsSnap = await firestore
           .collection('events')
           .where(FieldPath.documentId, whereIn: chunk)
           .get();

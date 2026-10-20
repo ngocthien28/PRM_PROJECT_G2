@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app_database.dart';
@@ -41,8 +43,11 @@ class FavoriteLocalDao {
 
   final AppDatabase _db;
 
-  // Web/fallback in-memory cache
+  // Web / test fallback in-memory cache
   static final Map<String, bool> _webCache = {};
+
+  bool get _useMemoryCache =>
+      kIsWeb || Platform.environment.containsKey('FLUTTER_TEST');
 
   static String _key(String eventId, String userId) => '$userId:$eventId';
 
@@ -53,6 +58,8 @@ class FavoriteLocalDao {
     required bool isFavorite,
   }) async {
     _webCache[_key(eventId, userId)] = isFavorite;
+
+    if (_useMemoryCache) return;
 
     final db = await _db.database;
     if (db == null) return;
@@ -74,6 +81,10 @@ class FavoriteLocalDao {
     required String eventId,
     required String userId,
   }) async {
+    if (_useMemoryCache) {
+      return _webCache[_key(eventId, userId)] ?? false;
+    }
+
     final db = await _db.database;
     if (db == null) return _webCache[_key(eventId, userId)] ?? false;
 
@@ -91,6 +102,13 @@ class FavoriteLocalDao {
 
   /// Trả về danh sách eventId được đánh dấu yêu thích của user.
   Future<List<String>> getFavoriteEventIds(String userId) async {
+    if (_useMemoryCache) {
+      return _webCache.entries
+          .where((e) => e.key.startsWith('$userId:') && e.value)
+          .map((e) => e.key.substring(userId.length + 1))
+          .toList();
+    }
+
     final db = await _db.database;
     if (db == null) {
       return _webCache.entries
@@ -114,6 +132,8 @@ class FavoriteLocalDao {
   /// Xóa cache cục bộ theo user (khi logout).
   Future<void> clearForUser(String userId) async {
     _webCache.removeWhere((key, _) => key.startsWith('$userId:'));
+    if (_useMemoryCache) return;
+
     final db = await _db.database;
     if (db == null) return;
     await db.delete(
