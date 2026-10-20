@@ -111,9 +111,7 @@ class _ManageEventsScreenState extends ConsumerState<ManageEventsScreen> {
             child: const Text('Keep event'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red.shade700,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
             onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Cancel event'),
           ),
@@ -255,6 +253,9 @@ class _EventsBody extends StatelessWidget {
                     onEdit: () => onEdit(events[index]),
                     onCancel: () => onCancel(events[index]),
                     onOpen: () => onOpen(events[index]),
+                    onParticipants: () => context.push(
+                      RouteNames.organizerEventParticipants(events[index].id),
+                    ),
                   ),
                   childCount: events.length,
                 ),
@@ -400,6 +401,7 @@ class _ManagedEventCard extends StatelessWidget {
     required this.onEdit,
     required this.onCancel,
     required this.onOpen,
+    this.onParticipants,
   });
 
   final EventModel event;
@@ -407,6 +409,7 @@ class _ManagedEventCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onCancel;
   final VoidCallback onOpen;
+  final VoidCallback? onParticipants;
 
   @override
   Widget build(BuildContext context) {
@@ -421,9 +424,7 @@ class _ManagedEventCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(
-          color: isCancelled
-              ? Colors.red.withOpacity(0.3)
-              : CampusColors.line,
+          color: isCancelled ? Colors.red.withOpacity(0.3) : CampusColors.line,
         ),
       ),
       child: InkWell(
@@ -456,9 +457,7 @@ class _ManagedEventCard extends StatelessWidget {
                                   event.title,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
+                                  style: Theme.of(context).textTheme.titleMedium
                                       ?.copyWith(fontWeight: FontWeight.bold),
                                 ),
                               ),
@@ -469,9 +468,7 @@ class _ManagedEventCard extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             event.category,
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelMedium
+                            style: Theme.of(context).textTheme.labelMedium
                                 ?.copyWith(color: CampusColors.teal),
                           ),
                           const SizedBox(height: 8),
@@ -485,10 +482,24 @@ class _ManagedEventCard extends StatelessWidget {
                             text: event.locationName,
                           ),
                           const SizedBox(height: 4),
-                          _InfoLine(
-                            icon: Icons.people_outline,
-                            text:
-                                '${event.registeredCount} / ${event.capacity} registered',
+                          InkWell(
+                            onTap: () {
+                              if (onParticipants != null) {
+                                onParticipants!();
+                              } else {
+                                context.push(
+                                  RouteNames.organizerEventParticipants(
+                                    event.id,
+                                  ),
+                                );
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(4),
+                            child: _InfoLine(
+                              icon: Icons.people_outline,
+                              text:
+                                  '${event.registeredCount} / ${event.capacity} registered',
+                            ),
                           ),
                           const SizedBox(height: 6),
                           ClipRRect(
@@ -539,11 +550,23 @@ class _ManagedEventCard extends StatelessWidget {
                         ),
                         _ManagedAction.edit => onEdit(),
                         _ManagedAction.cancel => onCancel(),
+                        _ManagedAction.participants =>
+                          onParticipants != null
+                              ? onParticipants!()
+                              : context.push(
+                                  RouteNames.organizerEventParticipants(
+                                    event.id,
+                                  ),
+                                ),
                       },
                       itemBuilder: (_) => [
                         const PopupMenuItem(
                           value: _ManagedAction.open,
                           child: Text('View details'),
+                        ),
+                        const PopupMenuItem(
+                          value: _ManagedAction.participants,
+                          child: Text('View participants'),
                         ),
                         if (event.status != EventStatus.cancelled)
                           const PopupMenuItem(
@@ -573,7 +596,7 @@ class _ManagedEventCard extends StatelessWidget {
   }
 }
 
-enum _ManagedAction { open, scan, edit, cancel }
+enum _ManagedAction { open, scan, edit, cancel, participants }
 
 class _InfoLine extends StatelessWidget {
   const _InfoLine({required this.icon, required this.text});
