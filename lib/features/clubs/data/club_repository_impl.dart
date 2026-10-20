@@ -8,6 +8,7 @@ import '../../../shared/enums/user_role.dart';
 import '../../auth/data/models/app_user.dart';
 import '../domain/usecases/create_club.dart';
 import '../domain/usecases/deactivate_club.dart';
+import '../domain/usecases/join_club.dart';
 import '../domain/usecases/update_club.dart';
 import '../domain/usecases/view_club_list.dart';
 import '../domain/usecases/view_club_details.dart';
@@ -105,7 +106,7 @@ class ClubRepositoryImpl implements ClubRepository {
 
   @override
   Future<void> joinClub({required String clubId, required AppUser actor}) =>
-      membership(clubId, actor, true);
+      JoinClub(db)(clubId: clubId, actor: actor);
   @override
   Future<void> leaveClub({required String clubId, required AppUser actor}) =>
       membership(clubId, actor, false);
