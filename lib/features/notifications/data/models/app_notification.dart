@@ -17,7 +17,7 @@ class AppNotification {
   final DateTime createdAt;
   factory AppNotification.fromMap(String id, Map<String, dynamic> data) {
     final date = data['createdAt'];
-    if (date is! Timestamp) {
+    if (date != null && date is! Timestamp) {
       throw const FormatException('Invalid notification timestamp.');
     }
     return AppNotification(
@@ -28,7 +28,9 @@ class AppNotification {
       type: data['type'] as String? ?? '',
       referenceId: data['referenceId'] as String?,
       isRead: data['isRead'] as bool? ?? false,
-      createdAt: date.toDate().toUtc(),
+      createdAt: date is Timestamp
+          ? date.toDate().toUtc()
+          : DateTime.now().toUtc(),
     );
   }
   Map<String, dynamic> toMap() => {
