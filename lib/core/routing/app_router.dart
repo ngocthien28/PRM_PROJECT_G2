@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
@@ -23,6 +24,8 @@ import '../../features/notifications/presentation/screens/notification_screen.da
 import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/admin/presentation/screens/moderation_screen.dart';
 import '../../features/favorites/presentation/screens/favorites_screen.dart';
+import '../../features/profile/presentation/screens/profile_screen.dart';
+import '../../features/profile/presentation/screens/edit_profile_screen.dart';
 import '../../features/checkin/presentation/screens/qr_scanner_screen.dart';
 import 'route_guards.dart';
 import 'route_names.dart';
@@ -62,6 +65,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const ForgotPasswordScreen(),
       ),
       GoRoute(path: RouteNames.home, builder: (_, _) => const StudentShell()),
+      GoRoute(
+        path: RouteNames.profile,
+        builder: (_, _) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.editProfile,
+        builder: (_, _) => const EditProfileScreen(),
+      ),
       GoRoute(
         path: RouteNames.clubs,
         builder: (_, _) => const ClubListScreen(),

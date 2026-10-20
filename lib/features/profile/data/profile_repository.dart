@@ -9,4 +9,11 @@ abstract class ProfileRepository {
     required String email,
     required String displayName,
   });
+
+  Future<void> updateProfile({
+    required String uid,
+    required String displayName,
+    required String phone,
+  });
+  Future<void> updateAvatar({required String uid, required String avatarUrl});
 }
