@@ -9,6 +9,7 @@ import '../../../auth/presentation/viewmodels/auth_view_model.dart';
 import '../../../events/data/models/event_filter.dart';
 import '../../../events/presentation/viewmodels/event_list_view_model.dart';
 import '../../../events/presentation/widgets/event_results.dart';
+import '../../../../shared/widgets/role_navigation_actions.dart';
 import '../../../notifications/presentation/viewmodels/notification_view_model.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -41,6 +42,7 @@ class HomeScreen extends ConsumerWidget {
       onSignOut: ref.read(authViewModelProvider.notifier).signOut,
       signingOut: action.isLoading,
       actions: [
+        const RoleNavigationActions(),
         IconButton(
           tooltip: 'My events',
           onPressed: () => context.push(RouteNames.myEvents),
