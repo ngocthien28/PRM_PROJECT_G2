@@ -305,14 +305,14 @@ class RegistrationRepositoryImpl implements RegistrationRepository {
         throw const AppException('Mã QR không hợp lệ hoặc sai sự kiện');
       }
 
-      if (reg.status != RegistrationStatus.registered) {
-        throw const AppException('Vé không ở trạng thái hoạt động để check-in');
-      }
-
-      if (reg.checkedInAt != null) {
+      if (reg.checkedInAt != null || reg.status == RegistrationStatus.checkedIn) {
         throw const AppException(
           'Vé này đã được check-in trước đó (Quét trùng)',
         );
+      }
+
+      if (reg.status != RegistrationStatus.registered) {
+        throw const AppException('Vé không ở trạng thái hoạt động để check-in');
       }
 
       final eventRef = _firestore.collection('events').doc(payload.eventId);
