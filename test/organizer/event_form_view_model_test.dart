@@ -92,7 +92,7 @@ void main() {
       expect(currentState().status, EventFormSubmissionStatus.error);
       expect(
         currentState().errorMessage,
-        'Unable to save event. Please try again.',
+        'Something went wrong. Please try again.',
       );
     });
 

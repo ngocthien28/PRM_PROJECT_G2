@@ -141,7 +141,7 @@ final favoriteEventsProvider =
     if (!ref.mounted || identity == null) return [];
     // Theo dõi thay đổi từ stream để tự reload khi có toggle
     ref.watch(favoriteIdsProvider);
-    return ref
+    return await ref
         .watch(favoriteRepositoryProvider)
         .getFavoriteEvents(identity.uid);
   } catch (_) {
