@@ -6,6 +6,7 @@ import '../../../core/errors/app_exception.dart';
 import '../../../core/errors/error_mapper.dart';
 import '../../auth/data/models/app_user.dart';
 import '../../organizer_events/data/models/event_form_input.dart';
+import '../../organizer_events/data/models/organizer_dashboard_summary.dart';
 import '../../../shared/enums/event_status.dart';
 import '../../../shared/enums/user_role.dart';
 import 'event_repository.dart';
@@ -165,6 +166,41 @@ class EventRepositoryImpl implements EventRepository {
             .get(const GetOptions(source: Source.server));
         return snapshot.docs.map(EventModel.fromFirestore).toList();
       });
+
+  @override
+  Future<OrganizerDashboardSummary> getOrganizerDashboard({
+    required AppUser actor,
+    required DateTime asOf,
+  }) => _request(() async {
+    actor = await _verifiedActor(actor);
+    _requireEventManager(actor);
+    final summary = OrganizerDashboardAccumulator(
+      organizerId: actor.uid,
+      asOf: asOf,
+    );
+    // Reuses the owner/startAt index from UC-034. Each request is bounded;
+    // all pages contribute to KPIs, while only 5 upcoming / 3 recent cards
+    // are retained. Registration documents are never queried.
+    const pageSize = 100;
+    final query = firestore
+        .collection(FirestoreCollections.events)
+        .where('organizerId', isEqualTo: actor.uid)
+        .orderBy('startAt', descending: true)
+        .orderBy(FieldPath.documentId, descending: true);
+    QueryDocumentSnapshot<Map<String, dynamic>>? cursor;
+    while (true) {
+      final page =
+          await (cursor == null ? query : query.startAfterDocument(cursor))
+              .limit(pageSize)
+              .get(const GetOptions(source: Source.server));
+      for (final document in page.docs) {
+        summary.add(EventModel.fromFirestore(document));
+      }
+      if (page.docs.length < pageSize) break;
+      cursor = page.docs.last;
+    }
+    return summary.finish();
+  });
 
   @override
   Future<EventModel> createEvent({
