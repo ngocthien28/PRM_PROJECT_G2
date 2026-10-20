@@ -17,5 +17,10 @@ coverage/
 *.p12
 *.pem
 service-account*.json
+**/node_modules/
+**/credentials*.json
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
 .env
 .env.*
