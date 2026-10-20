@@ -63,6 +63,7 @@ service cloud.firestore {
       allow create: if isEventManager()
         && request.resource.data.organizerId == request.auth.uid
         && request.resource.data.status == 'published'
+        && request.resource.data.startAt > request.time
         && request.resource.data.registeredCount == 0
         && request.resource.data.checkedInCount == 0
         && request.resource.data.createdAt == request.time

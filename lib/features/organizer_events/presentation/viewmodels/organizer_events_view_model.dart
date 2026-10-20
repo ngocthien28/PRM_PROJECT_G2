@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/errors/app_exception.dart';
 
 import '../../../auth/data/models/app_user.dart';
 import '../../../auth/presentation/viewmodels/auth_view_model.dart';
@@ -12,14 +13,15 @@ import '../../data/models/event_form_input.dart';
 /// The organizer's server-backed event list. The dashboard that consumes this
 /// provider is intentionally a later task; keeping it here makes the CRUD
 /// operations share the same repository and authenticated profile.
-final organizerEventsProvider =
-    FutureProvider.autoDispose<List<EventModel>>((ref) async {
-      final actor = await ref.watch(currentUserProvider.future);
-      if (actor == null || !actor.isActive || !actor.role.canOrganize) {
-        return const [];
-      }
-      return ref.watch(eventRepositoryProvider).getManagedEvents(actor: actor);
-    });
+final organizerEventsProvider = FutureProvider.autoDispose<List<EventModel>>((
+  ref,
+) async {
+  final actor = await ref.watch(currentUserProvider.future);
+  if (actor == null || !actor.isActive || !actor.role.canOrganize) {
+    return const [];
+  }
+  return ref.watch(eventRepositoryProvider).getManagedEvents(actor: actor);
+});
 
 /// Thin presentation-layer entry point for organizer mutations.
 ///
@@ -70,14 +72,20 @@ class OrganizerEventActions {
   }
 
   Future<void> cancelEvent(String eventId) async {
-    await _repository.cancelEvent(eventId: eventId, actor: await _requireActor());
+    await _repository.cancelEvent(
+      eventId: eventId,
+      actor: await _requireActor(),
+    );
     _refresh();
   }
 
   Future<AppUser> _requireActor() async {
     final actor = await _currentActor();
     if (actor == null) {
-      throw StateError('Your session is no longer available. Please sign in again.');
+      throw const AppException(
+        'Your session is no longer available. Please sign in again.',
+        code: 'unauthenticated',
+      );
     }
     return actor;
   }

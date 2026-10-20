@@ -7,7 +7,8 @@ void main() {
 
   EventFormInput validInput({
     String title = 'Flutter Workshop',
-    String description = 'Learn Flutter fundamentals in this hands-on workshop.',
+    String description =
+        'Learn Flutter fundamentals in this hands-on workshop.',
     String category = 'technology',
     String locationName = 'Hall A',
     DateTime? start,
@@ -135,6 +136,27 @@ void main() {
 
     expect(errors, isEmpty);
   });
+
+  test(
+    'future start compares instants consistently across timezone offsets',
+    () {
+      final now = DateTime.parse('2030-01-01T09:00:00+07:00');
+      expect(
+        validInput(
+          start: DateTime.parse('2030-01-01T02:00:01Z'),
+          end: DateTime.parse('2030-01-01T11:00:00+07:00'),
+        ).validate(requireFutureStart: true, now: now),
+        isEmpty,
+      );
+      expect(
+        validInput(
+          start: DateTime.parse('2030-01-01T08:59:59+07:00'),
+          end: DateTime.parse('2030-01-01T04:00:00Z'),
+        ).validate(requireFutureStart: true, now: now),
+        contains('startAt'),
+      );
+    },
+  );
 
   test('keeps local poster metadata separate from an uploaded URL', () {
     final selection = EventPosterSelection(
