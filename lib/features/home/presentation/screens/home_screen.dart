@@ -157,17 +157,32 @@ class HomeScreen extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(height: 24),
-                          FilledButton.icon(
-                            onPressed: browse,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: CampusColors.gold,
-                              foregroundColor: CampusColors.ink,
-                            ),
-                            icon: const Icon(
-                              Icons.arrow_outward_rounded,
-                              size: 18,
-                            ),
-                            label: const Text('Browse events'),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 10,
+                            children: [
+                              FilledButton.icon(
+                                onPressed: browse,
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: CampusColors.gold,
+                                  foregroundColor: CampusColors.ink,
+                                ),
+                                icon: const Icon(
+                                  Icons.arrow_outward_rounded,
+                                  size: 18,
+                                ),
+                                label: const Text('Browse events'),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: () => context.push(RouteNames.favorites),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  side: const BorderSide(color: Color(0xFF5D7F6D)),
+                                ),
+                                icon: const Icon(Icons.favorite_border, size: 18),
+                                label: const Text('Favorites'),
+                              ),
+                            ],
                           ),
                         ],
                       ),
