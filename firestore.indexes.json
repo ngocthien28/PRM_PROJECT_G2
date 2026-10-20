@@ -16,6 +16,14 @@
         {"fieldPath": "status", "order": "ASCENDING"},
         {"fieldPath": "startAt", "order": "ASCENDING"}
       ]
+    },
+    {
+      "collectionGroup": "events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "organizerId", "order": "ASCENDING"},
+        {"fieldPath": "startAt", "order": "DESCENDING"}
+      ]
     }
   ],
   "fieldOverrides": []
