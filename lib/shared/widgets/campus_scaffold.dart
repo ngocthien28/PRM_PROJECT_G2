@@ -28,6 +28,7 @@ class CampusScaffold extends ConsumerWidget {
     this.unreadCount = 0,
     this.signOutKey,
     this.sidebarWidth = 232,
+    this.floatingActionButton,
   });
   final Key? signOutKey;
   final double sidebarWidth;
@@ -38,6 +39,7 @@ class CampusScaffold extends ConsumerWidget {
   final List<Widget> actions;
   final VoidCallback? onBack, onSignOut;
   final bool signingOut;
+  final Widget? floatingActionButton;
 
   List<(String, IconData, CampusSection, String)> get destinations => [
     (
@@ -179,6 +181,7 @@ class CampusScaffold extends ConsumerWidget {
       ),
     );
     return Scaffold(
+      floatingActionButton: floatingActionButton,
       body: SafeArea(
         bottom: false,
         child: Row(

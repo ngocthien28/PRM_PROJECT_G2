@@ -9,6 +9,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/enums/event_status.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../../../shared/widgets/app_back_button.dart';
+import '../../../../shared/widgets/campus_scaffold.dart';
 import '../../../auth/presentation/viewmodels/auth_view_model.dart';
 import '../../../events/data/models/event_model.dart';
 import '../../../events/presentation/widgets/event_format.dart';
@@ -40,6 +41,53 @@ class _ManageEventsScreenState extends ConsumerState<ManageEventsScreen> {
         ? RouteNames.admin
         : RouteNames.organizer;
 
+    final content = events.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => _ErrorState(error: error, onRetry: _refresh),
+      data: (items) => _EventsBody(
+        allItems: items,
+        events: _filter(items),
+        query: _query,
+        status: _status,
+        isAdmin: user?.role == UserRole.admin,
+        onQueryChanged: (value) => setState(() => _query = value),
+        onStatusChanged: (value) => setState(() => _status = value),
+        onRefresh: _refresh,
+        onEdit: (event) =>
+            context.go(RouteNames.organizerEditEvent(event.id), extra: event),
+        onCancel: _cancel,
+        onOpen: (event) =>
+            context.push(RouteNames.organizerEventDetail(event.id)),
+        onCreate: () => context.go(RouteNames.organizerCreateEvent),
+      ),
+    );
+
+    final createFab = FloatingActionButton.extended(
+      key: const Key('managedEventsCreateButton'),
+      onPressed: () => context.go(RouteNames.organizerCreateEvent),
+      icon: const Icon(Icons.add),
+      label: const Text('Create Event'),
+    );
+
+    if (user?.role == UserRole.admin) {
+      return CampusScaffold(
+        title: 'My Managed Events',
+        section: CampusSection.events,
+        role: 'admin',
+        userName: user?.displayName ?? 'Administrator',
+        actions: [
+          IconButton(
+            key: const Key('managedEventsRefreshButton'),
+            tooltip: 'Refresh events',
+            onPressed: _refresh,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+        floatingActionButton: createFab,
+        body: content,
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         leading: AppBackButton(fallbackLocation: fallback),
@@ -53,32 +101,8 @@ class _ManageEventsScreenState extends ConsumerState<ManageEventsScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('managedEventsCreateButton'),
-        onPressed: () => context.go(RouteNames.organizerCreateEvent),
-        icon: const Icon(Icons.add),
-        label: const Text('Create Event'),
-      ),
-      body: events.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _ErrorState(error: error, onRetry: _refresh),
-        data: (items) => _EventsBody(
-          allItems: items,
-          events: _filter(items),
-          query: _query,
-          status: _status,
-          isAdmin: user?.role == UserRole.admin,
-          onQueryChanged: (value) => setState(() => _query = value),
-          onStatusChanged: (value) => setState(() => _status = value),
-          onRefresh: _refresh,
-          onEdit: (event) =>
-              context.go(RouteNames.organizerEditEvent(event.id), extra: event),
-          onCancel: _cancel,
-          onOpen: (event) =>
-              context.push(RouteNames.organizerEventDetail(event.id)),
-          onCreate: () => context.go(RouteNames.organizerCreateEvent),
-        ),
-      ),
+      floatingActionButton: createFab,
+      body: content,
     );
   }
 

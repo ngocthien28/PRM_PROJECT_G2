@@ -15,43 +15,168 @@ import '../registration/registration_fakes.dart';
 
 void main() {
   group('ParticipantSummaryState', () {
-    test('computes attendance rate accurately and avoids zero-division', () {
-      final zeroRegisteredEvent = testEvent(
+    test(
+      '1. Event chưa có registration -> counters = 0, no division by zero',
+      () {
+        final zeroRegisteredEvent = testEvent(
+          id: 'e0',
+          capacity: 100,
+          registeredCount: 0,
+          checkedInCount: 0,
+        );
+        final zeroState = ParticipantSummaryState(
+          event: zeroRegisteredEvent,
+          participants: const [],
+        );
+        expect(zeroState.registeredCount, 0);
+        expect(zeroState.checkedInCount, 0);
+        expect(zeroState.notYetCheckedInCount, 0);
+        expect(zeroState.attendanceRate, 0.0);
+        expect(zeroState.checkInRate, 0.0);
+      },
+    );
+
+    test(
+      '2. Có 10 registrations, 6 checked-in -> tỷ lệ 60% và 4 not yet checked-in',
+      () {
+        final event = testEvent(
+          id: 'e1',
+          capacity: 100,
+          registeredCount: 10,
+          checkedInCount: 6,
+        );
+        final state = ParticipantSummaryState(
+          event: event,
+          participants: const [],
+        );
+        expect(state.registeredCount, 10);
+        expect(state.checkedInCount, 6);
+        expect(state.notYetCheckedInCount, 4);
+        expect(state.attendanceRate, 60.0);
+        expect(state.checkInRate, 60.0);
+      },
+    );
+
+    test(
+      '3. Registration cancelled không bị đếm sai trong active counters',
+      () {
+        final event = testEvent(
+          id: 'e1',
+          capacity: 50,
+          registeredCount: 2, // 2 active registrations after 1 cancellation
+          checkedInCount: 1,
+        );
+        final state = ParticipantSummaryState(
+          event: event,
+          participants: [
+            testRegistration(
+              id: 'r1',
+              eventId: 'e1',
+              userId: 'u1',
+              status: RegistrationStatus.checkedIn,
+            ),
+            testRegistration(
+              id: 'r2',
+              eventId: 'e1',
+              userId: 'u2',
+              status: RegistrationStatus.registered,
+            ),
+            testRegistration(
+              id: 'r3',
+              eventId: 'e1',
+              userId: 'u3',
+              status: RegistrationStatus.cancelled,
+              cancelledAt: DateTime.utc(2030, 5, 20, 8, 0),
+            ),
+          ],
+        );
+        expect(state.registeredCount, 2);
+        expect(state.checkedInCount, 1);
+        expect(state.notYetCheckedInCount, 1);
+        expect(state.attendanceRate, 50.0);
+        // Cancelled item is in participants list for history display
+        expect(state.participants.any((p) => p.isCancelled), isTrue);
+      },
+    );
+
+    test(
+      '4. Checked-in không lớn hơn registered theo dữ liệu hợp lệ / safely clamped',
+      () {
+        final anomalousEvent = testEvent(
+          id: 'e_anom',
+          capacity: 100,
+          registeredCount: 5,
+          checkedInCount: 10, // anomalous count from Firestore
+        );
+        final state = ParticipantSummaryState(
+          event: anomalousEvent,
+          participants: const [],
+        );
+        expect(state.checkedInCount, 5); // safely clamped to registeredCount
+        expect(state.notYetCheckedInCount, 0);
+        expect(state.attendanceRate, 100.0);
+      },
+    );
+
+    test('5. Không chia cho 0 khi registeredCount == 0', () {
+      final event = testEvent(
         id: 'e0',
-        capacity: 100,
+        capacity: 50,
         registeredCount: 0,
         checkedInCount: 0,
       );
-      final zeroState = ParticipantSummaryState(
-        event: zeroRegisteredEvent,
-        participants: const [],
-      );
-      expect(zeroState.registeredCount, 0);
-      expect(zeroState.checkedInCount, 0);
-      expect(zeroState.attendanceRate, 0.0);
-
-      final event = testEvent(
-        id: 'e1',
-        capacity: 100,
-        registeredCount: 20,
-        checkedInCount: 5,
-      );
       final state = ParticipantSummaryState(
         event: event,
-        participants: [
-          testRegistration(id: 'r1', eventId: 'e1', userId: 'u1'),
-          testRegistration(
-            id: 'r2',
-            eventId: 'e1',
-            userId: 'u2',
-            status: RegistrationStatus.checkedIn,
-            checkedInAt: DateTime.utc(2030, 5, 20, 9, 30),
-          ),
-        ],
+        participants: const [],
       );
-      expect(state.registeredCount, 20);
-      expect(state.checkedInCount, 5);
-      expect(state.attendanceRate, 25.0);
+      expect(state.attendanceRate, 0.0);
+      expect(state.checkInRate, 0.0);
+    });
+
+    test(
+      '6. Deduplication ngăn duplicate registrations trong participants list',
+      () {
+        final event = testEvent(
+          id: 'e1',
+          registeredCount: 1,
+          checkedInCount: 0,
+        );
+        final state = ParticipantSummaryState(
+          event: event,
+          participants: [
+            testRegistration(id: 'dup-1', eventId: 'e1', userId: 'u1'),
+            testRegistration(id: 'dup-1', eventId: 'e1', userId: 'u1'),
+          ],
+        );
+        expect(state.participants.length, 1);
+      },
+    );
+
+    test('7. Status mapping chính xác', () {
+      expect(RegistrationStatus.registered.label, 'Đã đăng ký');
+      expect(RegistrationStatus.checkedIn.label, 'Đã check-in');
+      expect(RegistrationStatus.cancelled.label, 'Đã hủy');
+
+      expect(
+        RegistrationStatus.fromString('checkedin'),
+        RegistrationStatus.checkedIn,
+      );
+      expect(
+        RegistrationStatus.fromString('checked_in'),
+        RegistrationStatus.checkedIn,
+      );
+      expect(
+        RegistrationStatus.fromString('cancelled'),
+        RegistrationStatus.cancelled,
+      );
+      expect(
+        RegistrationStatus.fromString('canceled'),
+        RegistrationStatus.cancelled,
+      );
+      expect(
+        RegistrationStatus.fromString('unknown'),
+        RegistrationStatus.registered,
+      );
     });
   });
 
@@ -305,6 +430,164 @@ void main() {
       expect(summary2, isNotNull);
       expect(summary1!.participants.map((p) => p.id), ['reg-1', 'reg-2']);
       expect(summary2!.participants.map((p) => p.id), ['reg-3']);
+    });
+
+    testWidgets('12. handles and propagates firestore error from repository', (
+      tester,
+    ) async {
+      fakeRegistrations.failure = const AppException(
+        'Database connection failed',
+        code: 'firestore-unavailable',
+      );
+      Object? error;
+
+      await tester.pumpWidget(
+        createTestHarness(
+          eventId: 'event-owner-1',
+          uid: 'org-1',
+          onState: (state) {
+            if (state.hasError) error = state.error;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        error,
+        isA<AppException>().having(
+          (e) => e.code,
+          'code',
+          'firestore-unavailable',
+        ),
+      );
+    });
+
+    testWidgets('13. refresh pulls updated registration numbers', (
+      tester,
+    ) async {
+      ParticipantSummaryState? summary;
+      late WidgetRef widgetRef;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, _) => null,
+          overrides: [
+            currentUserProvider.overrideWith(
+              (ref) => Stream.value(
+                testUser(uid: 'org-1', role: UserRole.organizer),
+              ),
+            ),
+            eventRepositoryProvider.overrideWithValue(fakeEvents),
+            registrationRepositoryProvider.overrideWithValue(fakeRegistrations),
+          ],
+          child: Consumer(
+            builder: (context, ref, _) {
+              widgetRef = ref;
+              final state = ref.watch(
+                participantSummaryProvider('event-owner-1'),
+              );
+              if (state.hasValue) summary = state.value;
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(summary, isNotNull);
+      expect(summary!.participants.length, 2);
+
+      // Now add a new participant to the repository
+      fakeRegistrations.registrations.add(
+        testRegistration(
+          id: 'reg-new',
+          eventId: 'event-owner-1',
+          userId: 'student-new',
+          status: RegistrationStatus.registered,
+        ),
+      );
+
+      // Refresh / invalidate provider
+      widgetRef.invalidate(participantSummaryProvider('event-owner-1'));
+      await tester.pumpAndSettle();
+
+      expect(summary!.participants.length, 3);
+    });
+
+    testWidgets('14. switching eventId does not keep stale data', (
+      tester,
+    ) async {
+      String activeEventId = 'event-owner-1';
+      ParticipantSummaryState? currentSummary;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, _) => null,
+          overrides: [
+            currentUserProvider.overrideWith(
+              (ref) =>
+                  Stream.value(testUser(uid: 'admin-1', role: UserRole.admin)),
+            ),
+            eventRepositoryProvider.overrideWithValue(fakeEvents),
+            registrationRepositoryProvider.overrideWithValue(fakeRegistrations),
+          ],
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                children: [
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final state = ref.watch(
+                        participantSummaryProvider(activeEventId),
+                      );
+                      if (state.hasValue) currentSummary = state.value;
+                      return const SizedBox();
+                    },
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(currentSummary?.event.id, 'event-owner-1');
+      expect(currentSummary?.participants.length, 2);
+
+      // Switch to event-owner-2
+      activeEventId = 'event-owner-2';
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, _) => null,
+          overrides: [
+            currentUserProvider.overrideWith(
+              (ref) =>
+                  Stream.value(testUser(uid: 'admin-1', role: UserRole.admin)),
+            ),
+            eventRepositoryProvider.overrideWithValue(fakeEvents),
+            registrationRepositoryProvider.overrideWithValue(fakeRegistrations),
+          ],
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                children: [
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final state = ref.watch(
+                        participantSummaryProvider(activeEventId),
+                      );
+                      if (state.hasValue) currentSummary = state.value;
+                      return const SizedBox();
+                    },
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(currentSummary?.event.id, 'event-owner-2');
+      expect(currentSummary?.participants.length, 1);
     });
   });
 }

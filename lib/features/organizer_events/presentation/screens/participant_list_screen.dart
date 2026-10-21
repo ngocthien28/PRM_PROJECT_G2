@@ -108,7 +108,16 @@ class ParticipantListScreen extends ConsumerWidget {
   }
 }
 
-class _ParticipantSummaryContent extends StatelessWidget {
+enum ParticipantFilter {
+  all('All'),
+  checkedIn('Checked-in'),
+  notCheckedIn('Not Checked-in');
+
+  const ParticipantFilter(this.label);
+  final String label;
+}
+
+class _ParticipantSummaryContent extends ConsumerStatefulWidget {
   const _ParticipantSummaryContent({
     required this.eventId,
     required this.summary,
@@ -118,208 +127,324 @@ class _ParticipantSummaryContent extends StatelessWidget {
   final ParticipantSummaryState summary;
 
   @override
+  ConsumerState<_ParticipantSummaryContent> createState() =>
+      _ParticipantSummaryContentState();
+}
+
+class _ParticipantSummaryContentState
+    extends ConsumerState<_ParticipantSummaryContent> {
+  ParticipantFilter _filter = ParticipantFilter.all;
+
+  @override
   Widget build(BuildContext context) {
+    final summary = widget.summary;
     final event = summary.event;
     final rateText = summary.registeredCount > 0
         ? '${summary.attendanceRate.toStringAsFixed(1)}%'
         : '0%';
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 600;
+    final filteredParticipants = switch (_filter) {
+      ParticipantFilter.all => summary.participants,
+      ParticipantFilter.checkedIn =>
+        summary.participants
+            .where((p) => p.status == RegistrationStatus.checkedIn)
+            .toList(),
+      ParticipantFilter.notCheckedIn =>
+        summary.participants
+            .where((p) => p.status == RegistrationStatus.registered)
+            .toList(),
+    };
 
-        return Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 900),
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                // Event Header Card
-                Card(
-                  elevation: 1,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: const BorderSide(color: CampusColors.line),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                event.title,
-                                style: Theme.of(context).textTheme.titleLarge
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            _EventStatusBadge(status: event.status),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.schedule,
-                              size: 16,
-                              color: CampusColors.muted,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                eventDateTime(context, event.startAt),
-                                style: const TextStyle(
-                                  color: CampusColors.muted,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.place_outlined,
-                              size: 16,
-                              color: CampusColors.muted,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                event.locationName,
-                                style: const TextStyle(
-                                  color: CampusColors.muted,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Event ID: ${event.id}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: CampusColors.muted.withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
+    final checkedInCountInList = summary.participants
+        .where((p) => p.status == RegistrationStatus.checkedIn)
+        .length;
+    final notCheckedInCountInList = summary.participants
+        .where((p) => p.status == RegistrationStatus.registered)
+        .length;
 
-                // Statistics Cards
-                Text(
-                  'Participant Statistics',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    SizedBox(
-                      width: wide
-                          ? (constraints.maxWidth.clamp(0, 900) - 64) / 3
-                          : (constraints.maxWidth - 52) / 2,
-                      child: _StatCard(
-                        icon: Icons.people_alt_outlined,
-                        color: CampusColors.teal,
-                        label: 'Total Registered',
-                        value: '${summary.registeredCount} / ${event.capacity}',
-                        valueKey: const Key('statTotalRegistered'),
-                      ),
-                    ),
-                    SizedBox(
-                      width: wide
-                          ? (constraints.maxWidth.clamp(0, 900) - 64) / 3
-                          : (constraints.maxWidth - 52) / 2,
-                      child: _StatCard(
-                        icon: Icons.how_to_reg_outlined,
-                        color: Colors.green.shade700,
-                        label: 'Total Checked-in',
-                        value: '${summary.checkedInCount}',
-                        valueKey: const Key('statTotalCheckedIn'),
-                      ),
-                    ),
-                    SizedBox(
-                      width: wide
-                          ? (constraints.maxWidth.clamp(0, 900) - 64) / 3
-                          : constraints.maxWidth - 40,
-                      child: _StatCard(
-                        icon: Icons.pie_chart_outline,
-                        color: CampusColors.ink,
-                        label: 'Attendance Rate',
-                        value: rateText,
-                        valueKey: const Key('statAttendanceRate'),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(participantSummaryProvider(widget.eventId));
+        await ref.read(participantSummaryProvider(widget.eventId).future);
+      },
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isDesktop = constraints.maxWidth >= 720;
+          final cardWidth = isDesktop
+              ? (constraints.maxWidth.clamp(0, 900) - 40 - 36) / 4
+              : (constraints.maxWidth - 40 - 12) / 2;
 
-                // Participant List Header
-                Text(
-                  'Participant List (${summary.participants.length})',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Empty / List View
-                if (summary.participants.isEmpty)
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
+                children: [
+                  // Event Header Card
                   Card(
-                    elevation: 0,
-                    color: CampusColors.canvas,
+                    elevation: 1,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                       side: const BorderSide(color: CampusColors.line),
                     ),
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical: 36,
-                        horizontal: 20,
-                      ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.people_outline,
-                            size: 40,
-                            color: CampusColors.muted,
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  event.title,
+                                  style: Theme.of(context).textTheme.titleLarge
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _EventStatusBadge(status: event.status),
+                            ],
                           ),
-                          SizedBox(height: 12),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.schedule,
+                                size: 16,
+                                color: CampusColors.muted,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  eventDateTime(context, event.startAt),
+                                  style: const TextStyle(
+                                    color: CampusColors.muted,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.place_outlined,
+                                size: 16,
+                                color: CampusColors.muted,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  event.locationName,
+                                  style: const TextStyle(
+                                    color: CampusColors.muted,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
                           Text(
-                            'No participants have registered for this event yet.',
-                            key: Key('emptyParticipantsMessage'),
-                            textAlign: TextAlign.center,
+                            'Event ID: ${event.id}',
                             style: TextStyle(
-                              color: CampusColors.muted,
-                              fontSize: 14,
+                              fontSize: 11,
+                              color: CampusColors.muted.withValues(alpha: 0.8),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  )
-                else
-                  ...summary.participants.map(
-                    (participant) => _ParticipantTile(participant: participant),
                   ),
-                const SizedBox(height: 32),
-              ],
+                  const SizedBox(height: 20),
+
+                  // Statistics Cards
+                  Text(
+                    'Participant Statistics',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      SizedBox(
+                        width: cardWidth,
+                        child: _StatCard(
+                          icon: Icons.people_alt_outlined,
+                          color: CampusColors.teal,
+                          label: 'Total Registered',
+                          value:
+                              '${summary.registeredCount} / ${event.capacity}',
+                          valueKey: const Key('statTotalRegistered'),
+                        ),
+                      ),
+                      SizedBox(
+                        width: cardWidth,
+                        child: _StatCard(
+                          icon: Icons.how_to_reg_outlined,
+                          color: Colors.green.shade700,
+                          label: 'Total Checked-in',
+                          value: '${summary.checkedInCount}',
+                          valueKey: const Key('statTotalCheckedIn'),
+                        ),
+                      ),
+                      SizedBox(
+                        width: cardWidth,
+                        child: _StatCard(
+                          icon: Icons.pending_actions_outlined,
+                          color: Colors.orange.shade800,
+                          label: 'Not Yet Checked-in',
+                          value: '${summary.notYetCheckedInCount}',
+                          valueKey: const Key('statNotYetCheckedIn'),
+                        ),
+                      ),
+                      SizedBox(
+                        width: cardWidth,
+                        child: _StatCard(
+                          icon: Icons.pie_chart_outline,
+                          color: CampusColors.ink,
+                          label: 'Attendance Rate',
+                          value: rateText,
+                          valueKey: const Key('statAttendanceRate'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Participant List Header & Filter Bar
+                  Text(
+                    'Participant List (${filteredParticipants.length})',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Filter Chips
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        FilterChip(
+                          key: const Key('filterChip_all'),
+                          selected: _filter == ParticipantFilter.all,
+                          label: Text('All (${summary.participants.length})'),
+                          onSelected: (_) =>
+                              setState(() => _filter = ParticipantFilter.all),
+                        ),
+                        const SizedBox(width: 8),
+                        FilterChip(
+                          key: const Key('filterChip_checkedIn'),
+                          selected: _filter == ParticipantFilter.checkedIn,
+                          label: Text('Checked-in ($checkedInCountInList)'),
+                          onSelected: (_) => setState(
+                            () => _filter = ParticipantFilter.checkedIn,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        FilterChip(
+                          key: const Key('filterChip_notCheckedIn'),
+                          selected: _filter == ParticipantFilter.notCheckedIn,
+                          label: Text(
+                            'Not Checked-in ($notCheckedInCountInList)',
+                          ),
+                          onSelected: (_) => setState(
+                            () => _filter = ParticipantFilter.notCheckedIn,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Empty / Filtered List View
+                  if (summary.participants.isEmpty)
+                    Card(
+                      elevation: 0,
+                      color: CampusColors.canvas,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: const BorderSide(color: CampusColors.line),
+                      ),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          vertical: 36,
+                          horizontal: 20,
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.people_outline,
+                              size: 40,
+                              color: CampusColors.muted,
+                            ),
+                            SizedBox(height: 12),
+                            Text(
+                              'No participants have registered for this event yet.',
+                              key: Key('emptyParticipantsMessage'),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: CampusColors.muted,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else if (filteredParticipants.isEmpty)
+                    Card(
+                      elevation: 0,
+                      color: CampusColors.canvas,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: const BorderSide(color: CampusColors.line),
+                      ),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          vertical: 36,
+                          horizontal: 20,
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.filter_list_off,
+                              size: 40,
+                              color: CampusColors.muted,
+                            ),
+                            SizedBox(height: 12),
+                            Text(
+                              'No participants match the selected filter.',
+                              key: Key('emptyFilteredParticipantsMessage'),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: CampusColors.muted,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    ...filteredParticipants.map(
+                      (participant) =>
+                          _ParticipantTile(participant: participant),
+                    ),
+                  const SizedBox(height: 32),
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
@@ -431,6 +556,17 @@ class _ParticipantTile extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.green.shade700,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+            if (participant.cancelledAt != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                'Cancelled: ${eventDateTime(context, participant.cancelledAt!)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.red.shade700,
                   fontWeight: FontWeight.w500,
                 ),
               ),

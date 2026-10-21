@@ -265,10 +265,11 @@ class RegistrationRepositoryImpl implements RegistrationRepository {
       final snap = await _firestore
           .collection('registrations')
           .where('eventId', isEqualTo: eventId)
-          .where('status', isEqualTo: RegistrationStatus.registered.name)
           .get();
 
-      return snap.docs.map(RegistrationModel.fromFirestore).toList();
+      final list = snap.docs.map(RegistrationModel.fromFirestore).toList();
+      list.sort((a, b) => b.registeredAt.compareTo(a.registeredAt));
+      return list;
     } catch (e) {
       if (e is AppException) rethrow;
       throw mapError(e, StackTrace.current);
@@ -305,7 +306,8 @@ class RegistrationRepositoryImpl implements RegistrationRepository {
         throw const AppException('Mã QR không hợp lệ hoặc sai sự kiện');
       }
 
-      if (reg.checkedInAt != null || reg.status == RegistrationStatus.checkedIn) {
+      if (reg.checkedInAt != null ||
+          reg.status == RegistrationStatus.checkedIn) {
         throw const AppException(
           'Vé này đã được check-in trước đó (Quét trùng)',
         );
