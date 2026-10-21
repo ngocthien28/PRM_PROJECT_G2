@@ -59,6 +59,16 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
     _capacity = TextEditingController(text: value?.capacity.toString() ?? '');
     _startAt = value?.startAt.toLocal() ?? now.add(const Duration(hours: 1));
     _endAt = value?.endAt.toLocal() ?? now.add(const Duration(hours: 2));
+
+    _title.addListener(() => _clearFieldError('title'));
+    _description.addListener(() => _clearFieldError('description'));
+    _location.addListener(() => _clearFieldError('locationName'));
+    _capacity.addListener(() => _clearFieldError('capacity'));
+  }
+
+  void _clearFieldError(String field) {
+    if (!mounted) return;
+    ref.read(eventFormViewModelProvider.notifier).clearFieldError(field);
   }
 
   @override
@@ -80,6 +90,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
     capacity: int.tryParse(_capacity.text.trim()) ?? 0,
     posterSelection: ref.read(eventPosterViewModelProvider).selection,
     createRequestId: _createRequestId,
+    currentRegisteredCount: widget.initialValue?.currentRegisteredCount,
   );
 
   Future<void> _selectDateTime(bool isStart) async {
@@ -110,6 +121,8 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
         _endAt = selected;
       }
     });
+    _clearFieldError(isStart ? 'startAt' : 'endAt');
+    if (isStart) _clearFieldError('endAt');
   }
 
   Future<void> _submit() async {
@@ -123,7 +136,12 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
 
     final saved = await ref
         .read(eventFormViewModelProvider.notifier)
-        .submit(_input, onSubmit, requireFutureStart: !_isEditMode);
+        .submit(
+          _input,
+          onSubmit,
+          requireFutureStart: !_isEditMode,
+          currentRegisteredCount: widget.initialValue?.currentRegisteredCount,
+        );
     if (saved && mounted) {
       setState(() => _completed = true);
       widget.onSuccess?.call();
@@ -199,12 +217,15 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                                   key: const Key('selectPosterButton'),
                                   onPressed: isSubmitting || _completed
                                       ? null
-                                      : () => ref
-                                            .read(
-                                              eventPosterViewModelProvider
-                                                  .notifier,
-                                            )
-                                            .select(),
+                                      : () {
+                                          _clearFieldError('poster');
+                                          ref
+                                              .read(
+                                                eventPosterViewModelProvider
+                                                    .notifier,
+                                              )
+                                              .select();
+                                        },
                                   icon: const Icon(
                                     Icons.add_photo_alternate_outlined,
                                   ),
@@ -218,9 +239,14 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                                   ),
                                 ),
                                 const Text('JPG, PNG, or WebP · Maximum 5 MB'),
-                                if (posterState.error != null)
+                                if (posterState.error != null ||
+                                    submissionState
+                                            .validationErrors['poster'] !=
+                                        null)
                                   Text(
-                                    posterState.error!,
+                                    posterState.error ??
+                                        submissionState
+                                            .validationErrors['poster']!,
                                     key: const Key('posterError'),
                                     style: TextStyle(
                                       color: Theme.of(
@@ -408,7 +434,10 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
             .toList(),
         onChanged: isSubmitting
             ? null
-            : (value) => setState(() => _category = value),
+            : (value) {
+                setState(() => _category = value);
+                _clearFieldError('category');
+              },
       );
 
   Widget _dateTimeField(
