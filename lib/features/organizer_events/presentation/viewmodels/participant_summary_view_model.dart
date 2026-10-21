@@ -10,21 +10,40 @@ import '../../../registration/data/models/registration_model.dart';
 
 /// State representation for the Event Participants Summary screen.
 class ParticipantSummaryState {
-  const ParticipantSummaryState({
+  ParticipantSummaryState({
     required this.event,
-    required this.participants,
-  });
+    required List<RegistrationModel> participants,
+  }) : participants = _deduplicate(participants);
 
   final EventModel event;
   final List<RegistrationModel> participants;
 
-  int get registeredCount => event.registeredCount;
-  int get checkedInCount => event.checkedInCount;
+  static List<RegistrationModel> _deduplicate(List<RegistrationModel> list) {
+    final seen = <String>{};
+    return list.where((p) {
+      final key = p.id.isNotEmpty ? p.id : '${p.eventId}_${p.userId}';
+      return seen.add(key);
+    }).toList();
+  }
 
-  /// Attendance rate calculated as (checkedIn / registered) * 100%.
+  int get registeredCount =>
+      event.registeredCount < 0 ? 0 : event.registeredCount;
+
+  int get checkedInCount {
+    final count = event.checkedInCount < 0 ? 0 : event.checkedInCount;
+    return count > registeredCount ? registeredCount : count;
+  }
+
+  /// Number of registered participants who have not yet checked in.
+  int get notYetCheckedInCount =>
+      (registeredCount - checkedInCount).clamp(0, registeredCount);
+
+  /// Check-in / attendance rate calculated as (checkedIn / registered) * 100%.
   /// Safely returns 0.0 when there are no registered participants.
   double get attendanceRate =>
       registeredCount > 0 ? (checkedInCount / registeredCount) * 100.0 : 0.0;
+
+  double get checkInRate => attendanceRate;
 }
 
 /// Server-backed participant summary provider for a given [eventId].
