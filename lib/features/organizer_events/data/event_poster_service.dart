@@ -115,7 +115,12 @@ class EventPosterPicker {
   final ImagePicker _picker;
 
   Future<EventPosterSelection?> pick() async {
-    final file = await _picker.pickImage(source: ImageSource.gallery);
+    final file = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1920,
+      maxHeight: 1920,
+      imageQuality: 85,
+    );
     return file == null ? null : EventPosterValidator.readFile(file);
   }
 }
