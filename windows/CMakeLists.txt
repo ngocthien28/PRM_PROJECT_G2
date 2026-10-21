@@ -57,6 +57,10 @@ add_subdirectory("runner")
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# Remove upstream transaction debug prints from this app's Windows build.
+include(cmake/quiet_firestore_transactions.cmake)
+campushub_quiet_firestore_transactions()
+
 
 # === Installation ===
 # Support files are copied into place next to the executable, so that it can

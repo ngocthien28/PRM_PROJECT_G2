@@ -19,6 +19,15 @@ import '../auth/auth_fakes.dart';
 import '../events/event_fakes.dart';
 import 'package:campushub/features/events/presentation/viewmodels/event_detail_view_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:campushub/features/organizer_events/data/event_poster_service.dart';
+import 'package:campushub/features/organizer_events/data/models/event_form_input.dart';
+import 'package:campushub/features/organizer_events/presentation/viewmodels/event_poster_view_model.dart';
+import 'poster_fixtures.dart';
+
+class _RoutePosterPicker extends EventPosterPicker {
+  @override
+  Future<EventPosterSelection?> pick() async => posterSelection();
+}
 
 void main() {
   late FakeAuth auth;
@@ -39,6 +48,7 @@ void main() {
         profileRepositoryProvider.overrideWithValue(profiles),
         localProfileCacheProvider.overrideWithValue(FakeLocalProfileCache()),
         eventRepositoryProvider.overrideWithValue(repository),
+        eventPosterPickerProvider.overrideWithValue(_RoutePosterPicker()),
         notificationInboxProvider.overrideWith((ref) => Stream.value([])),
         adminStatsProvider.overrideWith(
           (ref) async => const AdminStats(
@@ -98,6 +108,30 @@ void main() {
     expect(currentPath(), RouteNames.organizerCreateEvent);
     expect(find.text('Create Event'), findsNWidgets(3));
     expect(find.byKey(const Key('titleField')), findsOneWidget);
+  });
+
+  testWidgets('poster selection is isolated when switching event forms', (
+    tester,
+  ) async {
+    restoreActiveUser(UserRole.organizer);
+    await seedEditEvent();
+    await seedEditEvent(id: 'edit-2', title: 'Second event');
+    await mount(tester);
+    final router = container.read(appRouterProvider);
+    router.go(RouteNames.organizerEditEvent('edit-1'));
+    await tester.pumpAndSettle();
+    final select = find.byKey(const Key('selectPosterButton'));
+    await tester.ensureVisible(select);
+    await tester.tap(select);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('posterPreview')), findsOneWidget);
+    router.go(RouteNames.organizerEditEvent('edit-2'));
+    await tester.pumpAndSettle();
+    expect(find.text('Second event'), findsOneWidget);
+    expect(find.byKey(const Key('posterPreview')), findsNothing);
+    router.go(RouteNames.organizerCreateEvent);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('posterPreview')), findsNothing);
   });
 
   testWidgets('organizer navigates to My Managed Events', (tester) async {
@@ -214,6 +248,7 @@ void main() {
         find.byKey(const Key('descriptionField')),
         'A real repository create flow backed by fake Firestore.',
       );
+      await tester.ensureVisible(find.byKey(const Key('categoryField')));
       await tester.tap(find.byKey(const Key('categoryField')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Technology').last);

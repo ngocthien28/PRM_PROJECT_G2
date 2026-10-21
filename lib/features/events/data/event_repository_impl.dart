@@ -7,6 +7,7 @@ import '../../../core/errors/app_exception.dart';
 import '../../../core/errors/error_mapper.dart';
 import '../../auth/data/models/app_user.dart';
 import '../../organizer_events/data/models/event_form_input.dart';
+import '../../organizer_events/data/event_poster_service.dart';
 import '../../organizer_events/data/models/organizer_dashboard_summary.dart';
 import '../../../shared/enums/event_status.dart';
 import '../../../shared/enums/user_role.dart';
@@ -20,16 +21,20 @@ class EventRepositoryImpl implements EventRepository {
     DateTime Function()? now,
     this.requestTimeout = const Duration(seconds: 20),
     this.authenticatedActor,
+    this.posterService,
   }) : _now = now ?? DateTime.now;
   final FirebaseFirestore firestore;
   final DateTime Function() _now;
   final Duration requestTimeout;
+  final EventPosterService? posterService;
 
   /// Production injects a fresh Firebase identity/profile resolver. Isolated
   /// repository tests may supply their trusted actor directly without Firebase.
   final Future<AppUser?> Function()? authenticatedActor;
   final Map<String, _EventCreateAttempt> _createAttempts = {};
   final _cancelAttempts = <(String, String), Future<EventModel>>{};
+  final _posterAttempts =
+      <(String, String, EventPosterSelection), _PosterAttempt>{};
 
   Future<T> _request<T>(
     Future<T> Function() action, {
@@ -217,7 +222,7 @@ class EventRepositoryImpl implements EventRepository {
           // confirms that write instead of allocating a second document or resetting
           // server timestamps/counters. This protection lasts for this repository
           // instance; it is not cross-device/restart idempotency.
-          final key = jsonEncode([
+          final detailsKey = jsonEncode([
             actor.uid,
             input.title.trim(),
             input.description.trim(),
@@ -227,17 +232,50 @@ class EventRepositoryImpl implements EventRepository {
             input.endAt.microsecondsSinceEpoch,
             input.capacity,
           ]);
+          final key = input.createRequestId == null
+              ? detailsKey
+              : jsonEncode([actor.uid, input.createRequestId]);
           final existing = _createAttempts[key];
           _requireValidInput(input, requireFutureStart: existing == null);
+          if (input.posterSelection != null) {
+            await EventPosterValidator.validate(input.posterSelection!);
+            _requirePosterService();
+          }
           final attempt =
               existing ??
               _EventCreateAttempt(
                 firestore.collection(FirestoreCollections.events).doc(),
                 _createMap(input, actor.uid),
+                detailsKey,
               );
           _createAttempts[key] = attempt;
           try {
             final event = await attempt.confirm();
+            if (input.posterSelection != null) {
+              if (identical(attempt.posterSelection, input.posterSelection) &&
+                  attempt.posterUrl != null &&
+                  attempt.posterUrl == event.posterUrl) {
+                return _sameEditableValues(event, input)
+                    ? event
+                    : await _commitUpdate(
+                        event.id,
+                        input,
+                        actor,
+                        posterUrl: event.posterUrl,
+                      );
+              }
+              attempt.posterSelection = input.posterSelection;
+              final saved = await _savePoster(event, input, actor);
+              attempt.posterUrl = saved.posterUrl;
+              return saved;
+            }
+            if (attempt.detailsKey != detailsKey) {
+              return await updateEvent(
+                eventId: event.id,
+                input: input,
+                actor: actor,
+              );
+            }
             // A timed-out caller must not evict a write which completed later.
             // Eviction happens in the successful outer request below.
             return event;
@@ -263,6 +301,9 @@ class EventRepositoryImpl implements EventRepository {
         _createAttempts.removeWhere(
           (_, attempt) => attempt.reference.id == event.id,
         );
+        if (input.posterSelection != null) {
+          _posterAttempts.remove((actor.uid, event.id, input.posterSelection!));
+        }
         return event;
       });
 
@@ -272,10 +313,53 @@ class EventRepositoryImpl implements EventRepository {
     required EventFormInput input,
     required AppUser actor,
     DateTime? expectedUpdatedAt,
-  }) => _request(() async {
-    actor = await _verifiedActor(actor);
-    _requireEventManager(actor);
-    _requireValidInput(input);
+  }) =>
+      _request(() async {
+        actor = await _verifiedActor(actor);
+        _requireEventManager(actor);
+        _requireValidInput(input);
+        if (input.posterSelection != null) {
+          await EventPosterValidator.validate(input.posterSelection!);
+          _requirePosterService();
+          final snapshot = await _eventDocument(
+            eventId,
+          ).get(const GetOptions(source: Source.server));
+          if (!snapshot.exists) {
+            throw const AppException(
+              'This event is unavailable.',
+              code: 'event-not-found',
+            );
+          }
+          final event = EventModel.fromFirestore(snapshot);
+          _requireOwnerOrAdmin(event, actor);
+          return _savePoster(
+            event,
+            input,
+            actor,
+            expectedUpdatedAt: expectedUpdatedAt,
+          );
+        }
+        return _commitUpdate(
+          eventId,
+          input,
+          actor,
+          expectedUpdatedAt: expectedUpdatedAt,
+        );
+      }).then((event) {
+        if (input.posterSelection != null) {
+          _posterAttempts.remove((actor.uid, event.id, input.posterSelection!));
+        }
+        return event;
+      });
+
+  Future<EventModel> _commitUpdate(
+    String eventId,
+    EventFormInput input,
+    AppUser actor, {
+    DateTime? expectedUpdatedAt,
+    String? posterUrl,
+    void Function()? onPosterAttached,
+  }) async {
     final ref = _eventDocument(eventId);
     await firestore.runTransaction((transaction) async {
       final snapshot = await transaction.get(ref);
@@ -287,6 +371,16 @@ class EventRepositoryImpl implements EventRepository {
       }
       final existing = EventModel.fromFirestore(snapshot);
       _requireOwnerOrAdmin(existing, actor);
+      if (posterUrl != null && existing.posterUrl == posterUrl) {
+        onPosterAttached?.call();
+      }
+      // Confirm a previous commit whose response was lost, without writing
+      // again or treating our own timestamp as a competing edit.
+      if (posterUrl != null &&
+          existing.posterUrl == posterUrl &&
+          _sameEditableValues(existing, input)) {
+        return;
+      }
       if (existing.status == EventStatus.cancelled) {
         throw const AppException(
           'Cancelled events cannot be updated.',
@@ -308,12 +402,126 @@ class EventRepositoryImpl implements EventRepository {
       }
       // Read and validate the current counters/version on every transaction
       // retry. Never write protected fields or another member's metadata.
-      transaction.update(ref, _editableMap(input));
+      final updates = _editableMap(input);
+      if (posterUrl != null) updates['posterUrl'] = posterUrl;
+      transaction.update(ref, updates);
     }, timeout: requestTimeout);
+    onPosterAttached?.call();
     return EventModel.fromFirestore(
       await ref.get(const GetOptions(source: Source.server)),
     );
-  });
+  }
+
+  EventPosterService _requirePosterService() =>
+      posterService ??
+      (throw const AppException(
+        'Poster upload is unavailable. Please try again.',
+        code: 'poster-unavailable',
+      ));
+
+  bool _sameEditableValues(EventModel event, EventFormInput input) =>
+      event.title == input.title.trim() &&
+      event.description == input.description.trim() &&
+      event.category == input.category.trim() &&
+      event.locationName == input.locationName.trim() &&
+      event.capacity == input.capacity &&
+      event.startAt.isAtSameMomentAs(input.startAt) &&
+      event.endAt.isAtSameMomentAs(input.endAt);
+
+  Future<EventModel> _savePoster(
+    EventModel event,
+    EventFormInput input,
+    AppUser actor, {
+    DateTime? expectedUpdatedAt,
+  }) async {
+    final selection = input.posterSelection!;
+    final key = (actor.uid, event.id, selection);
+    final attempt = _posterAttempts.putIfAbsent(key, _PosterAttempt.new);
+    if (attempt.pending != null) {
+      final result = await attempt.pending!;
+      if (!_sameEditableValues(result, input)) {
+        throw const AppException(
+          'The previous save finished with different details. Reload the latest event before saving again.',
+          code: 'event-edit-conflict',
+        );
+      }
+      return result;
+    }
+    final operation = () async {
+      _requireOwnerOrAdmin(event, actor);
+      if (event.status == EventStatus.cancelled) {
+        throw const AppException(
+          'Cancelled events cannot be updated.',
+          code: 'event-cancelled',
+        );
+      }
+      if (input.capacity < event.registeredCount) {
+        throw AppException(
+          'Capacity must be at least ${event.registeredCount}, the current number of registered participants.',
+          code: 'event-capacity-below-registered',
+        );
+      }
+      // Preflight before uploading, then recheck inside the transaction.
+      // A retained upload may be confirmation of our own earlier commit.
+      if (attempt.upload == null &&
+          expectedUpdatedAt != null &&
+          !event.updatedAt.isAtSameMomentAs(expectedUpdatedAt)) {
+        throw const AppException(
+          'This event changed while you were editing. Reload the latest event before saving again.',
+          code: 'event-edit-conflict',
+        );
+      }
+      final service = _requirePosterService();
+      try {
+        attempt.upload ??= await service.upload(event.id, selection);
+        final result = await _commitUpdate(
+          event.id,
+          input,
+          actor,
+          expectedUpdatedAt: expectedUpdatedAt,
+          posterUrl: attempt.upload!.url,
+          onPosterAttached: () => attempt.attached = true,
+        );
+        // Evict only when the outer caller confirms success. A caller may have
+        // timed out while this operation continued; its retry must reuse this URL.
+        return result;
+      } catch (error) {
+        final code = error is FirebaseException
+            ? error.code
+            : error is AppException
+            ? error.code
+            : '';
+        // Delete only after a definite rejection. Timeouts/unavailable responses
+        // can hide a committed transaction; retain its URL to confirm on retry.
+        if (!attempt.attached &&
+            {
+              'permission-denied',
+              'unauthenticated',
+              'invalid-argument',
+              'event-edit-conflict',
+              'event-forbidden',
+              'event-cancelled',
+              'event-capacity-below-registered',
+              'event-not-found',
+            }.contains(code)) {
+          final upload = attempt.upload;
+          if (upload != null) {
+            try {
+              await service.delete(upload);
+            } catch (_) {}
+          }
+          _posterAttempts.remove(key);
+        }
+        rethrow;
+      }
+    }();
+    attempt.pending = operation;
+    try {
+      return await operation;
+    } finally {
+      attempt.pending = null;
+    }
+  }
 
   @override
   Future<EventModel> cancelEvent({
@@ -455,11 +663,18 @@ class EventRepositoryImpl implements EventRepository {
 }
 
 class _EventCreateAttempt {
-  _EventCreateAttempt(this.reference, Map<String, dynamic> data) {
+  _EventCreateAttempt(
+    this.reference,
+    Map<String, dynamic> data,
+    this.detailsKey,
+  ) {
     _write = reference.set(data).then((_) => writeAcknowledged = true);
   }
 
   final DocumentReference<Map<String, dynamic>> reference;
+  final String detailsKey;
+  EventPosterSelection? posterSelection;
+  String? posterUrl;
   late final Future<void> _write;
   bool writeAcknowledged = false;
 
@@ -476,4 +691,10 @@ class _EventCreateAttempt {
     }
     return EventModel.fromFirestore(snapshot);
   }
+}
+
+class _PosterAttempt {
+  bool attached = false;
+  UploadedEventPoster? upload;
+  Future<EventModel>? pending;
 }

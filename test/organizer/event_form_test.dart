@@ -37,6 +37,7 @@ void main() {
       find.byKey(const Key('descriptionField')),
       'Learn Flutter fundamentals in this hands-on workshop.',
     );
+    await t.ensureVisible(find.byKey(const Key('categoryField')));
     await t.tap(find.byKey(const Key('categoryField')));
     await t.pumpAndSettle();
     await t.tap(find.text('Technology').last);
