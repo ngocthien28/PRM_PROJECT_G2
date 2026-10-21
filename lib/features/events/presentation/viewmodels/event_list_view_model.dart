@@ -5,11 +5,13 @@ import '../../data/event_repository.dart';
 import '../../data/event_repository_impl.dart';
 import '../../data/models/event_filter.dart';
 import '../../data/models/event_model.dart';
+import '../../../organizer_events/presentation/viewmodels/event_poster_view_model.dart';
 
 final eventRepositoryProvider = Provider<EventRepository>(
   (ref) => EventRepositoryImpl(
     firestore: ref.watch(firestoreProvider),
     authenticatedActor: ref.watch(authenticatedActorProvider),
+    posterService: ref.watch(eventPosterServiceProvider),
   ),
 );
 

@@ -14,17 +14,19 @@ service firebase.storage {
         && request.resource.size <= 5 * 1024 * 1024;
     }
     function isEventManager() {
-      return isSignedIn() && (
-        request.auth.token.role == 'organizer'
-        || request.auth.token.role == 'admin'
-        || firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['organizer', 'admin']
-      );
+      return isSignedIn()
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.status == 'active'
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['organizer', 'admin'];
     }
     function isAdmin() {
-      return isSignedIn() && (
-        request.auth.token.role == 'admin'
-        || firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin'
-      );
+      return isEventManager()
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    function managesEvent(eventId) {
+      return isEventManager()
+        && firestore.exists(/databases/(default)/documents/events/$(eventId))
+        && (isAdmin()
+          || firestore.get(/databases/(default)/documents/events/$(eventId)).data.organizerId == request.auth.uid);
     }
 
     match /avatars/{uid}/{fileName} {
@@ -46,14 +48,13 @@ service firebase.storage {
       allow delete: if (isOwner(userId) || isAdmin()) && isEventManager();
     }
 
-    // Event-specific path: events/{eventId}/{fileName}
+    // Event-specific path: ownership comes from the event, never a filename.
     match /events/{eventId}/{fileName} {
       allow read: if true;
-      allow create, update: if isEventManager()
-        && (fileName.matches(request.auth.uid + '_.*') || isAdmin())
+      allow create, update: if managesEvent(eventId)
+        && firestore.get(/databases/(default)/documents/events/$(eventId)).data.status != 'cancelled'
         && isValidImage();
-      allow delete: if isEventManager()
-        && (fileName.matches(request.auth.uid + '_.*') || isAdmin());
+      allow delete: if managesEvent(eventId);
     }
 
     match /{allPaths=**} {

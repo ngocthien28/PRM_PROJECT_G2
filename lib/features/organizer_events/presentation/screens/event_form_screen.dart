@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../../core/constants/event_categories.dart';
 import '../../data/models/event_form_input.dart';
 import '../viewmodels/event_form_view_model.dart';
+import '../viewmodels/event_poster_view_model.dart';
 import '../../../events/presentation/widgets/event_poster.dart';
 
 typedef EventFormSubmitCallback = Future<void> Function(EventFormInput input);
@@ -38,6 +40,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
   late DateTime _startAt;
   late DateTime _endAt;
   bool _completed = false;
+  final String _createRequestId = const Uuid().v4();
 
   bool get _isEditMode => widget.initialValue != null;
   bool get _canSubmit => widget.onSubmit != null;
@@ -75,6 +78,8 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
     startAt: _startAt,
     endAt: _endAt,
     capacity: int.tryParse(_capacity.text.trim()) ?? 0,
+    posterSelection: ref.read(eventPosterViewModelProvider).selection,
+    createRequestId: _createRequestId,
   );
 
   Future<void> _selectDateTime(bool isStart) async {
@@ -111,6 +116,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
     final onSubmit = widget.onSubmit;
     if (_completed ||
         onSubmit == null ||
+        ref.read(eventPosterViewModelProvider).selecting ||
         ref.read(eventFormViewModelProvider).isSubmitting) {
       return;
     }
@@ -127,7 +133,9 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
   @override
   Widget build(BuildContext context) {
     final submissionState = ref.watch(eventFormViewModelProvider);
-    final isSubmitting = submissionState.isSubmitting;
+    final posterState = ref.watch(eventPosterViewModelProvider);
+    final progress = ref.watch(eventPosterProgressProvider);
+    final isSubmitting = submissionState.isSubmitting || posterState.selecting;
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditMode ? 'Edit Event' : 'Create Event'),
@@ -169,11 +177,67 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                                 const SizedBox(height: 24),
-                                if (widget.existingPosterUrl != null)
+                                if (posterState.selection?.bytes != null)
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.memory(
+                                      posterState.selection!.bytes!,
+                                      key: const Key('posterPreview'),
+                                      height: 200,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, _, _) => const Text(
+                                        'Cannot preview this poster.',
+                                      ),
+                                    ),
+                                  )
+                                else if (widget.existingPosterUrl != null)
                                   EventPoster(
                                     url: widget.existingPosterUrl,
                                     category: _category ?? '',
                                   ),
+                                OutlinedButton.icon(
+                                  key: const Key('selectPosterButton'),
+                                  onPressed: isSubmitting || _completed
+                                      ? null
+                                      : () => ref
+                                            .read(
+                                              eventPosterViewModelProvider
+                                                  .notifier,
+                                            )
+                                            .select(),
+                                  icon: const Icon(
+                                    Icons.add_photo_alternate_outlined,
+                                  ),
+                                  label: Text(
+                                    posterState.selecting
+                                        ? 'Selecting...'
+                                        : posterState.selection != null ||
+                                              widget.existingPosterUrl != null
+                                        ? 'Change Poster'
+                                        : 'Select Poster',
+                                  ),
+                                ),
+                                const Text('JPG, PNG, or WebP · Maximum 5 MB'),
+                                if (posterState.error != null)
+                                  Text(
+                                    posterState.error!,
+                                    key: const Key('posterError'),
+                                    style: TextStyle(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.error,
+                                    ),
+                                  ),
+                                if (submissionState.isSubmitting &&
+                                    progress != null) ...[
+                                  LinearProgressIndicator(
+                                    value: progress,
+                                    key: const Key('posterUploadProgress'),
+                                  ),
+                                  Text(
+                                    'Uploading poster ${(progress * 100).round()}%',
+                                  ),
+                                ],
                                 _textField(
                                   'titleField',
                                   _title,
@@ -269,7 +333,9 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                                   ),
                                   label: Text(
                                     isSubmitting
-                                        ? 'Saving...'
+                                        ? (progress != null
+                                              ? 'Uploading poster...'
+                                              : 'Saving...')
                                         : _canSubmit
                                         ? (_isEditMode
                                               ? 'Save Changes'
