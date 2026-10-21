@@ -268,5 +268,167 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+
+    testWidgets(
+      'displays all 4 KPI statistics cards accurately with dedicated keys',
+      (tester) async {
+        final event = testEvent(
+          id: 'event-kpi',
+          title: 'KPI Test Event',
+          capacity: 200,
+          registeredCount: 50,
+          checkedInCount: 30,
+        );
+        final state = ParticipantSummaryState(
+          event: event,
+          participants: const [],
+        );
+
+        await tester.pumpWidget(
+          buildScreen(eventId: 'event-kpi', load: () async => state),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('statTotalRegistered')), findsOneWidget);
+        expect(find.text('50 / 200'), findsOneWidget);
+
+        expect(find.byKey(const Key('statTotalCheckedIn')), findsOneWidget);
+        expect(find.text('30'), findsOneWidget);
+
+        expect(find.byKey(const Key('statNotYetCheckedIn')), findsOneWidget);
+        expect(find.text('20'), findsOneWidget);
+
+        expect(find.byKey(const Key('statAttendanceRate')), findsOneWidget);
+        expect(find.text('60.0%'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'filter chips filter participant list correctly between All, Checked-in, and Not Checked-in',
+      (tester) async {
+        final event = testEvent(
+          id: 'event-filter',
+          title: 'Filter Event',
+          capacity: 100,
+          registeredCount: 3,
+          checkedInCount: 1,
+        );
+
+        final participants = [
+          testRegistration(
+            id: 'reg-checked',
+            eventId: 'event-filter',
+            userId: 'user-checked',
+            status: RegistrationStatus.checkedIn,
+            checkedInAt: DateTime.utc(2030, 5, 20, 10, 0),
+          ),
+          testRegistration(
+            id: 'reg-active',
+            eventId: 'event-filter',
+            userId: 'user-active',
+            status: RegistrationStatus.registered,
+          ),
+          testRegistration(
+            id: 'reg-cancelled',
+            eventId: 'event-filter',
+            userId: 'user-cancelled',
+            status: RegistrationStatus.cancelled,
+            cancelledAt: DateTime.utc(2030, 5, 19, 15, 0),
+          ),
+        ];
+
+        final state = ParticipantSummaryState(
+          event: event,
+          participants: participants,
+        );
+
+        tester.view.physicalSize = const Size(1000, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        await tester.pumpWidget(
+          buildScreen(eventId: 'event-filter', load: () async => state),
+        );
+        await tester.pumpAndSettle();
+
+        // Initially 'All' is selected: shows 3 participants
+        expect(find.text('User: user-checked'), findsOneWidget);
+        expect(find.text('User: user-active'), findsOneWidget);
+        expect(find.text('User: user-cancelled'), findsOneWidget);
+        expect(find.text('Đã check-in'), findsOneWidget);
+        expect(find.text('Đã đăng ký'), findsOneWidget);
+        expect(find.text('Đã hủy'), findsOneWidget);
+
+        // Tap Checked-in filter
+        await tester.tap(find.byKey(const Key('filterChip_checkedIn')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('User: user-checked'), findsOneWidget);
+        expect(find.text('User: user-active'), findsNothing);
+        expect(find.text('User: user-cancelled'), findsNothing);
+
+        // Tap Not Checked-in filter
+        await tester.tap(find.byKey(const Key('filterChip_notCheckedIn')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('User: user-checked'), findsNothing);
+        expect(find.text('User: user-active'), findsOneWidget);
+        expect(find.text('User: user-cancelled'), findsNothing);
+
+        // Return to All
+        await tester.tap(find.byKey(const Key('filterChip_all')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('User: user-checked'), findsOneWidget);
+        expect(find.text('User: user-active'), findsOneWidget);
+        expect(find.text('User: user-cancelled'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'displays empty filter message when no participants match selected filter',
+      (tester) async {
+        final event = testEvent(
+          id: 'event-empty-filter',
+          registeredCount: 1,
+          checkedInCount: 0,
+        );
+        // Only has an active (not checked-in) participant
+        final participants = [
+          testRegistration(
+            id: 'reg-only-active',
+            eventId: 'event-empty-filter',
+            userId: 'user-1',
+            status: RegistrationStatus.registered,
+          ),
+        ];
+
+        final state = ParticipantSummaryState(
+          event: event,
+          participants: participants,
+        );
+
+        await tester.pumpWidget(
+          buildScreen(eventId: 'event-empty-filter', load: () async => state),
+        );
+        await tester.pumpAndSettle();
+
+        // Tap Checked-in filter (there are 0 checked-in)
+        await tester.tap(find.byKey(const Key('filterChip_checkedIn')));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('emptyFilteredParticipantsMessage')),
+          findsOneWidget,
+        );
+        expect(
+          find.text('No participants match the selected filter.'),
+          findsOneWidget,
+        );
+      },
+    );
   });
 }
