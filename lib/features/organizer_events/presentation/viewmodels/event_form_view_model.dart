@@ -57,10 +57,32 @@ class EventFormSubmissionController {
     }
   }
 
+  void clearFieldError(String field) {
+    if (!_state.validationErrors.containsKey(field)) return;
+    final updated = Map<String, String>.from(_state.validationErrors)
+      ..remove(field);
+    _setState(
+      EventFormSubmissionState(
+        status: updated.isEmpty && _state.errorMessage == null
+            ? EventFormSubmissionStatus.idle
+            : _state.status,
+        validationErrors: Map.unmodifiable(updated),
+        errorMessage: _state.errorMessage,
+      ),
+    );
+  }
+
+  void clearValidationErrors() {
+    if (_state.validationErrors.isEmpty && _state.errorMessage == null) return;
+    _setState(const EventFormSubmissionState.idle());
+  }
+
   Future<bool> submit(
     EventFormInput input,
     EventFormSaveCallback save, {
     bool requireFutureStart = false,
+    DateTime? now,
+    int? currentRegisteredCount,
   }) async {
     if (_submissionLocked) return false;
 
@@ -71,7 +93,8 @@ class EventFormSubmissionController {
     );
     final errors = input.validate(
       requireFutureStart: requireFutureStart,
-      now: _now(),
+      now: now ?? _now(),
+      currentRegisteredCount: currentRegisteredCount,
     );
     if (errors.isNotEmpty) {
       _setState(
@@ -139,9 +162,21 @@ class EventFormViewModel extends Notifier<EventFormSubmissionState> {
     return _controller.state;
   }
 
+  void clearFieldError(String field) => _controller.clearFieldError(field);
+
+  void clearValidationErrors() => _controller.clearValidationErrors();
+
   Future<bool> submit(
     EventFormInput input,
     EventFormSaveCallback save, {
     bool requireFutureStart = false,
-  }) => _controller.submit(input, save, requireFutureStart: requireFutureStart);
+    DateTime? now,
+    int? currentRegisteredCount,
+  }) => _controller.submit(
+    input,
+    save,
+    requireFutureStart: requireFutureStart,
+    now: now,
+    currentRegisteredCount: currentRegisteredCount,
+  );
 }
