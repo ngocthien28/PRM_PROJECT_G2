@@ -44,6 +44,7 @@ beforeEach(async () => {
     await setDoc(doc(db, 'users/o1'), {uid: 'o1', role: 'organizer', status: 'active'});
     await setDoc(doc(db, 'users/o2'), {uid: 'o2', role: 'organizer', status: 'active'});
     await setDoc(doc(db, 'users/admin'), {uid: 'admin', role: 'admin', status: 'active'});
+    await setDoc(doc(db, 'events/e1'), {organizerId: 'o1', status: 'published'});
   });
 });
 
@@ -123,11 +124,11 @@ test('admin can upload and delete posters across folders', async () => {
   await assertSucceeds(deleteObject(fileRef));
 });
 
-test('event-scoped path requires matching organizer prefix', async () => {
+test('event-scoped path requires event ownership regardless of filename prefix', async () => {
   const o1Storage = storageFor('o1', 'organizer');
   const allowedRef = ref(o1Storage, 'events/e1/o1_banner.png');
   await assertSucceeds(uploadBytes(allowedRef, samplePng, {contentType: 'image/png'}));
 
-  const spoofedRef = ref(o1Storage, 'events/e1/o2_banner.png');
+  const spoofedRef = ref(storageFor('o2', 'organizer'), 'events/e1/o2_banner.png');
   await assertFails(uploadBytes(spoofedRef, samplePng, {contentType: 'image/png'}));
 });

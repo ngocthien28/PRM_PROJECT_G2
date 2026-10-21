@@ -6,6 +6,7 @@ import '../../../../core/routing/route_names.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/errors/error_mapper.dart';
 import '../viewmodels/event_form_view_model.dart';
+import '../viewmodels/event_poster_view_model.dart';
 import '../../data/models/event_form_input.dart';
 import 'event_form_screen.dart';
 import '../viewmodels/organizer_events_view_model.dart';
@@ -17,14 +18,20 @@ class OrganizerCreateEventScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return EventFormScreen(
-      onSubmit: ref.read(organizerEventActionsProvider).createEvent,
-      onSuccess: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Event created successfully.')),
-        );
-        context.go(RouteNames.organizerManagedEvents);
-      },
+    return ProviderScope(
+      overrides: [
+        eventFormViewModelProvider.overrideWith(EventFormViewModel.new),
+        eventPosterViewModelProvider.overrideWith(EventPosterViewModel.new),
+      ],
+      child: EventFormScreen(
+        onSubmit: ref.read(organizerEventActionsProvider).createEvent,
+        onSuccess: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Event created successfully.')),
+          );
+          context.go(RouteNames.organizerManagedEvents);
+        },
+      ),
     );
   }
 }
@@ -75,6 +82,7 @@ class OrganizerEditEventScreen extends ConsumerWidget {
         key: ValueKey((event.id, event.organizerId, event.updatedAt)),
         overrides: [
           eventFormViewModelProvider.overrideWith(EventFormViewModel.new),
+          eventPosterViewModelProvider.overrideWith(EventPosterViewModel.new),
         ],
         child: EventFormScreen(
           key: ValueKey(event.id),
