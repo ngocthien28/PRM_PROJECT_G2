@@ -621,10 +621,13 @@ class EventRepositoryImpl implements EventRepository {
   void _requireValidInput(
     EventFormInput input, {
     bool requireFutureStart = false,
+    int? currentRegisteredCount,
   }) {
     final errors = input.validate(
       requireFutureStart: requireFutureStart,
       now: _now(),
+      currentRegisteredCount:
+          currentRegisteredCount ?? input.currentRegisteredCount,
     );
     if (errors.isNotEmpty) {
       throw AppException(errors.values.first, code: 'invalid-event-input');
