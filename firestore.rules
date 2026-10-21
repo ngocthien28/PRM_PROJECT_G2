@@ -67,6 +67,18 @@ service cloud.firestore {
         && (data.get('lastCheckInRegistrationId', null) == null
           || data.lastCheckInRegistrationId is string);
     }
+    // Attach URLs only as active owner/admin. Cloudinary unsigned upload itself
+    // is public; Rules enforce event ownership and the delivery account/path.
+    function validPosterUrl(eventId, url) {
+      let objectPath = '/v0/b/[^/]+/o/events%2F' + eventId
+        + '%2F[A-Za-z0-9_-]+[.](jpg|png|webp)[?]alt=media&token=[A-Za-z0-9,-]+';
+      return eventId.matches('[A-Za-z0-9_-]+') && url is string && url.size() <= 2048
+        && (url.matches('https://res[.]cloudinary[.]com/djznx3z7o/image/upload/v[0-9]+/'
+            + '(campushub/club_logos/)?campushub/event_posters/' + eventId
+            + '/[A-Za-z0-9_-]+[.](jpg|jpeg|png|webp)')
+          || url.matches('https://firebasestorage[.]googleapis[.]com' + objectPath)
+          || url.matches('http://(127[.]0[.]0[.]1|localhost):9199' + objectPath));
+    }
     function validRegistration(data, registrationId) {
       return data.keys().hasAll(['eventId', 'userId', 'status', 'qrToken',
           'registeredAt', 'cancelledAt', 'checkedInAt'])
@@ -150,6 +162,7 @@ service cloud.firestore {
         && request.resource.data.startAt > request.time
         && request.resource.data.registeredCount == 0
         && request.resource.data.checkedInCount == 0
+        && request.resource.data.posterUrl == null
         && request.resource.data.get('lastCheckInRegistrationId', null) == null
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time
@@ -158,7 +171,8 @@ service cloud.firestore {
         && (isAdmin() || resource.data.organizerId == request.auth.uid)
         && request.resource.data.organizerId == resource.data.organizerId
         && request.resource.data.clubId == resource.data.clubId
-        && request.resource.data.posterUrl == resource.data.posterUrl
+        && (request.resource.data.posterUrl == resource.data.posterUrl
+          || validPosterUrl(eventId, request.resource.data.posterUrl))
         && request.resource.data.latitude == resource.data.latitude
         && request.resource.data.longitude == resource.data.longitude
         && request.resource.data.registeredCount == resource.data.registeredCount
@@ -168,7 +182,7 @@ service cloud.firestore {
         && validEventFields(request.resource.data)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'title', 'titleLower', 'description', 'category', 'locationName',
-          'startAt', 'endAt', 'capacity', 'status', 'updatedAt'
+          'startAt', 'endAt', 'capacity', 'status', 'updatedAt', 'posterUrl'
         ])
         && (
           (resource.data.status != 'cancelled'

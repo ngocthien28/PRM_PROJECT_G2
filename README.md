@@ -46,6 +46,11 @@ grant access.
 
 ### Windows terminal output
 
+The Windows build removes Firestore's `Before`, `After`, and `Transaction`
+debug prints from a generated local source copy. The pub cache is unchanged.
+After changing this native build configuration, stop the app completely and run
+`flutter run -d windows` again; hot restart cannot rebuild the C++ plugin.
+
 Use the filtered runner to hide VM Service links and Firestore transaction
 traces while keeping errors and connection status visible:
 
@@ -57,7 +62,7 @@ traces while keeping errors and connection status visible:
 
 The runner disables DevTools startup and keeps the Flutter exit code. Additional
 Flutter arguments can be passed after the script options. Direct `flutter run`
-continues to show the standard Flutter/plugin output.
+continues to show the standard Flutter output, including VM Service links.
 
 ## Club logo uploads (Cloudinary)
 
@@ -83,7 +88,35 @@ assigned by a trusted administrator.
 
 Android SDK licenses still need acceptance on the checked development machine: `flutter doctor --android-licenses`.
 
+## Event posters (Cloudinary Free, UC-040)
+
+Create/Edit Event now uploads posters to the same Cloudinary account and
+unsigned preset used by Club logos. Firebase can stay on Spark; poster upload
+does not use Firebase Storage. Free-plan usage limits still apply.
+
+The default cloud name and preset above work with plain `flutter run -d windows`.
+Poster public IDs are `campushub/event_posters/{eventId}/{uuid}`. To use a
+separate unsigned preset, set `CLOUDINARY_EVENT_POSTER_UPLOAD_PRESET`; it must
+allow supplied public IDs, JPG/PNG/WebP and files up to 5 MiB. Keep API secrets
+on a trusted backend, never in Dart or `--dart-define`.
+
+Before saving Cloudinary poster URLs against the real Firebase project, review
+and apply this repository's Firestore Rules (this changes the real backend):
+
+```powershell
+firebase.cmd deploy --project campushub-prm-g2 --only firestore:rules
+```
+
+Owner/Admin authorization is enforced on the Firestore event mutation. The
+unsigned Cloudinary endpoint itself does not authenticate Firebase users.
+See [UC-040](docs/uc040_cloudinary_free.md) for verification, cleanup limits
+and the optional synthetic live upload test. Existing Firebase poster URLs
+remain supported; Cloudinary is the active upload provider.
+
 ## Verify
+
+UC-040 poster upload, security policy, retry behavior and emulator verification:
+[Update Event Poster](docs/uc040_cloudinary_free.md).
 
 ```powershell
 dart format --output=none --set-exit-if-changed lib test
