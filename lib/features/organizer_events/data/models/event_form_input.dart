@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../../../../core/constants/event_categories.dart';
 
 /// Pure-Dart input and validation for the organizer event create/edit form.
@@ -15,6 +17,7 @@ class EventFormInput {
     required this.endAt,
     required this.capacity,
     this.posterSelection,
+    this.createRequestId,
   });
 
   static const int minTitleLength = 3;
@@ -30,6 +33,9 @@ class EventFormInput {
   final DateTime endAt;
   final int capacity;
   final EventPosterSelection? posterSelection;
+
+  /// Stable for the lifetime of one create form, including poster retries.
+  final String? createRequestId;
 
   /// Returns one readable error per invalid form field.
   ///
@@ -97,16 +103,19 @@ class EventFormInput {
 /// A local poster selected for a future upload.
 ///
 /// This is deliberately distinct from an uploaded `EventModel.posterUrl`: it is not an
-/// uploaded URL and is never persisted by the event repository in UC-032.
-/// UC-040 owns picking, type/size validation and storage upload.
+/// uploaded URL. Only the Storage service's download URL may be persisted.
 class EventPosterSelection {
   const EventPosterSelection({
     required this.localUri,
     this.mimeType,
     this.byteLength,
+    this.fileName,
+    this.bytes,
   });
 
   final Uri localUri;
   final String? mimeType;
   final int? byteLength;
+  final String? fileName;
+  final Uint8List? bytes;
 }

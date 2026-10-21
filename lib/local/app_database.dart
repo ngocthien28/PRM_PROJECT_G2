@@ -10,7 +10,7 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   Database? _db;
-  bool _ffiInitialized = false;
+  late final DatabaseFactory _factory = _createDatabaseFactory();
 
   /// Returns the open [Database] instance, or null if on Web or if initialization fails.
   Future<Database?> get database async {
@@ -21,7 +21,6 @@ class AppDatabase {
     if (_db != null && _db!.isOpen) return _db;
 
     try {
-      _initFfiIfNeeded();
       _db = await _initDatabase();
       return _db;
     } catch (e, stack) {
@@ -30,26 +29,26 @@ class AppDatabase {
     }
   }
 
-  void _initFfiIfNeeded() {
-    if (kIsWeb) return;
-    if (!_ffiInitialized) {
-      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-        sqfliteFfiInit();
-        databaseFactory = databaseFactoryFfi;
-      }
-      _ffiInitialized = true;
+  DatabaseFactory _createDatabaseFactory() {
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      sqfliteFfiInit();
+      // Keep the desktop factory local instead of replacing sqflite's default.
+      return databaseFactoryFfi;
     }
+    return databaseFactory;
   }
 
   Future<Database> _initDatabase() async {
-    final databasesPath = await getDatabasesPath();
+    final databasesPath = await _factory.getDatabasesPath();
     final path = p.join(databasesPath, 'campushub.db');
 
-    return openDatabase(
+    return _factory.openDatabase(
       path,
-      version: DbMigrations.currentVersion,
-      onCreate: DbMigrations.onCreate,
-      onUpgrade: DbMigrations.onUpgrade,
+      options: OpenDatabaseOptions(
+        version: DbMigrations.currentVersion,
+        onCreate: DbMigrations.onCreate,
+        onUpgrade: DbMigrations.onUpgrade,
+      ),
     );
   }
 
