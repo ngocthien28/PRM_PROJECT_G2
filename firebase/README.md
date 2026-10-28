@@ -20,6 +20,7 @@ CampusHub utilizes Cloud Firestore, Firebase Authentication, and Firebase Storag
 | **`clubs`** | Auto-generated | `ownerId`, `name`, `nameLower`, `description`, `memberCount`, `status` (`active`\|`cancelled`), `logoUrl`, `createdAt`, `updatedAt` | Read by active users; created/updated by owner organizer or admin. Member count updated atomically upon membership changes. |
 | **`club_memberships`** | `{clubId}_{userId}` | `clubId`, `userId`, `role` (`member`\|`manager`), `status` (`active`\|`left`), `joinedAt`, `updatedAt` | Scoped to member or club organizer. Updated atomically with notification generation. |
 | **`notifications`** | Auto-generated | `userId`, `title`, `body`, `type`, `referenceId`, `membershipStatus`, `isRead`, `pushStatus`, `createdAt` | Read & marked read exclusively by recipient (`userId == auth.uid`). |
+| **`moderation_cases`** | Stable demo IDs | Target details, reporter details, status, resolution, and audit timestamps | Read and resolved by active admins; active users can submit pending reports. |
 
 ---
 

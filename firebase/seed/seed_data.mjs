@@ -485,5 +485,45 @@ export function getSeedData(now = new Date()) {
     },
   ];
 
-  return { users, clubs, clubMemberships, events, registrations, notifications };
+  // 7. Demo Moderation Cases
+  const moderationCases = [
+    {
+      id: 'demo_moderation_club_01',
+      targetType: 'club',
+      targetId: 'demo_club_arts',
+      title: 'Club description needs a policy review',
+      description: 'A student reported that the public club description may contain outdated participation requirements.',
+      reporterId: 'demo_student_01',
+      reporterName: 'Nguyen Van A (Student)',
+      status: 'pending',
+      createdAt: new Date(now.getTime() - 6 * hourMs),
+      updatedAt: new Date(now.getTime() - 6 * hourMs),
+    },
+    {
+      id: 'demo_moderation_event_02',
+      targetType: 'event',
+      targetId: 'demo_event_cancelled_football_07',
+      title: 'Cancelled event remained visible',
+      description: 'The cancelled event was reviewed after a student reported that its status was unclear.',
+      reporterId: 'demo_student_02',
+      reporterName: 'Tran Thi B (Student)',
+      status: 'resolved',
+      resolutionAction: 'resolve',
+      resolution: 'The event status and cancellation message were verified.',
+      resolvedBy: 'demo_admin_01',
+      resolvedAt: new Date(now.getTime() - 1 * dayMs),
+      createdAt: new Date(now.getTime() - 2 * dayMs),
+      updatedAt: new Date(now.getTime() - 1 * dayMs),
+    },
+  ];
+
+  return {
+    users,
+    clubs,
+    clubMemberships,
+    events,
+    registrations,
+    notifications,
+    moderationCases,
+  };
 }
