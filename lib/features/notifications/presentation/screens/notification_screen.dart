@@ -83,6 +83,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       userName: user?.displayName ?? 'Campus member',
       role: user?.role.name ?? 'student',
       unreadCount: unread,
+      onBack: () => context.go(campusHome(user?.role.name ?? 'student')),
       actions: [
         IconButton(
           tooltip: 'Refresh',

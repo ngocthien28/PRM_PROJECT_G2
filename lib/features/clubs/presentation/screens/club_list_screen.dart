@@ -29,6 +29,7 @@ class _ClubListScreenState extends ConsumerState<ClubListScreen> {
       userName: user?.displayName ?? 'Campus member',
       role: user?.role.name ?? 'student',
       unreadCount: ref.watch(unreadNotificationCountProvider),
+      onBack: () => context.go(campusHome(user?.role.name ?? 'student')),
       body: CampusPage(
         children: [
           Container(
