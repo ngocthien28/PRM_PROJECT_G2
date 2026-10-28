@@ -77,8 +77,8 @@ class WeatherBanner extends ConsumerWidget {
                     const SizedBox(height: 2),
                     Text(
                       forecast.isFallback
-                          ? 'Thời tiết khuôn viên (dự phòng)'
-                          : 'Khuôn viên trường • Xem dự báo & khuyến nghị',
+                          ? 'Campus weather (offline estimate)'
+                          : 'Campus weather • View forecast and advice',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
