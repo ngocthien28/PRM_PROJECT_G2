@@ -8,6 +8,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/campus_scaffold.dart';
 import '../../../auth/data/models/app_user.dart';
 import '../../../auth/presentation/viewmodels/auth_view_model.dart';
+import '../../../admin/presentation/widgets/report_content_button.dart';
 import '../../../notifications/presentation/viewmodels/notification_view_model.dart';
 import '../../data/models/club_membership.dart';
 import '../../data/models/club_model.dart';
@@ -517,6 +518,15 @@ class _ClubDetailScreenState extends ConsumerState<ClubDetailScreen> {
                 ),
                 icon: const Icon(Icons.pause_circle_outline_rounded, size: 18),
                 label: const Text('Cancel Club'),
+              ),
+            ],
+            if (user != null && !manage) ...[
+              const SizedBox(height: 10),
+              ReportContentButton(
+                targetType: 'club',
+                targetId: club.id,
+                targetLabel: club.name,
+                expand: true,
               ),
             ],
             const SizedBox(height: 18),
