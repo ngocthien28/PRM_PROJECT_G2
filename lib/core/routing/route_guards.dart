@@ -41,12 +41,14 @@ String? sessionRedirect({
   if (path == RouteNames.splash || isAuthRoute(path)) {
     return to(roleHome(user.role));
   }
-  if (path.startsWith('/admin') && !canAccessAdmin(user)) {
+  if (isRouteWithin(path, RouteNames.admin) && !canAccessAdmin(user)) {
     return to(roleHome(user.role));
   }
-  if (path.startsWith('/organizer') && !canAccessOrganizer(user)) {
+  if (isRouteWithin(path, RouteNames.organizer) && !canAccessOrganizer(user)) {
     return to(roleHome(user.role));
   }
-  if (path.startsWith('/profile')) return null;
   return null;
 }
+
+bool isRouteWithin(String path, String root) =>
+    path == root || path.startsWith('$root/');
