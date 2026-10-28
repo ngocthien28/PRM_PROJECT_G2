@@ -6,6 +6,8 @@ import '../../../auth/presentation/viewmodels/auth_view_model.dart';
 import '../../../events/data/models/event_model.dart';
 import '../../../events/presentation/viewmodels/event_list_view_model.dart';
 import '../../data/models/registration_model.dart';
+import '../../../events/presentation/viewmodels/event_detail_view_model.dart';
+import '../../../organizer_events/presentation/viewmodels/participant_summary_view_model.dart';
 
 /// Provider for list of registrations belonging to the currently logged in student.
 final myRegistrationsProvider =
@@ -53,11 +55,13 @@ final eventRegistrationStatusProvider =
 
 /// Action notifier to handle joining or cancelling event registrations.
 final registrationActionProvider =
-    NotifierProvider<RegistrationActionViewModel, AsyncValue<RegistrationModel?>>(
-      RegistrationActionViewModel.new,
-    );
+    NotifierProvider<
+      RegistrationActionViewModel,
+      AsyncValue<RegistrationModel?>
+    >(RegistrationActionViewModel.new);
 
-class RegistrationActionViewModel extends Notifier<AsyncValue<RegistrationModel?>> {
+class RegistrationActionViewModel
+    extends Notifier<AsyncValue<RegistrationModel?>> {
   @override
   AsyncValue<RegistrationModel?> build() => const AsyncData(null);
 
@@ -90,6 +94,8 @@ class RegistrationActionViewModel extends Notifier<AsyncValue<RegistrationModel?
       ref.invalidate(myRegistrationsProvider);
       ref.invalidate(eventRegistrationStatusProvider(event.id));
       ref.invalidate(eventListProvider);
+      ref.invalidate(eventDetailProvider(event.id));
+      ref.invalidate(participantSummaryProvider(event.id));
 
       return registration;
     } catch (error, stack) {
@@ -123,6 +129,8 @@ class RegistrationActionViewModel extends Notifier<AsyncValue<RegistrationModel?
       ref.invalidate(myRegistrationsProvider);
       ref.invalidate(eventRegistrationStatusProvider(eventId));
       ref.invalidate(eventListProvider);
+      ref.invalidate(eventDetailProvider(eventId));
+      ref.invalidate(participantSummaryProvider(eventId));
     } catch (error, stack) {
       state = AsyncError(error, stack);
       rethrow;
