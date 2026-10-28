@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show SocketException;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/firestore_collections.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/errors/error_mapper.dart';
+import '../../../local/dao/event_cache_dao.dart';
 import '../../auth/data/models/app_user.dart';
 import '../../organizer_events/data/models/event_form_input.dart';
 import '../../organizer_events/data/event_poster_service.dart';
@@ -22,11 +24,13 @@ class EventRepositoryImpl implements EventRepository {
     this.requestTimeout = const Duration(seconds: 20),
     this.authenticatedActor,
     this.posterService,
+    this.eventCacheDao,
   }) : _now = now ?? DateTime.now;
   final FirebaseFirestore firestore;
   final DateTime Function() _now;
   final Duration requestTimeout;
   final EventPosterService? posterService;
+  final EventCacheDao? eventCacheDao;
 
   /// Production injects a fresh Firebase identity/profile resolver. Isolated
   /// repository tests may supply their trusted actor directly without Firebase.
@@ -75,86 +79,225 @@ class EventRepositoryImpl implements EventRepository {
     }
   }
 
+  bool _isOfflineOrTimeout(Object error) {
+    if (error is TimeoutException) return true;
+    if (error is SocketException) return true;
+    if (error is FirebaseException) {
+      return error.code == 'unavailable' ||
+          error.code == 'deadline-exceeded' ||
+          error.code == 'network-request-failed';
+    }
+    if (error is AppException) {
+      return error.code == 'event-timeout' ||
+          error.code == 'unavailable' ||
+          error.code == 'network-request-failed';
+    }
+    return false;
+  }
+
   @override
   Future<List<EventModel>> getUpcomingEvents({
     EventFilter? filter,
     bool forceRefresh = false,
-  }) => _request(() async {
+  }) async {
     final selection = filter ?? const EventFilter();
-    Query<Map<String, dynamic>> query = firestore
-        .collection(FirestoreCollections.events)
-        .where('status', isEqualTo: EventStatus.published.name)
-        .where(
-          'startAt',
-          isGreaterThanOrEqualTo: Timestamp.fromDate(_now().toUtc()),
-        );
-    if (selection.category != null) {
-      query = query.where('category', isEqualTo: selection.category);
+    try {
+      return await _request(() async {
+        Query<Map<String, dynamic>> query = firestore
+            .collection(FirestoreCollections.events)
+            .where('status', isEqualTo: EventStatus.published.name)
+            .where(
+              'startAt',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(_now().toUtc()),
+            );
+        if (selection.category != null) {
+          query = query.where('category', isEqualTo: selection.category);
+        }
+        final snapshot = await query
+            .orderBy('startAt')
+            .get(const GetOptions(source: Source.server));
+        final events = snapshot.docs.map(EventModel.fromFirestore).toList();
+        // UC-028: Save fresh server events into SQLite cache
+        unawaited(eventCacheDao?.saveEvents(events));
+        return selection.apply(events);
+      });
+    } catch (e) {
+      // UC-030: Fallback to SQLite cache on offline / network failure
+      if (_isOfflineOrTimeout(e) && eventCacheDao != null) {
+        final cached = await eventCacheDao!.getCachedEvents();
+        if (cached.isNotEmpty) {
+          final upcomingCached = cached.where((e) => e.isUpcomingAt(_now()));
+          return selection.apply(upcomingCached);
+        }
+      }
+      rethrow;
     }
-    // Server reads in iteration 1; explicit SQLite fallback comes in iteration 2.
-    final snapshot = await query
-        .orderBy('startAt')
-        .get(const GetOptions(source: Source.server));
-    return selection.apply(snapshot.docs.map(EventModel.fromFirestore));
-  });
+  }
 
   @override
   Future<EventModel> getEventById(
     String eventId, {
     AppUser? actor,
-  }) => _request(() async {
-    if (eventId.trim().isEmpty || eventId.contains('/')) {
-      throw const AppException(
-        'This event is unavailable.',
-        code: 'event-not-found',
-      );
-    }
-    final supplied = actor;
-    final manager = supplied == null ? null : await _verifiedActor(supplied);
-    if (manager != null) _requireEventManager(manager);
-    // Ticket holders have get-only access to their event history. A query
-    // (even by document ID) uses list rules and cannot use that permission.
-    final snapshot = await firestore
-        .collection(FirestoreCollections.events)
-        .doc(eventId)
-        .get(const GetOptions(source: Source.server));
-    if (!snapshot.exists) {
-      throw const AppException(
-        'This event is unavailable or you do not have access to it.',
-        code: 'event-not-found',
-      );
-    }
-    final event = EventModel.fromFirestore(snapshot);
-    if (manager != null) {
-      if (manager.role != UserRole.admin && event.organizerId != manager.uid) {
-        throw const AppException(
-          'This event is unavailable or you do not have access to it.',
-          code: 'event-not-found',
-        );
+  }) async {
+    try {
+      return await _request(() async {
+        if (eventId.trim().isEmpty || eventId.contains('/')) {
+          throw const AppException(
+            'This event is unavailable.',
+            code: 'event-not-found',
+          );
+        }
+        final supplied = actor;
+        final manager = supplied == null ? null : await _verifiedActor(supplied);
+        if (manager != null) _requireEventManager(manager);
+        // Ticket holders have get-only access to their event history. A query
+        // (even by document ID) uses list rules and cannot use that permission.
+        final snapshot = await firestore
+            .collection(FirestoreCollections.events)
+            .doc(eventId)
+            .get(const GetOptions(source: Source.server));
+        if (!snapshot.exists) {
+          throw const AppException(
+            'This event is unavailable or you do not have access to it.',
+            code: 'event-not-found',
+          );
+        }
+        final event = EventModel.fromFirestore(snapshot);
+        // UC-028: Save to local cache
+        unawaited(eventCacheDao?.saveEvent(event));
+        if (manager != null) {
+          if (manager.role != UserRole.admin && event.organizerId != manager.uid) {
+            throw const AppException(
+              'This event is unavailable or you do not have access to it.',
+              code: 'event-not-found',
+            );
+          }
+        } else if (event.status != EventStatus.published) {
+          final participant = await authenticatedActor?.call();
+          final registration =
+              participant == null ||
+                  !participant.isActive ||
+                  event.status == EventStatus.draft
+              ? null
+              : await firestore
+                    .collection('registrations')
+                    .doc('${eventId}_${participant.uid}')
+                    .get(const GetOptions(source: Source.server));
+          final data = registration?.data();
+          if (data == null ||
+              data['userId'] != participant?.uid ||
+              data['eventId'] != eventId) {
+            throw const AppException(
+              'This event is unavailable or you do not have access to it.',
+              code: 'event-not-found',
+            );
+          }
+        }
+        return event;
+      });
+    } catch (e) {
+      if (_isOfflineOrTimeout(e) && eventCacheDao != null) {
+        final cached = await eventCacheDao!.getCachedEvent(eventId);
+        if (cached != null) return cached;
       }
-    } else if (event.status != EventStatus.published) {
-      final participant = await authenticatedActor?.call();
-      final registration =
-          participant == null ||
-              !participant.isActive ||
-              event.status == EventStatus.draft
-          ? null
-          : await firestore
-                .collection('registrations')
-                .doc('${eventId}_${participant.uid}')
-                .get(const GetOptions(source: Source.server));
-      final data = registration?.data();
-      if (data == null ||
-          data['userId'] != participant?.uid ||
-          data['eventId'] != eventId) {
-        throw const AppException(
-          'This event is unavailable or you do not have access to it.',
-          code: 'event-not-found',
-        );
-      }
+      rethrow;
     }
-    return event;
-  });
+  }
+
+  @override
+  Future<List<EventModel>> searchEvents(EventFilter filter) async {
+    // Firestore has no full-text search: fetch by category (indexed) and match
+    // the keyword locally against title, location and category.
+    final upcoming = await getUpcomingEvents(
+      filter: EventFilter(category: filter.category),
+    );
+    final keyword = filter.keyword;
+    return filter
+        .withKeyword('')
+        .apply(upcoming.where((event) => event.matchesKeyword(keyword)));
+  }
+
+  @override
+  Future<List<EventModel>> getEventsByIds(List<String> eventIds) async {
+    final ids = <String>{
+      for (final id in eventIds)
+        if (id.trim().isNotEmpty && !id.contains('/')) id.trim(),
+    }.toList();
+    if (ids.isEmpty) return const <EventModel>[];
+    try {
+      return await _request(() async {
+        final results = await Future.wait(ids.map(_tryReadEvent));
+        final events =
+            List<EventModel>.unmodifiable(results.whereType<EventModel>());
+        if (events.isEmpty && eventCacheDao != null) {
+          final cached = await _readCachedByIds(ids);
+          if (cached.isNotEmpty) return cached;
+        }
+        return events;
+      });
+    } catch (e) {
+      if (_isOfflineOrTimeout(e) && eventCacheDao != null) {
+        final cached = await _readCachedByIds(ids);
+        if (cached.isNotEmpty) return cached;
+      }
+      rethrow;
+    }
+  }
+
+  Future<List<EventModel>> _readCachedByIds(List<String> ids) async {
+    if (eventCacheDao == null) return const [];
+    final list = <EventModel>[];
+    for (final id in ids) {
+      final cached = await eventCacheDao!.getCachedEvent(id);
+      if (cached != null) list.add(cached);
+    }
+    return List<EventModel>.unmodifiable(list);
+  }
+
+  Future<EventModel?> _tryReadEvent(String id) async {
+    try {
+      final snapshot = await firestore
+          .collection(FirestoreCollections.events)
+          .doc(id)
+          .get(const GetOptions(source: Source.server));
+      if (!snapshot.exists) return null;
+      final event = EventModel.fromFirestore(snapshot);
+      unawaited(eventCacheDao?.saveEvent(event));
+      return event;
+    } on FirebaseException catch (error) {
+      if (error.code == 'permission-denied' || error.code == 'not-found') {
+        return null;
+      }
+      if (_isOfflineOrTimeout(error) && eventCacheDao != null) {
+        return eventCacheDao!.getCachedEvent(id);
+      }
+      rethrow;
+    } on FormatException {
+      return null;
+    } on TypeError {
+      return null;
+    } catch (error) {
+      if (_isOfflineOrTimeout(error) && eventCacheDao != null) {
+        return eventCacheDao!.getCachedEvent(id);
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  Future<List<EventModel>> getRelatedEvents({
+    required String eventId,
+    required String category,
+    int limit = 5,
+  }) async {
+    final upcoming = await getUpcomingEvents(
+      filter: EventFilter(category: category),
+    );
+    return upcoming
+        .where((event) => event.id != eventId)
+        .take(limit)
+        .toList();
+  }
 
   @override
   Future<List<EventModel>> getManagedEvents({required AppUser actor}) =>

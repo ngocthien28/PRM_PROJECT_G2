@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/firebase_providers.dart';
 import '../../../auth/presentation/viewmodels/auth_view_model.dart';
+import '../../../../local/dao/event_cache_dao.dart';
 import '../../data/event_repository.dart';
 import '../../data/event_repository_impl.dart';
 import '../../data/models/event_filter.dart';
@@ -12,7 +13,13 @@ final eventRepositoryProvider = Provider<EventRepository>(
     firestore: ref.watch(firestoreProvider),
     authenticatedActor: ref.watch(authenticatedActorProvider),
     posterService: ref.watch(eventPosterServiceProvider),
+    eventCacheDao: ref.watch(eventCacheDaoProvider),
   ),
+);
+
+/// UC-016: Read-only contract provider for student discovery screens.
+final eventReadRepositoryProvider = Provider<EventReadRepository>(
+  (ref) => ref.watch(eventRepositoryProvider),
 );
 
 final eventFilterProvider = NotifierProvider<EventFilterViewModel, EventFilter>(
