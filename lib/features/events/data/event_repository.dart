@@ -1,20 +1,16 @@
 import '../../auth/data/models/app_user.dart';
 import '../../organizer_events/data/models/event_form_input.dart';
 import '../../organizer_events/data/models/organizer_dashboard_summary.dart';
-import 'models/event_filter.dart';
+import 'event_read_repository.dart';
 import 'models/event_model.dart';
 
-/// Shared event discovery and organizer mutation contract.
-abstract interface class EventRepository {
-  Future<List<EventModel>> getUpcomingEvents({
-    EventFilter? filter,
-    bool forceRefresh = false,
-  });
+export 'event_read_repository.dart';
 
-  /// Without [actor], preserves published-only Student discovery behavior.
-  /// Manager reads are restricted to owner/admin, including unpublished events.
-  /// Authenticated ticket holders can also read their finished/cancelled events.
-  Future<EventModel> getEventById(String eventId, {AppUser? actor});
+/// Shared event discovery and organizer mutation contract.
+///
+/// Read/search operations are declared in [EventReadRepository] (UC-016);
+/// this interface adds the organizer/admin management operations.
+abstract interface class EventRepository implements EventReadRepository {
   Future<List<EventModel>> getManagedEvents({required AppUser actor});
 
   /// Full owner-scoped totals and bounded previews; never a single list page.
