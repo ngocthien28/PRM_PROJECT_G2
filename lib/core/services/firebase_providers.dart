@@ -25,18 +25,43 @@ import 'storage_service.dart';
 
 final firebaseInitializationProvider = FutureProvider<void>((ref) async {
   try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
     const useEmulator = bool.fromEnvironment(
       'USE_FIREBASE_EMULATOR',
       defaultValue: false,
     );
+    final platform = DefaultFirebaseOptions.currentPlatform;
+    // Match the project/bucket used by the existing demo seed and CLI. Merely
+    // changing hosts leaves Auth and Firestore in different emulator projects.
+    const emulatorProject = String.fromEnvironment(
+      'FIREBASE_EMULATOR_PROJECT_ID',
+      defaultValue: 'demo-campushub',
+    );
+    if (useEmulator && !emulatorProject.startsWith('demo-')) {
+      throw StateError('Emulator mode requires a demo- project ID.');
+    }
+    await Firebase.initializeApp(
+      options: useEmulator
+          ? FirebaseOptions(
+              apiKey: platform.apiKey,
+              appId: platform.appId,
+              messagingSenderId: platform.messagingSenderId,
+              projectId: emulatorProject,
+              storageBucket: '$emulatorProject.appspot.com',
+            )
+          : platform,
+    );
     if (useEmulator) {
-      const host = '127.0.0.1';
+      const host = String.fromEnvironment(
+        'FIREBASE_EMULATOR_HOST',
+        defaultValue: '127.0.0.1',
+      );
       await FirebaseAuth.instance.useAuthEmulator(host, 9099);
       FirebaseFirestore.instance.useFirestoreEmulator(host, 8087);
-      await FirebaseStorage.instance.useStorageEmulator(host, 9199);
+      // Windows posters use an authenticated emulator HTTP transport because
+      // firebase_storage's Windows SDK ignores useStorageEmulator.
+      if (kIsWeb || defaultTargetPlatform != TargetPlatform.windows) {
+        await FirebaseStorage.instance.useStorageEmulator(host, 9199);
+      }
     }
   } catch (error, stack) {
     debugPrint('Firebase initialization failed: ${error.runtimeType}\n$stack');
