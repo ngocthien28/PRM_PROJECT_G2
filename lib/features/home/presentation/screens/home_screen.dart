@@ -8,10 +8,13 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/campus_scaffold.dart';
 import '../../../auth/presentation/viewmodels/auth_view_model.dart';
 import '../../../events/data/models/event_filter.dart';
+import '../../../events/data/models/event_model.dart';
 import '../../../events/presentation/viewmodels/event_list_view_model.dart';
+import '../../../events/presentation/widgets/event_poster.dart';
 import '../../../events/presentation/widgets/event_results.dart';
 import '../../../../shared/widgets/role_navigation_actions.dart';
 import '../../../notifications/presentation/viewmodels/notification_view_model.dart';
+import '../../../weather/presentation/widgets/weather_banner.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -43,16 +46,18 @@ class HomeScreen extends ConsumerWidget {
       onSignOut: ref.read(authViewModelProvider.notifier).signOut,
       signingOut: action.isLoading,
       actions: [
-        const RoleNavigationActions(),
+        if (MediaQuery.sizeOf(context).width >= 600) ...[
+          const RoleNavigationActions(),
+          IconButton(
+            tooltip: 'My events',
+            onPressed: () => context.go(RouteNames.myEvents),
+            icon: const Icon(Icons.confirmation_number_outlined, size: 22),
+          ),
+        ],
         IconButton(
           tooltip: 'My profile',
           onPressed: () => context.push(RouteNames.profile),
           icon: const Icon(Icons.account_circle_outlined, size: 22),
-        ),
-        IconButton(
-          tooltip: 'My events',
-          onPressed: () => context.go(RouteNames.myEvents),
-          icon: const Icon(Icons.confirmation_number_outlined, size: 22),
         ),
       ],
       body: RefreshIndicator(
@@ -98,6 +103,8 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            const WeatherBanner(),
             const SizedBox(height: 22),
             LayoutBuilder(
               builder: (context, box) => Container(
@@ -252,6 +259,27 @@ class HomeScreen extends ConsumerWidget {
               events: events.whenData((items) => items.take(4).toList()),
               onRetry: refresh,
             ),
+            if (events.asData?.value.isNotEmpty ?? false) ...[
+              const SizedBox(height: 28),
+              SectionHeading(
+                title: 'Sự kiện nổi bật',
+                subtitle: 'Những hoạt động được sinh viên đăng ký nhiều nhất.',
+                trailing: TextButton(
+                  onPressed: () {
+                    ref
+                        .read(eventFilterProvider.notifier)
+                        .setSort(EventSort.popular);
+                    context.push(RouteNames.events);
+                  },
+                  child: const Text('Xem tất cả'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...((events.asData!.value.toList())
+                    ..sort((a, b) => b.fillRate.compareTo(a.fillRate)))
+                  .take(2)
+                  .map((e) => _FeaturedEventCard(key: ValueKey('featured-${e.id}'), event: e)),
+            ],
             const SizedBox(height: 26),
             Container(
               padding: const EdgeInsets.all(22),
@@ -300,6 +328,107 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FeaturedEventCard extends StatelessWidget {
+  const _FeaturedEventCard({super.key, required this.event});
+  final EventModel event;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      margin: const EdgeInsets.only(bottom: 10),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: CampusColors.line),
+      ),
+      child: InkWell(
+        onTap: () => context.push(RouteNames.eventDetail(event.id)),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 64,
+                  height: 64,
+                  child: EventPoster(
+                    url: event.posterUrl,
+                    category: event.category,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: CampusColors.gold.withAlpha(40),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'NỔI BẬT',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF8C6615),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          EventCategories.label(event.category).toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: CampusColors.teal,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      event.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${event.registeredCount}/${event.capacity} đã đăng ký (${(event.fillRate * 100).toStringAsFixed(0)}%)',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: CampusColors.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 13,
+                color: CampusColors.muted,
+              ),
+            ],
+          ),
         ),
       ),
     );
