@@ -246,8 +246,9 @@ class RegistrationRepositoryImpl implements RegistrationRepository {
         try {
           final ids = list.map((r) => r.id).toSet();
           for (final old in await dao.getMyTickets(userId)) {
-            if (!ids.contains(old.registrationId))
+            if (!ids.contains(old.registrationId)) {
               await dao.deleteTicket(old.registrationId);
+            }
           }
         } catch (_) {
           /* A failed cache cleanup must not hide server data. */
@@ -291,8 +292,9 @@ class RegistrationRepositoryImpl implements RegistrationRepository {
     } catch (error, stack) {
       if (_isOffline(error) && _ticketDao != null) {
         final ticket = await _ticketDao.getTicket(regId);
-        if (ticket != null && ticket.userId == userId)
+        if (ticket != null && ticket.userId == userId) {
           return ticket.toRegistrationModel();
+        }
       }
       throw mapError(error, stack);
     }

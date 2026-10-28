@@ -44,10 +44,9 @@ class EventDetailScreen extends ConsumerWidget {
       final user = ref.watch(currentUserProvider).asData?.value;
       if (user != null) {
         Future.microtask(() {
-          ref.read(recentViewDaoProvider).recordView(
-                eventId: eventId,
-                userId: user.uid,
-              );
+          ref
+              .read(recentViewDaoProvider)
+              .recordView(eventId: eventId, userId: user.uid);
         });
       }
     }
@@ -147,7 +146,10 @@ class EventDetailScreen extends ConsumerWidget {
                   ),
                   if (value.status == EventStatus.cancelled) ...[
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.red.shade50,
                         border: Border.all(color: Colors.red.shade300),
@@ -155,7 +157,11 @@ class EventDetailScreen extends ConsumerWidget {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.cancel_rounded, color: Colors.red.shade700, size: 28),
+                          Icon(
+                            Icons.cancel_rounded,
+                            color: Colors.red.shade700,
+                            size: 28,
+                          ),
                           const SizedBox(width: 14),
                           Expanded(
                             child: Column(
@@ -172,7 +178,10 @@ class EventDetailScreen extends ConsumerWidget {
                                 const SizedBox(height: 2),
                                 Text(
                                   'Sự kiện này đã bị hủy bởi ban tổ chức hoặc ban quản trị.',
-                                  style: TextStyle(fontSize: 12, color: Colors.red.shade800),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.red.shade800,
+                                  ),
                                 ),
                               ],
                             ),
@@ -249,7 +258,8 @@ class EventDetailScreen extends ConsumerWidget {
                               const SizedBox(height: 20),
                               if (!managed)
                                 _JoinEventButton(event: value)
-                              else if (value.status != EventStatus.cancelled) ...[
+                              else if (value.status !=
+                                  EventStatus.cancelled) ...[
                                 SizedBox(
                                   width: double.infinity,
                                   child: FilledButton.icon(
@@ -265,7 +275,9 @@ class EventDetailScreen extends ConsumerWidget {
                                       );
                                     },
                                     icon: const Icon(Icons.qr_code_scanner),
-                                    label: const Text('Quét QR Check-in Điểm Danh'),
+                                    label: const Text(
+                                      'Quét QR Check-in Điểm Danh',
+                                    ),
                                   ),
                                 ),
                               ],
@@ -358,16 +370,15 @@ class _JoinEventButton extends ConsumerWidget {
         ),
       ),
       error: (_, _) {
-        return _buildJoinButton(
-          context: context,
-          ref: ref,
-          isPast: isPast,
-          isFull: isFull,
-          actionState: actionState,
+        return OutlinedButton.icon(
+          onPressed: () =>
+              ref.invalidate(eventRegistrationStatusProvider(event.id)),
+          icon: const Icon(Icons.refresh),
+          label: const Text('Thử lại trạng thái đăng ký'),
         );
       },
       data: (reg) {
-        if (reg != null && reg.isActive) {
+        if (reg != null && (reg.isActive || reg.isCheckedIn)) {
           return SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
@@ -411,7 +422,7 @@ class _JoinEventButton extends ConsumerWidget {
   }) {
     final isCancelled = event.status == EventStatus.cancelled;
     final canJoin =
-        !isPast && !isFull && !isCancelled && !actionState.isLoading;
+        !isPast && !isFull && event.isPublished && !actionState.isLoading;
     final label = isCancelled
         ? 'Sự kiện đã bị hủy'
         : isPast
@@ -481,16 +492,17 @@ class _JoinEventButton extends ConsumerWidget {
 // ── UC-085: Provider & Widgets cho Sự kiện liên quan ─────────────────────────
 
 final relatedEventsProvider = FutureProvider.autoDispose
-    .family<List<EventModel>, ({String eventId, String category})>(
-  (ref, arg) async {
-    final repo = ref.watch(eventReadRepositoryProvider);
-    return repo.getRelatedEvents(
-      eventId: arg.eventId,
-      category: arg.category,
-      limit: 4,
-    );
-  },
-);
+    .family<List<EventModel>, ({String eventId, String category})>((
+      ref,
+      arg,
+    ) async {
+      final repo = ref.watch(eventReadRepositoryProvider);
+      return repo.getRelatedEvents(
+        eventId: arg.eventId,
+        category: arg.category,
+        limit: 4,
+      );
+    });
 
 class _RelatedEventsSection extends ConsumerWidget {
   const _RelatedEventsSection({
@@ -664,4 +676,3 @@ class _RelatedEventCard extends StatelessWidget {
     );
   }
 }
-
