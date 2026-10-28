@@ -16,6 +16,10 @@
     "test:seed": "node --test test/seed.integration.js",
     "test:dashboard": "node --test --test-concurrency=1 test/organizer-dashboard.integration.js",
     "test:cancel": "node --test --test-concurrency=1 test/cancel-event.integration.js",
+    "test:flow": "node --test --test-concurrency=1 test/event-flow.integration.js",
+    "test:windows-create": "node --test --test-concurrency=1 test/create-recovery.integration.js test/windows-storage.integration.js",
+    "test:demo": "node --test --test-concurrency=1 test/seed.integration.js test/organizer-demo.integration.js",
+    "test:organizer": "node --test --test-concurrency=1 test/event-ownership.integration.js test/event-poster.integration.js test/cancel-event.integration.js test/organizer-dashboard.integration.js test/event-flow.integration.js test/seed.integration.js test/organizer-demo.integration.js test/create-recovery.integration.js test/windows-storage.integration.js",
     "test:all": "node --test --test-concurrency=1 test/event-ownership.integration.js test/event-poster.integration.js test/storage-rules.integration.js test/rules.integration.js test/worker.integration.js test/seed.integration.js",
     "seed": "node ../firebase/seed/seed.mjs"
   },
