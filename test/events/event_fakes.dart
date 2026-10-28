@@ -46,6 +46,16 @@ class FakeEvents implements EventRepository {
   Future<void>? pending;
   int reads = 0;
   int mutations = 0;
+  int createRequests = 0;
+  int updateRequests = 0;
+  int fakeCancelInvocations = 0;
+  DateTime Function() now = DateTime.now;
+
+  Future<void> _mutationGate() async {
+    if (pending != null) await pending;
+    if (failure != null) throw failure!;
+  }
+
   final categories = <String?>[];
   int dashboardReads = 0;
 
@@ -120,10 +130,7 @@ class FakeEvents implements EventRepository {
     final upcoming = await getUpcomingEvents(
       filter: EventFilter(category: category),
     );
-    return upcoming
-        .where((event) => event.id != eventId)
-        .take(limit)
-        .toList();
+    return upcoming.where((event) => event.id != eventId).take(limit).toList();
   }
 
   @override
@@ -131,6 +138,8 @@ class FakeEvents implements EventRepository {
     required String eventId,
     required AppUser actor,
   }) async {
+    fakeCancelInvocations++;
+    await _mutationGate();
     final existing = _ownedEvent(eventId, actor);
     if (existing.status == EventStatus.cancelled) return existing;
     final updated = _copy(existing, status: EventStatus.cancelled);
@@ -144,12 +153,14 @@ class FakeEvents implements EventRepository {
     required EventFormInput input,
     required AppUser actor,
   }) async {
+    createRequests++;
+    await _mutationGate();
     _requireManager(actor);
-    final errors = input.validate();
+    final errors = input.validate(requireFutureStart: true, now: now());
     if (errors.isNotEmpty) {
       throw AppException(errors.values.first, code: 'invalid-event-input');
     }
-    final now = DateTime.now().toUtc();
+    final timestamp = now().toUtc();
     final event = EventModel(
       id: 'event-${events.length + 1}',
       organizerId: actor.uid,
@@ -163,8 +174,8 @@ class FakeEvents implements EventRepository {
       registeredCount: 0,
       checkedInCount: 0,
       status: EventStatus.published,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: timestamp,
+      updatedAt: timestamp,
     );
     events = [...events, event];
     mutations++;
@@ -172,12 +183,13 @@ class FakeEvents implements EventRepository {
   }
 
   @override
-  Future<List<EventModel>> getManagedEvents({required AppUser actor}) =>
-      Future.value(
-        actor.role.name == 'admin'
-            ? events
-            : events.where((event) => event.organizerId == actor.uid).toList(),
-      );
+  Future<List<EventModel>> getManagedEvents({required AppUser actor}) async {
+    _requireManager(actor);
+    await _mutationGate();
+    return actor.role.name == 'admin'
+        ? events
+        : events.where((event) => event.organizerId == actor.uid).toList();
+  }
 
   @override
   Future<EventModel> updateEvent({
@@ -186,6 +198,8 @@ class FakeEvents implements EventRepository {
     required AppUser actor,
     DateTime? expectedUpdatedAt,
   }) async {
+    updateRequests++;
+    await _mutationGate();
     final existing = _ownedEvent(eventId, actor);
     if (existing.status == EventStatus.cancelled) {
       throw const AppException(
@@ -193,7 +207,9 @@ class FakeEvents implements EventRepository {
         code: 'event-cancelled',
       );
     }
-    final errors = input.validate();
+    final errors = input.validate(
+      currentRegisteredCount: existing.registeredCount,
+    );
     if (errors.isNotEmpty) {
       throw AppException(errors.values.first, code: 'invalid-event-input');
     }
