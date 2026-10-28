@@ -1,5 +1,6 @@
 /// Table and column name constants for CampusHub SQLite local storage.
 abstract final class LocalTables {
+  static const String cachedNotifications = 'cached_notifications';
   static const String cachedEvents = 'cached_events';
   static const String offlineTickets = 'offline_tickets';
   static const String recentlyViewed = 'recently_viewed';
