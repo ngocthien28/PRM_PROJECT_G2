@@ -2,8 +2,10 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/firebase_providers.dart';
 import '../../../../local/dao/favorite_local_dao.dart';
+import '../../../../local/dao/recent_view_dao.dart';
 import '../../../auth/presentation/viewmodels/auth_view_model.dart';
 import '../../../events/data/models/event_model.dart';
+import '../../../events/presentation/viewmodels/event_list_view_model.dart';
 import '../../data/favorite_repository.dart';
 import '../../data/favorite_repository_impl.dart';
 
@@ -24,6 +26,23 @@ class LocalOnlyFavoriteRepository implements FavoriteRepository {
       userId: userId,
       isFavorite: isFavorite,
     );
+  }
+
+  @override
+  Future<void> removeFavorite({
+    required String userId,
+    required String eventId,
+  }) async {
+    await _localDao.setFavorite(
+      eventId: eventId,
+      userId: userId,
+      isFavorite: false,
+    );
+  }
+
+  @override
+  Future<void> clearAllFavorites(String userId) async {
+    await _localDao.clearForUser(userId);
   }
 
   @override
@@ -120,6 +139,32 @@ class FavoriteToggleViewModel extends Notifier<FavoriteToggleState> {
       );
       // Invalidate stream để cập nhật real-time
       ref.invalidate(favoriteIdsProvider);
+      ref.invalidate(favoriteEventsProvider);
+      state = const FavoriteToggleState();
+    } catch (e) {
+      state = FavoriteToggleState(error: 'Lỗi: $e');
+    }
+  }
+
+  /// Xóa trực tiếp khỏi favorites (UC-082)
+  Future<void> remove() async {
+    if (state.isLoading) return;
+
+    final identity = ref.read(authStateProvider).asData?.value;
+    if (identity == null) {
+      state = const FavoriteToggleState(error: 'Vui lòng đăng nhập lại.');
+      return;
+    }
+
+    state = const FavoriteToggleState(isLoading: true);
+
+    try {
+      await ref.read(favoriteRepositoryProvider).removeFavorite(
+        userId: identity.uid,
+        eventId: eventId,
+      );
+      ref.invalidate(favoriteIdsProvider);
+      ref.invalidate(favoriteEventsProvider);
       state = const FavoriteToggleState();
     } catch (e) {
       state = FavoriteToggleState(error: 'Lỗi: $e');
@@ -148,3 +193,30 @@ final favoriteEventsProvider =
     return [];
   }
 });
+
+// ── UC-086: Provider lấy danh sách sự kiện đã xem gần đây ──────────────────
+
+final recentlyViewedEventsProvider =
+    FutureProvider.autoDispose<List<EventModel>>((ref) async {
+  try {
+    final identity = await ref.watch(authStateProvider.future);
+    if (!ref.mounted || identity == null) return [];
+
+    final dao = ref.watch(recentViewDaoProvider);
+    final eventIds = await dao.getRecentlyViewedEventIds(userId: identity.uid);
+    if (eventIds.isEmpty) return [];
+
+    final eventRepo = ref.watch(eventReadRepositoryProvider);
+    final events = await eventRepo.getEventsByIds(eventIds);
+    final eventMap = {for (final e in events) e.id: e};
+
+    // Duy trì đúng thứ tự đã xem gần nhất
+    return [
+      for (final id in eventIds)
+        if (eventMap.containsKey(id)) eventMap[id]!,
+    ];
+  } catch (_) {
+    return [];
+  }
+});
+
