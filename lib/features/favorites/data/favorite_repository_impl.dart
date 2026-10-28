@@ -42,6 +42,37 @@ class FavoriteRepositoryImpl implements FavoriteRepository {
   }
 
   @override
+  Future<void> removeFavorite({
+    required String userId,
+    required String eventId,
+  }) async {
+    // 1. Xóa khỏi Firestore
+    await _favCol(userId).doc(eventId).delete();
+    // 2. Đồng bộ local SQLite
+    await localDao.setFavorite(
+      eventId: eventId,
+      userId: userId,
+      isFavorite: false,
+    );
+  }
+
+  @override
+  Future<void> clearAllFavorites(String userId) async {
+    // 1. Xóa toàn bộ docs trong subcollection favorites trên Firestore
+    final snapshot = await _favCol(userId).get();
+    if (snapshot.docs.isNotEmpty) {
+      final batch = firestore.batch();
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+    // 2. Xóa toàn bộ local SQLite favorites của user
+    await localDao.clearForUser(userId);
+  }
+
+
+  @override
   Future<bool> isFavorite({
     required String userId,
     required String eventId,
