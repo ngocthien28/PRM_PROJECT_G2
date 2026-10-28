@@ -355,6 +355,42 @@ service cloud.firestore {
         && request.resource.data.isRead == true;
       allow delete: if false;
     }
+    match /moderation_cases/{caseId} {
+      allow read: if isAdmin();
+      allow create: if activeUser()
+        && request.resource.data.keys().hasOnly([
+          'targetType', 'targetId', 'title', 'description', 'reporterId',
+          'reporterName', 'status', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.targetType in ['club', 'event', 'user', 'other']
+        && request.resource.data.targetId is string
+        && request.resource.data.targetId.size() > 0
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.description is string
+        && request.resource.data.description.size() >= 10
+        && request.resource.data.description.size() <= 1000
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if isAdmin()
+        && resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'resolutionAction', 'resolution', 'resolvedBy',
+          'resolvedAt', 'updatedAt'
+        ])
+        && request.resource.data.status in ['resolved', 'dismissed']
+        && request.resource.data.resolutionAction in ['resolve', 'dismiss']
+        && request.resource.data.resolution is string
+        && request.resource.data.resolution.size() >= 5
+        && request.resource.data.resolution.size() <= 500
+        && request.resource.data.resolvedBy == request.auth.uid
+        && request.resource.data.resolvedAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
     match /{document=**} {
       allow read, write: if false;
     }

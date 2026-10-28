@@ -50,7 +50,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ),
     routes: [
       GoRoute(
-        path: '/admin/moderation',
+        path: RouteNames.moderation,
         builder: (_, _) => const ModerationScreen(),
       ),
       GoRoute(path: '/', redirect: (_, _) => RouteNames.splash),
