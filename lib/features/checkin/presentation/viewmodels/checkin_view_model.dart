@@ -7,6 +7,8 @@ import '../../../registration/data/models/registration_model.dart';
 import '../../../organizer_events/presentation/viewmodels/participant_summary_view_model.dart';
 import '../../../organizer_events/presentation/viewmodels/organizer_dashboard_view_model.dart';
 import '../../../events/presentation/viewmodels/event_detail_view_model.dart';
+import '../../../events/presentation/viewmodels/event_list_view_model.dart';
+import '../../../registration/presentation/viewmodels/registration_view_model.dart';
 
 /// Represents the detailed outcome of a check-in attempt.
 class CheckinResult {
@@ -171,6 +173,9 @@ class CheckinViewModel extends Notifier<CheckinState> {
         ref.invalidate(organizerDashboardProvider);
         ref.invalidate(managedEventDetailProvider(payload.eventId));
         ref.invalidate(eventDetailProvider(payload.eventId));
+        ref.invalidate(eventListProvider);
+        ref.invalidate(myRegistrationsProvider);
+        ref.invalidate(eventRegistrationStatusProvider(payload.eventId));
       }
 
       // 5. Look up participant display name and email for the result screen
@@ -181,7 +186,8 @@ class CheckinViewModel extends Notifier<CheckinState> {
         final userDoc = await firestore
             .collection('users')
             .doc(updatedReg.userId)
-            .get();
+            .get()
+            .timeout(const Duration(seconds: 2));
         if (userDoc.exists) {
           final data = userDoc.data();
           participantName = data?['displayName'] as String?;
@@ -237,11 +243,7 @@ class CheckinViewModel extends Notifier<CheckinState> {
 
   /// Unlocks the scanner to allow subsequent barcode reads.
   void unlockScanner() {
-    state = state.copyWith(
-      status: CheckinStatus.idle,
-      isLocked: false,
-      errorMessage: null,
-    );
+    state = const CheckinState();
   }
 
   /// Resets state back to initial idle.
