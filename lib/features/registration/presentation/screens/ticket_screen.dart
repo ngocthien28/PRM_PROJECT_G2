@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../../../../local/dao/ticket_dao.dart';
 import '../../../events/data/models/event_model.dart';
 import '../../../events/presentation/viewmodels/event_list_view_model.dart';
 import '../../data/models/registration_model.dart';
@@ -29,6 +30,7 @@ class _TicketScreenState extends ConsumerState<TicketScreen> {
   EventModel? _event;
   bool _isLoading = true;
   String? _error;
+  OfflineTicketRecord? _cachedTicket;
 
   @override
   void initState() {
@@ -61,6 +63,12 @@ class _TicketScreenState extends ConsumerState<TicketScreen> {
       }
 
       _registration = reg;
+      try {
+        final cached = await ref.read(ticketDaoProvider).getTicket(reg.id);
+        if (cached?.userId == reg.userId) _cachedTicket = cached;
+      } catch (_) {
+        // The QR can still be displayed using the loaded registration.
+      }
 
       // Load event info if not already provided
       if (_event == null) {
@@ -112,10 +120,12 @@ class _TicketScreenState extends ConsumerState<TicketScreen> {
 
     if (confirmed == true && mounted) {
       try {
-        await ref.read(registrationActionProvider.notifier).cancelRegistration(
-          registrationId: _registration!.id,
-          eventId: _registration!.eventId,
-        );
+        await ref
+            .read(registrationActionProvider.notifier)
+            .cancelRegistration(
+              registrationId: _registration!.id,
+              eventId: _registration!.eventId,
+            );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Đã hủy đăng ký thành công')),
@@ -125,10 +135,7 @@ class _TicketScreenState extends ConsumerState<TicketScreen> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Lỗi: $e'),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
           );
         }
       }
@@ -145,25 +152,29 @@ class _TicketScreenState extends ConsumerState<TicketScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                        const SizedBox(height: 12),
-                        Text(_error!, textAlign: TextAlign.center),
-                        const SizedBox(height: 16),
-                        FilledButton(
-                          onPressed: _loadTicketData,
-                          child: const Text('Thử lại'),
-                        ),
-                      ],
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red,
                     ),
-                  ),
-                )
-              : _buildTicketContent(),
+                    const SizedBox(height: 12),
+                    Text(_error!, textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: _loadTicketData,
+                      child: const Text('Thử lại'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : _buildTicketContent(),
     );
   }
 
@@ -178,6 +189,13 @@ class _TicketScreenState extends ConsumerState<TicketScreen> {
           constraints: const BoxConstraints(maxWidth: 480),
           child: Column(
             children: [
+              if (reg.isFromCache)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    'Offline: vé đã lưu. Kết nối mạng và làm mới để cập nhật check-in.',
+                  ),
+                ),
               // Ticket Card
               Card(
                 elevation: 4,
@@ -207,7 +225,9 @@ class _TicketScreenState extends ConsumerState<TicketScreen> {
 
                       // Event Title
                       Text(
-                        event?.title ?? 'Sự Kiện Trường',
+                        event?.title ??
+                            _cachedTicket?.eventTitle ??
+                            'Sự Kiện Trường',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 20,
@@ -220,7 +240,11 @@ class _TicketScreenState extends ConsumerState<TicketScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.location_on_outlined, size: 16, color: Colors.grey.shade700),
+                            Icon(
+                              Icons.location_on_outlined,
+                              size: 16,
+                              color: Colors.grey.shade700,
+                            ),
                             const SizedBox(width: 4),
                             Flexible(
                               child: Text(
@@ -235,10 +259,16 @@ class _TicketScreenState extends ConsumerState<TicketScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.access_time, size: 16, color: Colors.grey.shade700),
+                            Icon(
+                              Icons.access_time,
+                              size: 16,
+                              color: Colors.grey.shade700,
+                            ),
                             const SizedBox(width: 4),
                             Text(
-                              DateFormat('dd/MM/yyyy HH:mm').format(event.startAt.toLocal()),
+                              DateFormat(
+                                'dd/MM/yyyy HH:mm',
+                              ).format(event.startAt.toLocal()),
                               style: TextStyle(color: Colors.grey.shade700),
                             ),
                           ],
@@ -281,7 +311,10 @@ class _TicketScreenState extends ConsumerState<TicketScreen> {
 
                       const SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(8),
@@ -303,14 +336,20 @@ class _TicketScreenState extends ConsumerState<TicketScreen> {
               const SizedBox(height: 24),
 
               // Action Buttons
-              if (reg.canCancel)
+              if (reg.canCancel && !reg.isFromCache)
                 OutlinedButton.icon(
                   onPressed: _confirmCancel,
                   icon: const Icon(Icons.cancel_outlined, color: Colors.red),
-                  label: const Text('Hủy vé đăng ký', style: TextStyle(color: Colors.red)),
+                  label: const Text(
+                    'Hủy vé đăng ký',
+                    style: TextStyle(color: Colors.red),
+                  ),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.red),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
                   ),
                 ),
             ],
