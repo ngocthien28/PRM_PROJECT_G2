@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/errors/error_mapper.dart';
 import '../../data/models/event_form_input.dart';
+import '../../data/event_draft_repository.dart';
+import 'event_draft_controller.dart';
 
 /// Submission states for the organizer event form.
 enum EventFormSubmissionStatus { idle, validating, submitting, success, error }
@@ -148,6 +150,10 @@ final eventFormViewModelProvider =
 /// workflow. Its listener mirrors intermediate state to Riverpod, so consumers
 /// can observe submitting before the injected callback completes.
 class EventFormViewModel extends Notifier<EventFormSubmissionState> {
+  EventDraftController? draft;
+
+  EventDraftController openDraft(EventDraftRepository repository, String uid) =>
+      draft ??= EventDraftController(repository: repository, organizerId: uid);
   late final EventFormSubmissionController _controller;
   late final EventFormSubmissionStateListener _stateListener;
 
@@ -159,6 +165,7 @@ class EventFormViewModel extends Notifier<EventFormSubmissionState> {
     };
     _controller.addListener(_stateListener);
     ref.onDispose(() => _controller.removeListener(_stateListener));
+    ref.onDispose(() => draft?.dispose());
     return _controller.state;
   }
 
