@@ -10,10 +10,39 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:campushub/features/auth/presentation/viewmodels/auth_view_model.dart';
 import '../auth/auth_fakes.dart';
 
 void main() {
+  test('deep links map supported notification targets safely', () {
+    final event = AppNotification(
+      id: 'event-notice',
+      userId: 'u1',
+      title: 'Event changed',
+      body: 'Open the event.',
+      type: 'event_update',
+      referenceId: 'event 1',
+      isRead: true,
+      createdAt: DateTime.utc(2026),
+    );
+    expect(notificationDeepLink(event), '/events/event%201');
+    expect(
+      notificationDeepLink(
+        AppNotification(
+          id: 'system',
+          userId: 'u1',
+          title: 'Welcome',
+          body: 'Welcome to CampusHub.',
+          type: 'system',
+          isRead: true,
+          createdAt: DateTime.utc(2026),
+        ),
+      ),
+      isNull,
+    );
+  });
+
   testWidgets('tap persists read and badge decreases through live inbox', (
     tester,
   ) async {
@@ -93,5 +122,56 @@ void main() {
     await tester.pump();
     await tester.pumpAndSettle();
     expect(find.text('No notifications yet'), findsOneWidget);
+  });
+
+  testWidgets('event notification opens its Event Detail deep link', (
+    tester,
+  ) async {
+    final item = AppNotification(
+      id: 'event-notice',
+      userId: 'uid',
+      title: 'Event changed',
+      body: 'The schedule was updated.',
+      type: 'event_update',
+      referenceId: 'event-1',
+      isRead: true,
+      createdAt: DateTime.utc(2026),
+    );
+    final router = GoRouter(
+      initialLocation: '/notifications',
+      routes: [
+        GoRoute(
+          path: '/notifications',
+          builder: (_, _) => const NotificationScreen(),
+        ),
+        GoRoute(
+          path: '/events/:eventId',
+          builder: (_, state) => Text(
+            'Event detail ${state.pathParameters['eventId']}',
+            textDirection: TextDirection.ltr,
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          notificationInboxProvider.overrideWith((_) => Stream.value([item])),
+          currentUserProvider.overrideWith((_) => Stream.value(testUser())),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('notification-event-notice')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('open-notification-event-notice')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Event detail event-1'), findsOneWidget);
   });
 }
