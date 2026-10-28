@@ -41,6 +41,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Review moderation case'), findsOneWidget);
+    expect(
+      find.text('Enter at least 5 characters before saving.'),
+      findsOneWidget,
+    );
     await tester.enterText(
       find.byKey(const ValueKey('moderation-note')),
       'Reviewed the club information and contacted its owner.',
@@ -53,6 +57,43 @@ void main() {
     expect(repository.lastActorId, 'admin-1');
     expect(repository.lastAction, ModerationAction.resolve);
     expect(find.text('Resolve issue saved.'), findsOneWidget);
+  });
+
+  testWidgets('resolved cases do not render a redundant disabled button', (
+    tester,
+  ) async {
+    final resolved = ModerationCase(
+      id: 'case-2',
+      targetType: 'event',
+      targetId: 'event-1',
+      title: 'Resolved event report',
+      description: 'The event status was reviewed by an administrator.',
+      reporterName: 'Student Reporter',
+      status: ModerationStatus.resolved,
+      resolution: 'The event status is now clear.',
+      createdAt: DateTime.utc(2026, 10, 27),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWith(
+            (_) => Stream.value(testUser(uid: 'admin-1', role: UserRole.admin)),
+          ),
+          notificationInboxProvider.overrideWith((_) => Stream.value([])),
+          moderationRepositoryProvider.overrideWithValue(
+            _FakeModerationRepository([resolved]),
+          ),
+        ],
+        child: const MaterialApp(home: ModerationScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Resolved (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Resolved event report'), findsOneWidget);
+    expect(find.text('Reviewed'), findsNothing);
+    expect(find.byKey(const ValueKey('review-case-case-2')), findsNothing);
   });
 
   testWidgets('case card remains usable in a narrow Windows window', (

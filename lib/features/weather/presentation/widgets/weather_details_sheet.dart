@@ -66,7 +66,7 @@ class WeatherDetailsSheet extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'THỜI TIẾT KHUÔN VIÊN TRƯỜNG',
+                        'CAMPUS WEATHER',
                         style: TextStyle(
                           fontSize: 10,
                           letterSpacing: 1.5,
@@ -76,7 +76,7 @@ class WeatherDetailsSheet extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Dự báo thời tiết & Khuyến cáo',
+                        'Forecast and activity advice',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -85,6 +85,7 @@ class WeatherDetailsSheet extends StatelessWidget {
                   ),
                 ),
                 IconButton(
+                  tooltip: 'Close weather details',
                   onPressed: () => Navigator.of(context).pop(),
                   icon: const Icon(Icons.close_rounded),
                 ),
@@ -181,9 +182,7 @@ class WeatherDetailsSheet extends StatelessWidget {
               decoration: BoxDecoration(
                 color: CampusColors.mint.withAlpha(80),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: CampusColors.teal.withAlpha(120),
-                ),
+                border: Border.all(color: CampusColors.teal.withAlpha(120)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,7 +198,7 @@ class WeatherDetailsSheet extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Khuyến nghị hoạt động & sự kiện:',
+                          'Activity and event advice',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
@@ -224,20 +223,21 @@ class WeatherDetailsSheet extends StatelessWidget {
             const SizedBox(height: 20),
 
             Text(
-              'Dự báo các ngày tới',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              'Next days',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
 
             // Daily forecast items
             ...forecast.daily.take(5).map((d) {
-              final isToday = d.date.day == DateTime.now().day &&
+              final isToday =
+                  d.date.day == DateTime.now().day &&
                   d.date.month == DateTime.now().month;
               final dayLabel = isToday
-                  ? 'Hôm nay'
-                  : 'Thứ ${d.date.weekday == 7 ? "CN" : d.date.weekday + 1} (${d.date.day}/${d.date.month})';
+                  ? 'Today'
+                  : '${_weekdayName(d.date.weekday)} (${d.date.day}/${d.date.month})';
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Row(
@@ -247,7 +247,9 @@ class WeatherDetailsSheet extends StatelessWidget {
                       child: Text(
                         dayLabel,
                         style: TextStyle(
-                          fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                          fontWeight: isToday
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                           fontSize: 13,
                         ),
                       ),
@@ -298,4 +300,14 @@ class WeatherDetailsSheet extends StatelessWidget {
       ),
     );
   }
+
+  String _weekdayName(int weekday) => const [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ][weekday - 1];
 }

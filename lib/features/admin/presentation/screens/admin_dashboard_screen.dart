@@ -113,9 +113,12 @@ class AdminDashboardScreen extends ConsumerWidget {
               children: [
                 LayoutBuilder(
                   builder: (context, box) {
+                    final textScale = MediaQuery.textScalerOf(context).scale(1);
                     final columns = box.maxWidth >= 850
                         ? 4
                         : box.maxWidth >= 440
+                        ? 2
+                        : box.maxWidth >= 320 && textScale <= 1.3
                         ? 2
                         : 1;
                     final width = (box.maxWidth - (columns - 1) * 16) / columns;
@@ -286,16 +289,19 @@ class AdminDashboardScreen extends ConsumerWidget {
                                 label: const Text('Create Club'),
                               ),
                               OutlinedButton.icon(
-                                onPressed: () => context
-                                    .push(RouteNames.organizerManagedEvents),
+                                onPressed: () => context.push(
+                                  RouteNames.organizerManagedEvents,
+                                ),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: Colors.white,
                                   side: const BorderSide(
                                     color: Color(0xFFB8D0C2),
                                   ),
                                 ),
-                                icon: const Icon(Icons.event_note_outlined,
-                                    size: 18),
+                                icon: const Icon(
+                                  Icons.event_note_outlined,
+                                  size: 18,
+                                ),
                                 label: const Text('Manage Events'),
                               ),
                             ],
@@ -460,12 +466,7 @@ class _StatCard extends StatelessWidget {
 
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: onTap != null
-          ? InkWell(
-              onTap: onTap,
-              child: content,
-            )
-          : content,
+      child: onTap != null ? InkWell(onTap: onTap, child: content) : content,
     );
   }
 }

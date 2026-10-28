@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:campushub/core/theme/app_theme.dart';
 import 'package:campushub/features/admin/data/admin_repository.dart';
 import 'package:campushub/features/admin/presentation/screens/admin_dashboard_screen.dart';
@@ -181,6 +182,19 @@ void main() {
           );
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
+          if (screen.key == 'admin' && device == 'phone') {
+            final navigation = tester.widget<NavigationBar>(
+              find.byType(NavigationBar),
+            );
+            expect(
+              navigation.labelBehavior,
+              NavigationDestinationLabelBehavior.onlyShowSelected,
+            );
+            expect(
+              tester.getTopLeft(find.text('Users').first).dy,
+              tester.getTopLeft(find.text('Active clubs').first).dy,
+            );
+          }
           if (device == 'large-phone') return;
           await tester.runAsync(() async {
             final boundary = tester.renderObject<RenderRepaintBoundary>(
@@ -264,5 +278,51 @@ void main() {
           .onPressed,
       isNotNull,
     );
+  });
+
+  testWidgets('club editor confirms before discarding changed fields', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(700, 720));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final router = GoRouter(
+      initialLocation: '/edit-club',
+      routes: [
+        GoRoute(
+          path: '/edit-club',
+          builder: (_, _) => ManageClubScreen(club: _clubs.first),
+        ),
+        GoRoute(
+          path: '/clubs',
+          builder: (_, _) => const Scaffold(body: Text('Club directory')),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWith(
+            (ref) => Stream.value(testUser(role: UserRole.organizer)),
+          ),
+          notificationInboxProvider.overrideWith((ref) => Stream.value([])),
+        ],
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('clubNameField')),
+      'Changed community name',
+    );
+    await tester.tap(find.byKey(const Key('cancelClubFormButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Discard unsaved changes?'), findsOneWidget);
+    expect(find.text('Keep editing'), findsOneWidget);
+    expect(find.text('Discard changes'), findsOneWidget);
+    await tester.tap(find.text('Discard changes'));
+    await tester.pumpAndSettle();
+    expect(find.text('Club directory'), findsOneWidget);
   });
 }
