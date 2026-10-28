@@ -22,19 +22,9 @@ class MyRegistrationsViewModel extends AsyncNotifier<List<RegistrationModel>> {
     if (identity == null) return const [];
 
     final repo = ref.watch(registrationRepositoryProvider);
-    final ticketDao = ref.watch(ticketDaoProvider);
-
-    try {
-      final remoteList = await repo.getMyRegistrations(identity.uid);
-      return remoteList;
-    } catch (e) {
-      // Offline / network fallback: try reading from SQLite cache
-      final cachedTickets = await ticketDao.getMyTickets(identity.uid);
-      if (cachedTickets.isNotEmpty) {
-        return cachedTickets.map((t) => t.toRegistrationModel()).toList();
-      }
-      return const [];
-    }
+    // The repository handles network-only fallback; permission and data errors
+    // must reach the error UI instead of being disguised as an empty list.
+    return repo.getMyRegistrations(identity.uid);
   }
 
   Future<void> refresh() async {
@@ -82,11 +72,15 @@ class RegistrationActionViewModel
       );
 
       // Cache ticket immediately for offline access
-      await ticketDao.saveTicket(
-        registration: registration,
-        eventTitle: event.title,
-        startAt: event.startAt,
-      );
+      try {
+        await ticketDao.saveTicket(
+          registration: registration,
+          eventTitle: event.title,
+          startAt: event.startAt,
+        );
+      } catch (_) {
+        // Joining already succeeded on the server. Do not invite a retry.
+      }
 
       state = AsyncData(registration);
 
@@ -121,7 +115,11 @@ class RegistrationActionViewModel
         registrationId: registrationId,
         userId: identity.uid,
       );
-      await ticketDao.deleteTicket(registrationId);
+      try {
+        await ticketDao.deleteTicket(registrationId);
+      } catch (_) {
+        // Refresh below reconciles the confirmed cancellation from the server.
+      }
 
       state = const AsyncData(null);
 

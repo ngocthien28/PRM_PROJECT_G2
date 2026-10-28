@@ -14,6 +14,10 @@ class OfflineTicketRecord {
     required this.eventTitle,
     required this.startAt,
     required this.updatedAt,
+    this.status = RegistrationStatus.registered,
+    this.registeredAt,
+    this.checkedInAt,
+    this.cancelledAt,
   });
 
   final String registrationId;
@@ -23,6 +27,12 @@ class OfflineTicketRecord {
   final String eventTitle;
   final DateTime startAt;
   final DateTime updatedAt;
+  final RegistrationStatus status;
+  final DateTime? registeredAt, checkedInAt, cancelledAt;
+
+  static DateTime? _date(dynamic value) => value is int
+      ? DateTime.fromMillisecondsSinceEpoch(value, isUtc: true)
+      : null;
 
   Map<String, dynamic> toMap() => {
     LocalTables.colRegistrationId: registrationId,
@@ -32,10 +42,18 @@ class OfflineTicketRecord {
     LocalTables.colEventTitle: eventTitle,
     LocalTables.colStartAt: startAt.millisecondsSinceEpoch,
     LocalTables.colUpdatedAt: updatedAt.millisecondsSinceEpoch,
+    'status': status.name,
+    'registered_at': registeredAt?.millisecondsSinceEpoch,
+    'checked_in_at': checkedInAt?.millisecondsSinceEpoch,
+    'cancelled_at': cancelledAt?.millisecondsSinceEpoch,
   };
 
   factory OfflineTicketRecord.fromMap(Map<String, dynamic> map) =>
       OfflineTicketRecord(
+        status: RegistrationStatus.fromString(map['status'] as String?),
+        registeredAt: _date(map['registered_at']),
+        checkedInAt: _date(map['checked_in_at']),
+        cancelledAt: _date(map['cancelled_at']),
         registrationId: map[LocalTables.colRegistrationId] as String,
         userId: map[LocalTables.colUserId] as String,
         eventId: map[LocalTables.colEventId] as String,
@@ -53,9 +71,12 @@ class OfflineTicketRecord {
     id: registrationId,
     eventId: eventId,
     userId: userId,
-    status: RegistrationStatus.registered,
+    status: status,
     qrToken: qrToken,
-    registeredAt: updatedAt,
+    registeredAt: registeredAt ?? updatedAt,
+    checkedInAt: checkedInAt,
+    cancelledAt: cancelledAt,
+    isFromCache: true,
   );
 }
 
@@ -79,6 +100,10 @@ class TicketDao {
       eventTitle: eventTitle,
       startAt: startAt,
       updatedAt: DateTime.now(),
+      status: registration.status,
+      registeredAt: registration.registeredAt,
+      checkedInAt: registration.checkedInAt,
+      cancelledAt: registration.cancelledAt,
     );
 
     _webCache[registration.id] = record;
@@ -106,7 +131,7 @@ class TicketDao {
       limit: 1,
     );
 
-    if (rows.isEmpty) return _webCache[registrationId];
+    if (rows.isEmpty) return null;
     return OfflineTicketRecord.fromMap(rows.first);
   }
 
@@ -114,19 +139,7 @@ class TicketDao {
     final db = await _db.database;
     if (db == null) {
       final list = _webCache.values.where((t) => t.userId == userId).toList();
-      if (list.isEmpty) {
-        final demoTicket = OfflineTicketRecord(
-          registrationId: 'reg_demo_01',
-          userId: userId,
-          eventId: 'event_001',
-          qrToken: 'demo-qr-token-uuid-12345',
-          eventTitle: 'Tech Talk: AI & Flutter Architecture',
-          startAt: DateTime.now().add(const Duration(days: 2)),
-          updatedAt: DateTime.now(),
-        );
-        _webCache[demoTicket.registrationId] = demoTicket;
-        return [demoTicket];
-      }
+      list.sort((a, b) => a.startAt.compareTo(b.startAt));
       return list;
     }
 
