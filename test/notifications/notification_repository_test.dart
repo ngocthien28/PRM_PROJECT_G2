@@ -1,4 +1,6 @@
 import 'package:campushub/features/notifications/data/notification_repository_impl.dart';
+import 'package:campushub/features/notifications/data/models/app_notification.dart';
+import 'package:campushub/local/dao/notification_cache_dao.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,7 +18,8 @@ void main() {
         'createdAt': Timestamp.fromDate(DateTime.utc(2026, 1, entry.$3)),
       });
     }
-    final repository = NotificationRepositoryImpl(db);
+    final cache = _MemoryNotificationCache();
+    final repository = NotificationRepositoryImpl(db, cache: cache);
     expect((await repository.watchInbox('u1').first).map((n) => n.id), [
       'b',
       'a',
@@ -25,5 +28,57 @@ void main() {
     expect((await repository.watchInbox('u1').first).first.isRead, true);
     await repository.markRead('b');
     expect((await db.collection('notifications').get()).size, 3);
+    expect((await cache.load('u1')).first.isRead, true);
   });
+
+  test(
+    'cached inbox is emitted immediately while Firestore refreshes',
+    () async {
+      final db = FakeFirebaseFirestore();
+      final cache = _MemoryNotificationCache();
+      final cached = AppNotification(
+        id: 'offline',
+        userId: 'u1',
+        title: 'Saved update',
+        body: 'Available without a network refresh.',
+        type: 'event',
+        isRead: false,
+        createdAt: DateTime.utc(2026, 10, 28),
+      );
+      await cache.replace('u1', [cached]);
+
+      final stream = NotificationRepositoryImpl(
+        db,
+        cache: cache,
+      ).watchInbox('u1');
+      expect((await stream.first).single.id, 'offline');
+    },
+  );
+}
+
+class _MemoryNotificationCache implements NotificationCache {
+  final Map<String, List<AppNotification>> _items = {};
+
+  @override
+  Future<List<AppNotification>> load(String userId) async => [
+    ...?_items[userId],
+  ];
+
+  @override
+  Future<void> markRead(String notificationId) async {
+    for (final entry in _items.entries) {
+      _items[entry.key] = [
+        for (final item in entry.value)
+          item.id == notificationId ? item.copyWith(isRead: true) : item,
+      ];
+    }
+  }
+
+  @override
+  Future<void> replace(
+    String userId,
+    List<AppNotification> notifications,
+  ) async {
+    _items[userId] = [...notifications];
+  }
 }

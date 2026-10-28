@@ -3,6 +3,7 @@ import 'package:campushub/features/notifications/data/models/app_notification.da
 import 'package:campushub/features/notifications/data/notification_repository_impl.dart';
 import 'package:campushub/features/notifications/presentation/screens/notification_screen.dart';
 import 'package:campushub/features/notifications/presentation/viewmodels/notification_view_model.dart';
+import 'package:campushub/local/dao/notification_cache_dao.dart';
 import 'package:campushub/shared/widgets/role_navigation_actions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
@@ -25,7 +26,10 @@ void main() {
       'isRead': false,
       'createdAt': Timestamp.fromDate(DateTime.utc(2026)),
     });
-    final repository = NotificationRepositoryImpl(db);
+    final repository = NotificationRepositoryImpl(
+      db,
+      cache: NotificationCacheDao(openDatabase: () async => null),
+    );
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
