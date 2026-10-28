@@ -22,13 +22,8 @@ final currentUserProvider = StreamProvider<AppUser?>((ref) {
   final cache = ref.watch(localProfileCacheProvider);
 
   Stream<AppUser?> watchProfile() async* {
-    try {
-      final cached = await cache.readProfile(identity.uid);
-      if (!ref.mounted) return;
-      if (cached != null && cached.uid == identity.uid) yield cached;
-    } catch (_) {
-      // Local cache failures must not prevent loading the remote profile.
-    }
+    // Persist profiles for local features, but obtain session roles/status from
+    // the repository stream. A stale local role must not unlock a module.
     if (!ref.mounted) return;
     await for (final user in profiles.watchUser(identity.uid)) {
       if (!ref.mounted) return;
