@@ -15,6 +15,32 @@ class NotificationScreen extends ConsumerStatefulWidget {
   ConsumerState<NotificationScreen> createState() => _NotificationScreenState();
 }
 
+String? notificationDeepLink(AppNotification item) {
+  final referenceId = item.referenceId?.trim();
+  if (referenceId == null || referenceId.isEmpty) return null;
+  return switch (item.type) {
+    'club' || 'club_membership' => RouteNames.clubDetail(referenceId),
+    'event' ||
+    'event_update' ||
+    'event_cancelled' ||
+    'event_reminder' => RouteNames.eventDetail(referenceId),
+    'ticket' || 'registration' => RouteNames.myEvents,
+    'moderation' => RouteNames.moderation,
+    _ => null,
+  };
+}
+
+String notificationActionLabel(AppNotification item) => switch (item.type) {
+  'club' || 'club_membership' => 'View club',
+  'event' ||
+  'event_update' ||
+  'event_cancelled' ||
+  'event_reminder' => 'View event',
+  'ticket' || 'registration' => 'View my events',
+  'moderation' => 'Open moderation',
+  _ => 'Open',
+};
+
 class _NotificationScreenState extends ConsumerState<NotificationScreen> {
   final Set<String> _saving = {};
   bool _unreadOnly = false;
@@ -39,12 +65,20 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       }
     }
     if (!mounted) return;
+    final target = notificationDeepLink(item);
     await showDialog<void>(
       context: context,
       builder: (dialog) => AlertDialog(
-        icon: const CircleAvatar(
+        icon: CircleAvatar(
           backgroundColor: CampusColors.mint,
-          child: Icon(Icons.groups_outlined, color: CampusColors.teal),
+          child: Icon(
+            item.type.startsWith('event')
+                ? Icons.event_outlined
+                : item.type == 'club_membership'
+                ? Icons.groups_outlined
+                : Icons.notifications_outlined,
+            color: CampusColors.teal,
+          ),
         ),
         title: Text(item.title),
         scrollable: true,
@@ -63,10 +97,20 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
           ],
         ),
         actions: [
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.pop(dialog),
             child: const Text('Close'),
           ),
+          if (target != null)
+            FilledButton.icon(
+              key: ValueKey('open-notification-${item.id}'),
+              onPressed: () {
+                Navigator.pop(dialog);
+                context.push(target);
+              },
+              icon: const Icon(Icons.arrow_outward_rounded, size: 17),
+              label: Text(notificationActionLabel(item)),
+            ),
         ],
       ),
     );
