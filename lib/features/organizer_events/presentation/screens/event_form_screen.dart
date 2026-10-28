@@ -8,6 +8,8 @@ import '../../data/models/event_form_input.dart';
 import '../viewmodels/event_form_view_model.dart';
 import '../viewmodels/event_poster_view_model.dart';
 import '../../../events/presentation/widgets/event_poster.dart';
+import '../viewmodels/event_draft_controller.dart';
+import '../viewmodels/event_draft_provider.dart';
 
 typedef EventFormSubmitCallback = Future<void> Function(EventFormInput input);
 
@@ -19,6 +21,7 @@ class EventFormScreen extends ConsumerStatefulWidget {
     this.onSuccess,
     this.existingPosterUrl,
     this.onReload,
+    this.draftOrganizerId,
   });
 
   final EventFormInput? initialValue;
@@ -26,12 +29,17 @@ class EventFormScreen extends ConsumerStatefulWidget {
   final VoidCallback? onSuccess;
   final String? existingPosterUrl;
   final VoidCallback? onReload;
+  final String? draftOrganizerId;
 
   @override
   ConsumerState<EventFormScreen> createState() => _EventFormScreenState();
 }
 
-class _EventFormScreenState extends ConsumerState<EventFormScreen> {
+class _EventFormScreenState extends ConsumerState<EventFormScreen>
+    with WidgetsBindingObserver {
+  EventDraftController? _draft;
+  bool _restoring = false;
+  bool _posterNeedsReselect = false;
   late final TextEditingController _title;
   late final TextEditingController _description;
   late String? _category;
@@ -40,7 +48,8 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
   late DateTime _startAt;
   late DateTime _endAt;
   bool _completed = false;
-  final String _createRequestId = const Uuid().v4();
+  bool _submitPending = false;
+  String _createRequestId = const Uuid().v4();
 
   bool get _isEditMode => widget.initialValue != null;
   bool get _canSubmit => widget.onSubmit != null;
@@ -64,15 +73,112 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
     _description.addListener(() => _clearFieldError('description'));
     _location.addListener(() => _clearFieldError('locationName'));
     _capacity.addListener(() => _clearFieldError('capacity'));
+    WidgetsBinding.instance.addObserver(this);
+    if (!_isEditMode && widget.draftOrganizerId != null) {
+      _draft = ref
+          .read(eventFormViewModelProvider.notifier)
+          .openDraft(
+            ref.read(eventDraftRepositoryProvider),
+            widget.draftOrganizerId!,
+          );
+      _createRequestId = _draft!.id;
+      _draft!.onChanged = () {
+        if (mounted) setState(() {});
+      };
+      Future.microtask(_restoreDraft);
+    }
+  }
+
+  Future<void> _restoreDraft() async {
+    final draft = await _draft?.restore();
+    if (!mounted || draft == null) return;
+    _restoring = true;
+    final fields = draft.fields;
+    setState(() {
+      _createRequestId = draft.id;
+      _title.text = fields['title'] as String;
+      _description.text = fields['description'] as String;
+      _location.text = fields['locationName'] as String;
+      _capacity.text = fields['capacity'] as String;
+      _category = EventCategories.labels.containsKey(fields['category'])
+          ? fields['category'] as String
+          : null;
+      _startAt = DateTime.parse(fields['startAt'] as String).toLocal();
+      _endAt = DateTime.parse(fields['endAt'] as String).toLocal();
+      _posterNeedsReselect = fields['posterSelected'] == true;
+    });
+    _restoring = false;
+  }
+
+  void _draftChanged() {
+    if (_restoring || _completed || _draft == null) return;
+    _draft!.changed({
+      'title': _title.text,
+      'description': _description.text,
+      'category': _category ?? '',
+      'locationName': _location.text,
+      'capacity': _capacity.text,
+      'startAt': _startAt.toUtc().toIso8601String(),
+      'endAt': _endAt.toUtc().toIso8601String(),
+      'posterSelected':
+          _posterNeedsReselect ||
+          ref.read(eventPosterViewModelProvider).selection != null,
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) _draft?.flush();
+  }
+
+  Future<void> _discardDraft() async {
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Discard draft?'),
+        content: const Text('Remove the saved form from this device?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep editing'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Discard'),
+          ),
+        ],
+      ),
+    );
+    if (discard != true || !mounted) return;
+    if (await _draft!.clear() && mounted) {
+      _restoring = true;
+      setState(() {
+        _title.clear();
+        _description.clear();
+        _location.clear();
+        _capacity.clear();
+        _category = null;
+        _posterNeedsReselect = false;
+        _startAt = DateTime.now().add(const Duration(hours: 1));
+        _endAt = _startAt.add(const Duration(hours: 1));
+        _createRequestId = _draft!.id;
+      });
+      ref.invalidate(eventPosterViewModelProvider);
+      ref.read(eventFormViewModelProvider.notifier).clearValidationErrors();
+      _restoring = false;
+    }
   }
 
   void _clearFieldError(String field) {
     if (!mounted) return;
     ref.read(eventFormViewModelProvider.notifier).clearFieldError(field);
+    _draftChanged();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _draft?.dispose();
     _title.dispose();
     _description.dispose();
     _location.dispose();
@@ -128,32 +234,65 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
   Future<void> _submit() async {
     final onSubmit = widget.onSubmit;
     if (_completed ||
+        _submitPending ||
         onSubmit == null ||
         ref.read(eventPosterViewModelProvider).selecting ||
         ref.read(eventFormViewModelProvider).isSubmitting) {
       return;
     }
 
-    final saved = await ref
-        .read(eventFormViewModelProvider.notifier)
-        .submit(
-          _input,
-          onSubmit,
-          requireFutureStart: !_isEditMode,
-          currentRegisteredCount: widget.initialValue?.currentRegisteredCount,
-        );
-    if (saved && mounted) {
-      setState(() => _completed = true);
-      widget.onSuccess?.call();
+    if (_posterNeedsReselect) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Select the draft poster again before submitting.'),
+        ),
+      );
+      return;
+    }
+    setState(() => _submitPending = true);
+    try {
+      _draftChanged();
+      await _draft?.flush();
+      if (!mounted) return;
+      final saved = await ref
+          .read(eventFormViewModelProvider.notifier)
+          .submit(
+            _input,
+            onSubmit,
+            requireFutureStart: !_isEditMode,
+            currentRegisteredCount: widget.initialValue?.currentRegisteredCount,
+          );
+      if (saved) {
+        _completed = true;
+        final cleared = await _draft?.clear(submitted: true);
+        if (!mounted) return;
+        if (cleared == false) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Event created, but local draft cleanup failed.'),
+            ),
+          );
+        }
+        widget.onSuccess?.call();
+      }
+    } finally {
+      if (mounted) setState(() => _submitPending = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(eventPosterViewModelProvider, (previous, next) {
+      if (next.selection != previous?.selection) {
+        _posterNeedsReselect = false;
+        _draftChanged();
+      }
+    });
     final submissionState = ref.watch(eventFormViewModelProvider);
     final posterState = ref.watch(eventPosterViewModelProvider);
     final progress = ref.watch(eventPosterProgressProvider);
-    final isSubmitting = submissionState.isSubmitting || posterState.selecting;
+    final isSubmitting =
+        _submitPending || submissionState.isSubmitting || posterState.selecting;
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditMode ? 'Edit Event' : 'Create Event'),
@@ -195,6 +334,43 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                                 const SizedBox(height: 24),
+                                if (_draft != null) ...[
+                                  Text(
+                                    _draft!.message,
+                                    key: const Key('draftStatus'),
+                                  ),
+                                  Wrap(
+                                    spacing: 12,
+                                    children: [
+                                      TextButton(
+                                        onPressed: isSubmitting || _completed
+                                            ? null
+                                            : () {
+                                                _draftChanged();
+                                                _draft!.flush();
+                                              },
+                                        child: const Text('Save Draft'),
+                                      ),
+                                      TextButton(
+                                        onPressed: isSubmitting || _completed
+                                            ? null
+                                            : _discardDraft,
+                                        child: const Text('Discard Draft'),
+                                      ),
+                                      TextButton(
+                                        onPressed: isSubmitting || _completed
+                                            ? null
+                                            : _restoreDraft,
+                                        child: const Text('Retry Restore'),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                                if (_posterNeedsReselect)
+                                  const Text(
+                                    'The previous poster was not stored. Select it again before submitting.',
+                                    key: Key('draftPosterWarning'),
+                                  ),
                                 if (posterState.selection?.bytes != null)
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(12),
@@ -415,30 +591,32 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
     );
   }
 
-  Widget _categoryField(String? error, bool isSubmitting) =>
-      DropdownButtonFormField<String>(
-        key: const Key('categoryField'),
-        initialValue: _category,
-        isExpanded: true,
-        decoration: InputDecoration(
-          labelText: 'Category',
-          hintText: 'Select an event category',
-          errorText: error,
-          border: const OutlineInputBorder(),
-        ),
-        items: EventCategories.labels.entries
-            .map(
-              (entry) =>
-                  DropdownMenuItem(value: entry.key, child: Text(entry.value)),
-            )
-            .toList(),
-        onChanged: isSubmitting
-            ? null
-            : (value) {
-                setState(() => _category = value);
-                _clearFieldError('category');
-              },
-      );
+  Widget _categoryField(String? error, bool isSubmitting) => KeyedSubtree(
+    key: ValueKey(_category),
+    child: DropdownButtonFormField<String>(
+      key: const Key('categoryField'),
+      initialValue: _category,
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: 'Category',
+        hintText: 'Select an event category',
+        errorText: error,
+        border: const OutlineInputBorder(),
+      ),
+      items: EventCategories.labels.entries
+          .map(
+            (entry) =>
+                DropdownMenuItem(value: entry.key, child: Text(entry.value)),
+          )
+          .toList(),
+      onChanged: isSubmitting
+          ? null
+          : (value) {
+              setState(() => _category = value);
+              _clearFieldError('category');
+            },
+    ),
+  );
 
   Widget _dateTimeField(
     String key,
