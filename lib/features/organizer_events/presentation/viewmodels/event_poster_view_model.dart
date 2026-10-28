@@ -1,16 +1,48 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../../core/errors/app_exception.dart';
 import '../../data/event_poster_service.dart';
 import '../../data/cloudinary_event_poster_service.dart';
 import '../../data/models/event_form_input.dart';
+import '../../data/emulator_event_poster_service.dart';
 
 final eventPosterPickerProvider = Provider<EventPosterPicker>(
   (ref) => EventPosterPicker(),
 );
 
 final eventPosterServiceProvider = Provider<EventPosterService>((ref) {
+  if (const bool.fromEnvironment('USE_FIREBASE_EMULATOR')) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
+      final service = EmulatorEventPosterService(
+        bucket: Firebase.app().options.storageBucket!,
+        idToken: () async => FirebaseAuth.instance.currentUser?.getIdToken(),
+        host: const String.fromEnvironment(
+          'FIREBASE_EMULATOR_HOST',
+          defaultValue: '127.0.0.1',
+        ),
+        onProgress: (progress) {
+          if (ref.mounted) {
+            ref.read(eventPosterProgressProvider.notifier).report(progress);
+          }
+        },
+      );
+      ref.onDispose(service.close);
+      return service;
+    }
+    return FirebaseEventPosterService(
+      FirebaseStorage.instance,
+      onProgress: (progress) {
+        if (ref.mounted) {
+          ref.read(eventPosterProgressProvider.notifier).report(progress);
+        }
+      },
+    );
+  }
   final service = CloudinaryEventPosterService(
     onProgress: (progress) {
       if (ref.mounted) {
