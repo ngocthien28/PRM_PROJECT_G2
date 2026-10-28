@@ -10,6 +10,7 @@ import '../viewmodels/event_poster_view_model.dart';
 import '../../data/models/event_form_input.dart';
 import 'event_form_screen.dart';
 import '../viewmodels/organizer_events_view_model.dart';
+import '../../../auth/presentation/viewmodels/auth_view_model.dart';
 
 /// Production create-event route. It keeps Firebase out of the form widget by
 /// injecting a save callback from the organizer presentation layer.
@@ -18,12 +19,18 @@ class OrganizerCreateEventScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final actor = ref.watch(currentUserProvider).asData?.value;
     return ProviderScope(
+      key: ValueKey(actor?.uid),
       overrides: [
         eventFormViewModelProvider.overrideWith(EventFormViewModel.new),
         eventPosterViewModelProvider.overrideWith(EventPosterViewModel.new),
       ],
       child: EventFormScreen(
+        draftOrganizerId:
+            actor != null && actor.isActive && actor.role.canOrganize
+            ? actor.uid
+            : null,
         onSubmit: ref.read(organizerEventActionsProvider).createEvent,
         onSuccess: () {
           ScaffoldMessenger.of(context).showSnackBar(

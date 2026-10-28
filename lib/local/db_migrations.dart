@@ -4,7 +4,15 @@ import 'local_tables.dart';
 
 /// Database schema initialization and version migrations for CampusHub.
 abstract final class DbMigrations {
-  static const int currentVersion = 3;
+  static const int currentVersion = 4;
+
+  static Future<void> createEventDrafts(Database db) => db.execute('''
+    CREATE TABLE IF NOT EXISTS event_drafts (
+      organizer_id TEXT PRIMARY KEY, id TEXT NOT NULL,
+      payload TEXT NOT NULL, created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )
+  ''');
 
   static Future<void> createNotificationCache(Database db) => db.execute('''
     CREATE TABLE IF NOT EXISTS cached_notifications (
@@ -19,6 +27,7 @@ abstract final class DbMigrations {
   static Future<void> onCreate(Database db, int version) async {
     await createNotificationCache(db);
     await createProfileCache(db);
+    await createEventDrafts(db);
     // 1. cached_events
     await db.execute('''
       CREATE TABLE ${LocalTables.cachedEvents} (
@@ -69,6 +78,7 @@ abstract final class DbMigrations {
   ) async {
     if (oldVersion < 2) await createNotificationCache(db);
     if (oldVersion < 3) await createProfileCache(db);
+    if (oldVersion < 4) await createEventDrafts(db);
   }
 
   static Future<void> createProfileCache(Database db) => db.execute('''
