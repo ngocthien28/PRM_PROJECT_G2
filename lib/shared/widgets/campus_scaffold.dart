@@ -29,6 +29,7 @@ class CampusScaffold extends ConsumerWidget {
     this.signOutKey,
     this.sidebarWidth = 232,
     this.floatingActionButton,
+    this.onBeforeNavigate,
   });
   final Key? signOutKey;
   final double sidebarWidth;
@@ -40,6 +41,7 @@ class CampusScaffold extends ConsumerWidget {
   final VoidCallback? onBack, onSignOut;
   final bool signingOut;
   final Widget? floatingActionButton;
+  final Future<bool> Function()? onBeforeNavigate;
 
   List<(String, IconData, CampusSection, String)> get destinations => [
     (
@@ -93,6 +95,8 @@ class CampusScaffold extends ConsumerWidget {
     final VoidCallback signOutAction =
         onSignOut ??
         () async {
+          if (onBeforeNavigate != null && !await onBeforeNavigate!()) return;
+          if (!context.mounted) return;
           final confirmed = await showDialog<bool>(
             context: context,
             builder: (dialog) => AlertDialog(
@@ -126,7 +130,9 @@ class CampusScaffold extends ConsumerWidget {
         };
     final wide = MediaQuery.sizeOf(context).width >= 1120;
     final selected = destinations.indexWhere((d) => d.$3 == section);
-    void navigate(int index) {
+    Future<void> navigate(int index) async {
+      if (onBeforeNavigate != null && !await onBeforeNavigate!()) return;
+      if (!context.mounted) return;
       final router = GoRouter.maybeOf(context);
       final target = destinations[index].$4;
       router?.go(target);
@@ -426,6 +432,9 @@ class CampusScaffold extends ConsumerWidget {
           ? null
           : NavigationBar(
               height: 66,
+              labelBehavior: destinations.length > 4
+                  ? NavigationDestinationLabelBehavior.onlyShowSelected
+                  : NavigationDestinationLabelBehavior.alwaysShow,
               selectedIndex: selected < 0 ? 0 : selected,
               onDestinationSelected: navigate,
               destinations: [

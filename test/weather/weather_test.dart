@@ -36,11 +36,11 @@ void main() {
       expect(forecast.humidity, 65);
       expect(forecast.windSpeed, 12.3);
       expect(forecast.weatherCode, 0);
-      expect(forecast.condition, 'Trời quang đãng');
+      expect(forecast.condition, 'Clear sky');
       expect(forecast.isFallback, isFalse);
       expect(forecast.daily.length, 2);
       expect(forecast.daily.first.tempMax, 33.0);
-      expect(forecast.outdoorAdvisory, contains('Thời tiết lý tưởng'));
+      expect(forecast.outdoorAdvisory, contains('Great weather'));
     });
 
     test('fallback weather provides safe default values', () {
@@ -76,9 +76,9 @@ void main() {
           'precipitation_probability_max': [10],
         },
       });
-      when(() => mockClient.get(any())).thenAnswer(
-        (_) async => http.Response(body, 200),
-      );
+      when(
+        () => mockClient.get(any()),
+      ).thenAnswer((_) async => http.Response(body, 200));
 
       final service = OpenMeteoService(client: mockClient);
       final forecast = await service.getForecast();
@@ -99,9 +99,9 @@ void main() {
         },
         'daily': {'time': []},
       });
-      when(() => mockClient.get(any())).thenAnswer(
-        (_) async => http.Response(body, 200),
-      );
+      when(
+        () => mockClient.get(any()),
+      ).thenAnswer((_) async => http.Response(body, 200));
 
       final service = OpenMeteoService(client: mockClient);
       final repo = WeatherRepositoryImpl(service: service);
