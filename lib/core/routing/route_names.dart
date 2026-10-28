@@ -18,6 +18,7 @@ class RouteNames {
   static String organizerEventParticipants(String id) =>
       '$organizer/events/${Uri.encodeComponent(id)}/participants';
   static const admin = '/admin';
+  static const moderation = '$admin/moderation';
   static const adminEvents = '$admin/events';
   static const myEvents = '/my-events';
   static const tickets = '/tickets';
