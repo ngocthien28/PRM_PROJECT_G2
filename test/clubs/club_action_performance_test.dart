@@ -78,6 +78,7 @@ void main() {
       expect(repo.detailSubscriptions, 1);
       expect(repo.membershipSubscriptions, 1);
       expect(find.text('About this club'), findsOneWidget);
+      expect(find.byKey(const ValueKey('report-club-c')), findsOneWidget);
     },
   );
 }
