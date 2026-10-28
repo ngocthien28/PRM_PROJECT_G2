@@ -135,10 +135,7 @@ class EventRepositoryImpl implements EventRepository {
   }
 
   @override
-  Future<EventModel> getEventById(
-    String eventId, {
-    AppUser? actor,
-  }) async {
+  Future<EventModel> getEventById(String eventId, {AppUser? actor}) async {
     try {
       return await _request(() async {
         if (eventId.trim().isEmpty || eventId.contains('/')) {
@@ -148,7 +145,9 @@ class EventRepositoryImpl implements EventRepository {
           );
         }
         final supplied = actor;
-        final manager = supplied == null ? null : await _verifiedActor(supplied);
+        final manager = supplied == null
+            ? null
+            : await _verifiedActor(supplied);
         if (manager != null) _requireEventManager(manager);
         // Ticket holders have get-only access to their event history. A query
         // (even by document ID) uses list rules and cannot use that permission.
@@ -166,7 +165,8 @@ class EventRepositoryImpl implements EventRepository {
         // UC-028: Save to local cache
         unawaited(eventCacheDao?.saveEvent(event));
         if (manager != null) {
-          if (manager.role != UserRole.admin && event.organizerId != manager.uid) {
+          if (manager.role != UserRole.admin &&
+              event.organizerId != manager.uid) {
             throw const AppException(
               'This event is unavailable or you do not have access to it.',
               code: 'event-not-found',
@@ -227,8 +227,9 @@ class EventRepositoryImpl implements EventRepository {
     try {
       return await _request(() async {
         final results = await Future.wait(ids.map(_tryReadEvent));
-        final events =
-            List<EventModel>.unmodifiable(results.whereType<EventModel>());
+        final events = List<EventModel>.unmodifiable(
+          results.whereType<EventModel>(),
+        );
         if (events.isEmpty && eventCacheDao != null) {
           final cached = await _readCachedByIds(ids);
           if (cached.isNotEmpty) return cached;
@@ -293,10 +294,7 @@ class EventRepositoryImpl implements EventRepository {
     final upcoming = await getUpcomingEvents(
       filter: EventFilter(category: category),
     );
-    return upcoming
-        .where((event) => event.id != eventId)
-        .take(limit)
-        .toList();
+    return upcoming.where((event) => event.id != eventId).take(limit).toList();
   }
 
   @override
@@ -363,8 +361,8 @@ class EventRepositoryImpl implements EventRepository {
           _requireEventManager(actor);
           // Keep the original write alive across a timeout. Retrying unchanged data
           // confirms that write instead of allocating a second document or resetting
-          // server timestamps/counters. This protection lasts for this repository
-          // instance; it is not cross-device/restart idempotency.
+          // server timestamps/counters. A persisted createRequestId also allows
+          // local drafts to recover the same document after an app restart.
           final detailsKey = jsonEncode([
             actor.uid,
             input.title.trim(),
@@ -387,13 +385,21 @@ class EventRepositoryImpl implements EventRepository {
           final attempt =
               existing ??
               _EventCreateAttempt(
-                firestore.collection(FirestoreCollections.events).doc(),
+                firestore
+                    .collection(FirestoreCollections.events)
+                    .doc(
+                      input.createRequestId == null
+                          ? null
+                          : '${Uri.encodeComponent(actor.uid)}_${Uri.encodeComponent(input.createRequestId!)}',
+                    ),
                 _createMap(input, actor.uid),
                 detailsKey,
+                reuseExisting: input.createRequestId != null,
               );
           _createAttempts[key] = attempt;
           try {
             final event = await attempt.confirm();
+            _requireOwnerOrAdmin(event, actor);
             if (input.posterSelection != null) {
               if (identical(attempt.posterSelection, input.posterSelection) &&
                   attempt.posterUrl != null &&
@@ -412,7 +418,8 @@ class EventRepositoryImpl implements EventRepository {
               attempt.posterUrl = saved.posterUrl;
               return saved;
             }
-            if (attempt.detailsKey != detailsKey) {
+            if (attempt.detailsKey != detailsKey ||
+                !_sameEditableValues(event, input)) {
               return await updateEvent(
                 eventId: event.id,
                 input: input,
@@ -812,9 +819,31 @@ class _EventCreateAttempt {
   _EventCreateAttempt(
     this.reference,
     Map<String, dynamic> data,
-    this.detailsKey,
-  ) {
-    _write = reference.set(data).then((_) => writeAcknowledged = true);
+    this.detailsKey, {
+    bool reuseExisting = false,
+  }) {
+    _write =
+        (reuseExisting
+                ? () async {
+                    // An exact documentId equality can be authorized as a get,
+                    // which the existing Rules deny for a missing document.
+                    // A bounded owner range remains a list query and reads at
+                    // most one document, including when the target is absent.
+                    final existing = await reference.parent
+                        .where('organizerId', isEqualTo: data['organizerId'])
+                        .where(
+                          FieldPath.documentId,
+                          isGreaterThanOrEqualTo: reference.id,
+                        )
+                        .orderBy(FieldPath.documentId)
+                        .limit(1)
+                        .get(const GetOptions(source: Source.server));
+                    if (!existing.docs.any((doc) => doc.id == reference.id)) {
+                      await reference.set(data);
+                    }
+                  }()
+                : reference.set(data))
+            .then((_) => writeAcknowledged = true);
   }
 
   final DocumentReference<Map<String, dynamic>> reference;
