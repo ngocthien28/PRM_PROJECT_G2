@@ -35,6 +35,108 @@ class EventModel {
   int get availablePlaces => (capacity - registeredCount).clamp(0, capacity);
   bool get isFull => registeredCount >= capacity;
 
+  // ── UC-016: Derived read helpers shared by Discovery screens ─────────────
+  bool get isPublished => status == EventStatus.published;
+  bool get isCancelled => status == EventStatus.cancelled;
+
+  /// True while the event can still be discovered/joined by students.
+  bool isUpcomingAt(DateTime now) =>
+      isPublished && !startAt.isBefore(now.toUtc());
+
+  bool hasStartedAt(DateTime now) => !startAt.isAfter(now.toUtc());
+
+  /// Registration ratio in the range 0..1, used to rank popular events.
+  double get fillRate =>
+      capacity == 0 ? 0 : (registeredCount / capacity).clamp(0, 1).toDouble();
+
+  /// Case-insensitive keyword match on title, location and category.
+  bool matchesKeyword(String keyword) {
+    final query = keyword.trim().toLowerCase();
+    if (query.isEmpty) return true;
+    return titleLower.contains(query) ||
+        locationName.toLowerCase().contains(query) ||
+        category.toLowerCase().contains(query);
+  }
+
+  EventModel copyWith({
+    String? title,
+    String? description,
+    String? category,
+    String? locationName,
+    DateTime? startAt,
+    DateTime? endAt,
+    int? capacity,
+    int? registeredCount,
+    int? checkedInCount,
+    EventStatus? status,
+    DateTime? updatedAt,
+    String? posterUrl,
+  }) => EventModel(
+    id: id,
+    organizerId: organizerId,
+    title: title ?? this.title,
+    description: description ?? this.description,
+    category: category ?? this.category,
+    locationName: locationName ?? this.locationName,
+    startAt: startAt ?? this.startAt,
+    endAt: endAt ?? this.endAt,
+    capacity: capacity ?? this.capacity,
+    registeredCount: registeredCount ?? this.registeredCount,
+    checkedInCount: checkedInCount ?? this.checkedInCount,
+    status: status ?? this.status,
+    createdAt: createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    clubId: clubId,
+    posterUrl: posterUrl ?? this.posterUrl,
+    latitude: latitude,
+    longitude: longitude,
+  );
+
+  /// Firestore-independent JSON (dates as epoch milliseconds, UTC) used by
+  /// the SQLite `cached_events` table and offline fallbacks.
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'organizerId': organizerId,
+    'clubId': clubId,
+    'title': title,
+    'description': description,
+    'category': category,
+    'locationName': locationName,
+    'latitude': latitude,
+    'longitude': longitude,
+    'startAt': startAt.toUtc().millisecondsSinceEpoch,
+    'endAt': endAt.toUtc().millisecondsSinceEpoch,
+    'capacity': capacity,
+    'registeredCount': registeredCount,
+    'checkedInCount': checkedInCount,
+    'posterUrl': posterUrl,
+    'status': status.name,
+    'createdAt': createdAt.toUtc().millisecondsSinceEpoch,
+    'updatedAt': updatedAt.toUtc().millisecondsSinceEpoch,
+  };
+
+  /// Reverses [toJson]. Reuses [EventModel.fromMap] validation so a corrupt
+  /// cache row is rejected with a [FormatException] instead of crashing UI.
+  factory EventModel.fromJson(Map<String, dynamic> json) {
+    final id = json['id'];
+    if (id is! String || id.isEmpty) {
+      throw const FormatException('Invalid cached event id.');
+    }
+    Timestamp time(String key) {
+      final value = json[key];
+      if (value is! int) throw FormatException('Invalid cached date: $key');
+      return Timestamp.fromMillisecondsSinceEpoch(value);
+    }
+
+    return EventModel.fromMap(id, {
+      ...json,
+      'startAt': time('startAt'),
+      'endAt': time('endAt'),
+      'createdAt': time('createdAt'),
+      'updatedAt': time('updatedAt'),
+    });
+  }
+
   factory EventModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
     if (data == null) throw const FormatException('Event does not exist.');

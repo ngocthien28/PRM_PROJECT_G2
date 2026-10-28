@@ -92,6 +92,41 @@ class FakeEvents implements EventRepository {
   }
 
   @override
+  Future<List<EventModel>> searchEvents(EventFilter filter) async {
+    final upcoming = await getUpcomingEvents(
+      filter: EventFilter(category: filter.category),
+    );
+    return filter
+        .withKeyword('')
+        .apply(upcoming.where((event) => event.matchesKeyword(filter.keyword)));
+  }
+
+  @override
+  Future<List<EventModel>> getEventsByIds(List<String> eventIds) async {
+    if (failure != null) throw failure!;
+    return [
+      for (final id in eventIds)
+        ...events.where((event) => event.id == id).take(1),
+    ];
+  }
+
+  @override
+  Future<List<EventModel>> getRelatedEvents({
+    required String eventId,
+    required String category,
+    int limit = 5,
+  }) async {
+    if (failure != null) throw failure!;
+    final upcoming = await getUpcomingEvents(
+      filter: EventFilter(category: category),
+    );
+    return upcoming
+        .where((event) => event.id != eventId)
+        .take(limit)
+        .toList();
+  }
+
+  @override
   Future<EventModel> cancelEvent({
     required String eventId,
     required AppUser actor,
