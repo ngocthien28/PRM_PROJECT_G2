@@ -21,19 +21,31 @@ class MyEventsScreen extends ConsumerStatefulWidget {
 }
 
 class _MyEventsScreenState extends ConsumerState<MyEventsScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final TabController _tabController;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    WidgetsBinding.instance.addObserver(this);
+    Future.microtask(() {
+      if (mounted) ref.invalidate(myRegistrationsProvider);
+    });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(myRegistrationsProvider);
+    }
   }
 
   @override
@@ -207,6 +219,7 @@ class _RegistrationCard extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     RegistrationStatusChip(status: registration.status),
+                    if (registration.isFromCache) const Text('Offline'),
                     Text(
                       DateFormat(
                         'dd/MM/yyyy HH:mm',
@@ -273,7 +286,7 @@ class _RegistrationCard extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    if (registration.canCancel)
+                    if (registration.canCancel && !registration.isFromCache)
                       TextButton.icon(
                         key: const Key('myEventsCancelTicketButton'),
                         style: TextButton.styleFrom(
@@ -289,8 +302,8 @@ class _RegistrationCard extends ConsumerWidget {
                       ),
                     const SizedBox(width: 8),
                     FilledButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).push(
+                      onPressed: () async {
+                        await Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) => TicketScreen(
                               registrationId: registration.id,
@@ -299,6 +312,9 @@ class _RegistrationCard extends ConsumerWidget {
                             ),
                           ),
                         );
+                        if (context.mounted) {
+                          ref.invalidate(myRegistrationsProvider);
+                        }
                       },
                       icon: const Icon(Icons.qr_code, size: 18),
                       label: const Text('Xem Vé QR'),
