@@ -4,6 +4,9 @@ import '../../../../core/services/firebase_providers.dart';
 import '../../../../core/utils/qr_payload.dart';
 import '../../../auth/presentation/viewmodels/auth_view_model.dart';
 import '../../../registration/data/models/registration_model.dart';
+import '../../../organizer_events/presentation/viewmodels/participant_summary_view_model.dart';
+import '../../../organizer_events/presentation/viewmodels/organizer_dashboard_view_model.dart';
+import '../../../events/presentation/viewmodels/event_detail_view_model.dart';
 
 /// Represents the detailed outcome of a check-in attempt.
 class CheckinResult {
@@ -28,12 +31,7 @@ class CheckinResult {
   final String? errorCode;
 }
 
-enum CheckinStatus {
-  idle,
-  processing,
-  success,
-  error,
-}
+enum CheckinStatus { idle, processing, success, error }
 
 class CheckinState {
   const CheckinState({
@@ -100,7 +98,8 @@ class CheckinViewModel extends Notifier<CheckinState> {
       } catch (e) {
         final failure = CheckinResult(
           isSuccess: false,
-          message: 'Mã QR không đúng định dạng của CampusHub hoặc đã bị biến đổi.',
+          message:
+              'Mã QR không đúng định dạng của CampusHub hoặc đã bị biến đổi.',
           errorCode: 'invalid_qr',
         );
         state = state.copyWith(
@@ -167,6 +166,12 @@ class CheckinViewModel extends Notifier<CheckinState> {
         organizerId: organizerId,
         payload: payload,
       );
+      if (ref.mounted) {
+        ref.invalidate(participantSummaryProvider(payload.eventId));
+        ref.invalidate(organizerDashboardProvider);
+        ref.invalidate(managedEventDetailProvider(payload.eventId));
+        ref.invalidate(eventDetailProvider(payload.eventId));
+      }
 
       // 5. Look up participant display name and email for the result screen
       String? participantName;
@@ -196,10 +201,7 @@ class CheckinViewModel extends Notifier<CheckinState> {
         checkedInAt: updatedReg.checkedInAt ?? DateTime.now(),
       );
 
-      state = state.copyWith(
-        status: CheckinStatus.success,
-        result: success,
-      );
+      state = state.copyWith(status: CheckinStatus.success, result: success);
 
       return success;
     } catch (e) {
