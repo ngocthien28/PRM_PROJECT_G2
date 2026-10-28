@@ -43,8 +43,9 @@ class RegistrationModel {
     DocumentSnapshot<Map<String, dynamic>> doc,
   ) {
     final data = doc.data();
-    if (data == null)
+    if (data == null) {
       throw const FormatException('Registration does not exist.');
+    }
     return RegistrationModel.fromMap(doc.id, data);
   }
 

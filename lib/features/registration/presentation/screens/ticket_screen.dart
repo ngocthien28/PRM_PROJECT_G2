@@ -25,7 +25,8 @@ class TicketScreen extends ConsumerStatefulWidget {
   ConsumerState<TicketScreen> createState() => _TicketScreenState();
 }
 
-class _TicketScreenState extends ConsumerState<TicketScreen> {
+class _TicketScreenState extends ConsumerState<TicketScreen>
+    with WidgetsBindingObserver {
   RegistrationModel? _registration;
   EventModel? _event;
   bool _isLoading = true;
@@ -35,6 +36,7 @@ class _TicketScreenState extends ConsumerState<TicketScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _registration = widget.initialRegistration;
     _event = widget.initialEvent;
     if (_registration != null && _event != null) {
@@ -44,17 +46,32 @@ class _TicketScreenState extends ConsumerState<TicketScreen> {
     }
   }
 
-  Future<void> _loadTicketData() async {
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && !_isLoading) {
+      _loadTicketData(refresh: true);
+    }
+  }
+
+  Future<void> _loadTicketData({bool refresh = false}) async {
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      RegistrationModel? reg = _registration;
+      RegistrationModel? reg = refresh ? null : _registration;
       if (reg == null) {
         // Find in registrations list or fetch directly
-        final list = await ref.read(myRegistrationsProvider.future);
+        final list = refresh
+            ? await ref.refresh(myRegistrationsProvider.future)
+            : await ref.read(myRegistrationsProvider.future);
         reg = list.where((r) => r.id == widget.registrationId).firstOrNull;
       }
 
@@ -148,6 +165,14 @@ class _TicketScreenState extends ConsumerState<TicketScreen> {
       appBar: AppBar(
         title: const Text('Vé Tham Gia (E-Ticket)'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            key: const Key('refreshTicket'),
+            tooltip: 'Làm mới trạng thái vé',
+            onPressed: _isLoading ? null : () => _loadTicketData(refresh: true),
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
