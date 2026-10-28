@@ -156,8 +156,22 @@ export async function runSeed(options = {}) {
     console.log(`  [SET] Notification: ${notice.title} (${notice.userId})`);
   }
 
-  // 7. Post-seed Consistency Verification
-  console.log('\n--- 7. Validating Invariants and Counter Consistency ---');
+  // 7. Seed Moderation Cases
+  console.log('\n--- 7. Seeding Moderation Cases ---');
+  for (const moderationCase of seedData.moderationCases) {
+    await db.collection('moderation_cases').doc(moderationCase.id).set({
+      ...moderationCase,
+      createdAt: Timestamp.fromDate(moderationCase.createdAt),
+      updatedAt: Timestamp.fromDate(moderationCase.updatedAt),
+      resolvedAt: moderationCase.resolvedAt
+        ? Timestamp.fromDate(moderationCase.resolvedAt)
+        : null,
+    }, { merge: false });
+    console.log(`  [SET] Moderation: ${moderationCase.title} [${moderationCase.status}]`);
+  }
+
+  // 8. Post-seed Consistency Verification
+  console.log('\n--- 8. Validating Invariants and Counter Consistency ---');
   let hasInconsistency = false;
   for (const event of seedData.events) {
     const eventRegs = seedData.registrations.filter((r) => r.eventId === event.id);
@@ -195,6 +209,7 @@ export async function runSeed(options = {}) {
     registrationsCount: seedData.registrations.length,
     clubsCount: seedData.clubs.length,
     notificationsCount: seedData.notifications.length,
+    moderationCasesCount: seedData.moderationCases.length,
     posterCount,
   };
 }
