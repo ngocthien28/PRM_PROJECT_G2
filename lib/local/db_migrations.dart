@@ -80,10 +80,12 @@ abstract final class DbMigrations {
     int oldVersion,
     int newVersion,
   ) async {
-    if (oldVersion < 2) await createNotificationCache(db);
-    if (oldVersion < 3) await createProfileCache(db);
-    if (oldVersion < 4) await createEventDrafts(db);
-    if (oldVersion < 5) {
+    if (oldVersion < 2 && newVersion >= 2) {
+      await createNotificationCache(db);
+    }
+    if (oldVersion < 3 && newVersion >= 3) await createProfileCache(db);
+    if (oldVersion < 4 && newVersion >= 4) await createEventDrafts(db);
+    if (oldVersion < 5 && newVersion >= 5) {
       await db.execute(
         "ALTER TABLE offline_tickets ADD COLUMN status TEXT NOT NULL DEFAULT 'registered'",
       );

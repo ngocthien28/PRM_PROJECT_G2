@@ -7,6 +7,7 @@ import '../../../../local/dao/recent_view_dao.dart';
 import '../../../../shared/enums/event_status.dart';
 import '../../../../shared/widgets/app_back_button.dart';
 import '../../../auth/presentation/viewmodels/auth_view_model.dart';
+import '../../../admin/presentation/widgets/report_content_button.dart';
 import '../../../favorites/presentation/viewmodels/favorite_view_model.dart';
 import '../../../registration/data/models/registration_model.dart';
 import '../../../registration/presentation/screens/ticket_screen.dart';
@@ -307,6 +308,15 @@ class EventDetailScreen extends ConsumerWidget {
                   ),
                   // ── UC-085: Sự kiện liên quan ──────────────────────────
                   if (!managed) ...[
+                    const SizedBox(height: 24),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: ReportContentButton(
+                        targetType: 'event',
+                        targetId: value.id,
+                        targetLabel: value.title,
+                      ),
+                    ),
                     const SizedBox(height: 36),
                     _RelatedEventsSection(
                       currentEventId: value.id,
@@ -356,6 +366,18 @@ class _JoinEventButton extends ConsumerWidget {
 
     final isPast = event.startAt.isBefore(DateTime.now());
     final isFull = event.isFull;
+
+    // Cancellation is an event fact, so do not hide its disabled action behind
+    // registration/profile loading or an unrelated registration read failure.
+    if (event.status == EventStatus.cancelled) {
+      return _buildJoinButton(
+        context: context,
+        ref: ref,
+        isPast: isPast,
+        isFull: isFull,
+        actionState: actionState,
+      );
+    }
 
     return regAsync.when(
       loading: () => const SizedBox(

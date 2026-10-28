@@ -215,7 +215,7 @@ void main() {
     }
   }
 
-  testWidgets('club search narrows results and editing updates live preview', (
+  testWidgets('UC-088/089 search and membership sorting work in club list', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(1440, 1000));
@@ -236,6 +236,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Code & Coffee'), findsOneWidget);
     expect(find.text('Creative Collective'), findsNothing);
+    await tester.enterText(find.byKey(const Key('club-search')), '');
+    await tester.tap(find.text('Most members'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.getTopLeft(find.text('Code & Coffee')).dx,
+      lessThan(tester.getTopLeft(find.text('Creative Collective')).dx),
+    );
     await tester.pumpWidget(app(const ManageClubScreen()));
     await tester.pumpAndSettle();
     await tester.enterText(
