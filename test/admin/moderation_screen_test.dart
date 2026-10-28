@@ -147,6 +147,16 @@ class _FakeModerationRepository implements ModerationRepository {
   Stream<List<ModerationCase>> watchCases() => Stream.value(items);
 
   @override
+  Future<String> submitReport({
+    required String targetType,
+    required String targetId,
+    required String title,
+    required String description,
+    required String reporterId,
+    required String reporterName,
+  }) async => 'case-created';
+
+  @override
   Future<void> resolveCase({
     required String caseId,
     required ModerationAction action,

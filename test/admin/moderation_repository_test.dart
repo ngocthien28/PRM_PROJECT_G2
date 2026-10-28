@@ -5,6 +5,56 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('active user report creates a pending moderation case', () async {
+    final firestore = FakeFirebaseFirestore();
+    final repository = ModerationRepositoryImpl(firestore);
+
+    final id = await repository.submitReport(
+      targetType: 'club',
+      targetId: 'club-1',
+      title: 'Inaccurate information: Code Club',
+      description: 'The meeting location shown on this page is out of date.',
+      reporterId: 'student-1',
+      reporterName: 'Student Reporter',
+    );
+
+    final data = (await firestore.collection('moderation_cases').doc(id).get())
+        .data()!;
+    expect(data['targetType'], 'club');
+    expect(data['targetId'], 'club-1');
+    expect(data['reporterId'], 'student-1');
+    expect(data['status'], 'pending');
+    expect(data['createdAt'], isA<Timestamp>());
+    expect(data['updatedAt'], isA<Timestamp>());
+  });
+
+  test('report rejects unsupported targets and vague descriptions', () async {
+    final repository = ModerationRepositoryImpl(FakeFirebaseFirestore());
+
+    expect(
+      () => repository.submitReport(
+        targetType: 'document',
+        targetId: 'doc-1',
+        title: 'Other concern: Document',
+        description: 'This description is long enough.',
+        reporterId: 'student-1',
+        reporterName: 'Student Reporter',
+      ),
+      throwsArgumentError,
+    );
+    expect(
+      () => repository.submitReport(
+        targetType: 'event',
+        targetId: 'event-1',
+        title: 'Other concern: Event',
+        description: 'Too short',
+        reporterId: 'student-1',
+        reporterName: 'Student Reporter',
+      ),
+      throwsArgumentError,
+    );
+  });
+
   test(
     'queue is ordered newest first and decisions keep an audit record',
     () async {
