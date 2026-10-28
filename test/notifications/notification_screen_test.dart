@@ -43,7 +43,7 @@ void main() {
     );
   });
 
-  testWidgets('tap persists read and badge decreases through live inbox', (
+  testWidgets('UC-090 opens full details and persists the read state', (
     tester,
   ) async {
     final db = FakeFirebaseFirestore();
@@ -124,7 +124,7 @@ void main() {
     expect(find.text('No notifications yet'), findsOneWidget);
   });
 
-  testWidgets('event notification opens its Event Detail deep link', (
+  testWidgets('UC-091 opens related content from a notification', (
     tester,
   ) async {
     final item = AppNotification(
