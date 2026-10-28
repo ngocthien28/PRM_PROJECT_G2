@@ -132,53 +132,72 @@ class CampusScaffold extends ConsumerWidget {
       router?.go(target);
     }
 
-    final header = Container(
-      padding: EdgeInsets.symmetric(horizontal: wide ? 32 : 12, vertical: 12),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: CampusColors.line)),
-      ),
-      child: Row(
-        children: [
-          if (onBack != null) ...[
-            IconButton(
-              tooltip: 'Back',
-              onPressed: onBack,
-              icon: const Icon(Icons.arrow_back_rounded),
-            ),
-            const SizedBox(width: 6),
-          ],
-          if (!wide && onBack == null) ...[
-            const _BrandMark(size: 34),
-            const SizedBox(width: 10),
-          ],
-          Expanded(
-            child: Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontSize: wide ? 19 : 17),
-            ),
+    final header = LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
+        final compact = availableWidth < 600;
+        final veryCompact = availableWidth < 450;
+        return Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: wide ? 32 : 12,
+            vertical: 12,
           ),
-          ...actions,
-          if (!wide)
-            MediaQuery.sizeOf(context).width >= 600
-                ? TextButton.icon(
-                    key: signOutKey,
-                    onPressed: signOutBusy ? null : signOutAction,
-                    icon: const Icon(Icons.logout_rounded, size: 18),
-                    label: const Text('Sign out'),
-                  )
-                : IconButton(
-                    key: signOutKey,
-                    tooltip: 'Sign out',
-                    onPressed: signOutBusy ? null : signOutAction,
-                    icon: const Icon(Icons.logout_rounded, size: 20),
-                  ),
-        ],
-      ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(bottom: BorderSide(color: CampusColors.line)),
+          ),
+          child: Row(
+            children: [
+              if (onBack != null) ...[
+                IconButton(
+                  tooltip: 'Back',
+                  onPressed: onBack,
+                  icon: const Icon(Icons.arrow_back_rounded),
+                ),
+                const SizedBox(width: 6),
+              ],
+              if (!wide && onBack == null) ...[
+                const _BrandMark(size: 34),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontSize: wide ? 19 : 17),
+                ),
+              ),
+              if (veryCompact)
+                ...actions.take(1)
+              else
+                ...actions,
+              if (!wide)
+                compact
+                    ? IconButton(
+                        key: signOutKey,
+                        tooltip: 'Sign out',
+                        onPressed: signOutBusy ? null : signOutAction,
+                        icon: signOutBusy
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.logout_rounded, size: 20),
+                      )
+                    : TextButton.icon(
+                        key: signOutKey,
+                        onPressed: signOutBusy ? null : signOutAction,
+                        icon: const Icon(Icons.logout_rounded, size: 18),
+                        label: const Text('Sign out'),
+                      ),
+            ],
+          ),
+        );
+      },
     );
     return Scaffold(
       floatingActionButton: floatingActionButton,
