@@ -82,7 +82,7 @@ class CampusScaffold extends ConsumerWidget {
         'Moderation',
         Icons.verified_user_outlined,
         CampusSection.moderation,
-        '/admin/moderation',
+        RouteNames.moderation,
       ),
   ];
 
@@ -170,10 +170,7 @@ class CampusScaffold extends ConsumerWidget {
                   ).textTheme.titleLarge?.copyWith(fontSize: wide ? 19 : 17),
                 ),
               ),
-              if (veryCompact)
-                ...actions.take(1)
-              else
-                ...actions,
+              if (veryCompact) ...actions.take(1) else ...actions,
               if (!wide)
                 compact
                     ? IconButton(
@@ -184,7 +181,9 @@ class CampusScaffold extends ConsumerWidget {
                             ? const SizedBox(
                                 width: 18,
                                 height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Icon(Icons.logout_rounded, size: 20),
                       )
@@ -316,7 +315,7 @@ class CampusScaffold extends ConsumerWidget {
                         ),
                       ),
                     const Spacer(),
-                    if (MediaQuery.sizeOf(context).height > 740)
+                    if (MediaQuery.sizeOf(context).height > 920)
                       Container(
                         margin: const EdgeInsets.all(18),
                         padding: const EdgeInsets.all(16),
