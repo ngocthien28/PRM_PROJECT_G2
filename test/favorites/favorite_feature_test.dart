@@ -5,6 +5,7 @@ import 'package:campushub/features/favorites/data/favorite_repository.dart';
 import 'package:campushub/features/favorites/presentation/screens/favorites_screen.dart';
 import 'package:campushub/features/favorites/presentation/viewmodels/favorite_view_model.dart';
 import 'package:campushub/local/dao/favorite_local_dao.dart';
+import 'package:campushub/local/dao/recent_view_dao.dart';
 import 'package:campushub/shared/enums/event_status.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -51,6 +52,19 @@ class FakeFavoriteRepository implements FavoriteRepository {
     } else {
       set.remove(eventId);
     }
+  }
+
+  @override
+  Future<void> removeFavorite({
+    required String userId,
+    required String eventId,
+  }) async {
+    _favorites[userId]?.remove(eventId);
+  }
+
+  @override
+  Future<void> clearAllFavorites(String userId) async {
+    _favorites[userId]?.clear();
   }
 
   @override
@@ -209,5 +223,106 @@ void main() {
       expect(find.text('Tech Talk AI'), findsOneWidget);
       expect(find.text('Music Festival'), findsNothing);
     });
+
+    testWidgets('remove favorite updates UI and repository (UC-082)', (tester) async {
+      final event1 = _dummyEvent(id: 'ev-1', title: 'Tech Talk AI');
+      final fakeRepo = FakeFavoriteRepository(events: [event1]);
+
+      await fakeRepo.toggleFavorite(userId: 'user-1', eventId: 'ev-1', isFavorite: true);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            favoriteRepositoryProvider.overrideWithValue(fakeRepo),
+            authStateProvider.overrideWith(
+              (ref) => Stream.value(dummyIdentity),
+            ),
+          ],
+          child: const MaterialApp(
+            home: FavoritesScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tech Talk AI'), findsOneWidget);
+      expect(find.byKey(const ValueKey('remove-fav-ev-1')), findsOneWidget);
+
+      await tester.ensureVisible(find.byKey(const ValueKey('remove-fav-ev-1')));
+      await tester.tap(find.byKey(const ValueKey('remove-fav-ev-1')));
+      await tester.pumpAndSettle();
+
+      expect(await fakeRepo.isFavorite(userId: 'user-1', eventId: 'ev-1'), false);
+    });
+
+    testWidgets('clear all favorites shows dialog and clears all on confirm (UC-086)', (tester) async {
+      final event1 = _dummyEvent(id: 'ev-1', title: 'Tech Talk AI');
+      final event2 = _dummyEvent(id: 'ev-2', title: 'Music Festival');
+      final fakeRepo = FakeFavoriteRepository(events: [event1, event2]);
+
+      await fakeRepo.toggleFavorite(userId: 'user-1', eventId: 'ev-1', isFavorite: true);
+      await fakeRepo.toggleFavorite(userId: 'user-1', eventId: 'ev-2', isFavorite: true);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            favoriteRepositoryProvider.overrideWithValue(fakeRepo),
+            authStateProvider.overrideWith(
+              (ref) => Stream.value(dummyIdentity),
+            ),
+          ],
+          child: const MaterialApp(
+            home: FavoritesScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Đã lưu 2 sự kiện'), findsOneWidget);
+      expect(find.byKey(const Key('clear-all-favorites')), findsOneWidget);
+
+      // Tap clear all
+      await tester.tap(find.byKey(const Key('clear-all-favorites')));
+      await tester.pumpAndSettle();
+
+      // Dialog shown
+      expect(find.text('Xóa tất cả yêu thích?'), findsOneWidget);
+
+      // Tap Confirm
+      await tester.tap(find.widgetWithText(FilledButton, 'Xóa tất cả'));
+      await tester.pumpAndSettle();
+
+      expect(await fakeRepo.getFavoriteEvents('user-1'), isEmpty);
+    });
+  });
+
+  group('RecentViewDao Tests (UC-086)', () {
+    late RecentViewDao dao;
+    const testUser = 'user-rec-1';
+
+    setUp(() {
+      dao = RecentViewDao();
+    });
+
+    test('recordView saves views and getRecentlyViewedEventIds returns in order', () async {
+      await dao.clearForUser(testUser);
+      expect(await dao.getRecentlyViewedEventIds(userId: testUser), isEmpty);
+
+      await dao.recordView(eventId: 'ev-1', userId: testUser);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await dao.recordView(eventId: 'ev-2', userId: testUser);
+
+      final ids = await dao.getRecentlyViewedEventIds(userId: testUser);
+      expect(ids, equals(['ev-2', 'ev-1']));
+    });
+
+    test('clearForUser clears all recorded views for user', () async {
+      await dao.recordView(eventId: 'ev-1', userId: testUser);
+      expect(await dao.getRecentlyViewedEventIds(userId: testUser), isNotEmpty);
+
+      await dao.clearForUser(testUser);
+      expect(await dao.getRecentlyViewedEventIds(userId: testUser), isEmpty);
+    });
   });
 }
+
