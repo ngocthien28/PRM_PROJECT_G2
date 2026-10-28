@@ -20,23 +20,22 @@ EventModel _testEvent({
   required String id,
   required String title,
   required String category,
-}) =>
-    EventModel(
-      id: id,
-      organizerId: 'org-1',
-      title: title,
-      description: 'Detailed description for $title',
-      category: category,
-      locationName: 'Campus Center Room 101',
-      startAt: DateTime.utc(2026, 11, 20, 10),
-      endAt: DateTime.utc(2026, 11, 20, 12),
-      capacity: 50,
-      registeredCount: 10,
-      checkedInCount: 0,
-      status: EventStatus.published,
-      createdAt: DateTime.utc(2026, 10, 1),
-      updatedAt: DateTime.utc(2026, 10, 1),
-    );
+}) => EventModel(
+  id: id,
+  organizerId: 'org-1',
+  title: title,
+  description: 'Detailed description for $title',
+  category: category,
+  locationName: 'Campus Center Room 101',
+  startAt: DateTime.utc(2026, 11, 20, 10),
+  endAt: DateTime.utc(2026, 11, 20, 12),
+  capacity: 50,
+  registeredCount: 10,
+  checkedInCount: 0,
+  status: EventStatus.published,
+  createdAt: DateTime.utc(2026, 10, 1),
+  updatedAt: DateTime.utc(2026, 10, 1),
+);
 
 class _FakeReadRepo implements EventReadRepository {
   _FakeReadRepo(this.events);
@@ -46,8 +45,7 @@ class _FakeReadRepo implements EventReadRepository {
   Future<List<EventModel>> getUpcomingEvents({
     EventFilter? filter,
     bool forceRefresh = false,
-  }) async =>
-      events;
+  }) async => events;
 
   @override
   Future<EventModel> getEventById(String eventId, {AppUser? actor}) async =>
@@ -65,11 +63,10 @@ class _FakeReadRepo implements EventReadRepository {
     required String eventId,
     required String category,
     int limit = 4,
-  }) async =>
-      events
-          .where((e) => e.id != eventId && e.category == category)
-          .take(limit)
-          .toList();
+  }) async => events
+      .where((e) => e.id != eventId && e.category == category)
+      .take(limit)
+      .toList();
 }
 
 void main() {
@@ -112,12 +109,12 @@ void main() {
           overrides: [
             eventReadRepositoryProvider.overrideWithValue(fakeReadRepo),
             eventDetailProvider('ev-main').overrideWith((_) async => mainEvent),
-            eventRegistrationStatusProvider('ev-main').overrideWith((_) async => null),
+            eventRegistrationStatusProvider(
+              'ev-main',
+            ).overrideWith((_) async => null),
             authStateProvider.overrideWith((_) => Stream.value(dummyIdentity)),
           ],
-          child: const MaterialApp(
-            home: EventDetailScreen(eventId: 'ev-main'),
-          ),
+          child: const MaterialApp(home: EventDetailScreen(eventId: 'ev-main')),
         ),
       );
 
@@ -125,6 +122,10 @@ void main() {
 
       expect(find.text('Flutter Deep Dive'), findsOneWidget);
       expect(find.text('About this event'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('report-event-ev-main')),
+        findsOneWidget,
+      );
 
       // Verify Related Events section is rendered
       expect(find.text('Sự kiện liên quan'), findsOneWidget);
@@ -147,22 +148,24 @@ void main() {
             eventReadRepositoryProvider.overrideWithValue(fakeReadRepo),
             recentViewDaoProvider.overrideWithValue(recentDao),
             eventDetailProvider('ev-main').overrideWith((_) async => mainEvent),
-            eventRegistrationStatusProvider('ev-main').overrideWith((_) async => null),
+            eventRegistrationStatusProvider(
+              'ev-main',
+            ).overrideWith((_) async => null),
             authStateProvider.overrideWith((_) => Stream.value(dummyIdentity)),
-            currentUserProvider.overrideWith((_) => Stream.value(
-              testUser(uid: 'student-42'),
-            )),
+            currentUserProvider.overrideWith(
+              (_) => Stream.value(testUser(uid: 'student-42')),
+            ),
           ],
-          child: const MaterialApp(
-            home: EventDetailScreen(eventId: 'ev-main'),
-          ),
+          child: const MaterialApp(home: EventDetailScreen(eventId: 'ev-main')),
         ),
       );
 
       await tester.pumpAndSettle();
 
       // Check view was recorded
-      final viewedIds = await recentDao.getRecentlyViewedEventIds(userId: 'student-42');
+      final viewedIds = await recentDao.getRecentlyViewedEventIds(
+        userId: 'student-42',
+      );
       expect(viewedIds, contains('ev-main'));
     },
   );

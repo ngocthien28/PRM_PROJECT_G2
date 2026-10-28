@@ -20,6 +20,62 @@ class ModerationRepositoryImpl implements ModerationRepository {
       );
 
   @override
+  Future<String> submitReport({
+    required String targetType,
+    required String targetId,
+    required String title,
+    required String description,
+    required String reporterId,
+    required String reporterName,
+  }) async {
+    const supportedTargets = {'club', 'event', 'user', 'other'};
+    final normalizedTarget = targetType.trim().toLowerCase();
+    final normalizedId = targetId.trim();
+    final normalizedTitle = title.trim();
+    final normalizedDescription = description.trim();
+    final normalizedReporterId = reporterId.trim();
+    final normalizedReporterName = reporterName.trim();
+
+    if (!supportedTargets.contains(normalizedTarget)) {
+      throw ArgumentError.value(
+        targetType,
+        'targetType',
+        'Unsupported target.',
+      );
+    }
+    if (normalizedId.isEmpty || normalizedReporterId.isEmpty) {
+      throw StateError('A target and authenticated reporter are required.');
+    }
+    if (normalizedTitle.isEmpty || normalizedTitle.length > 120) {
+      throw ArgumentError.value(title, 'title', 'Use 1-120 characters.');
+    }
+    if (normalizedDescription.length < 10 ||
+        normalizedDescription.length > 1000) {
+      throw ArgumentError.value(
+        description,
+        'description',
+        'Use 10-1000 characters.',
+      );
+    }
+
+    final reference = firestore.collection('moderation_cases').doc();
+    await reference.set({
+      'targetType': normalizedTarget,
+      'targetId': normalizedId,
+      'title': normalizedTitle,
+      'description': normalizedDescription,
+      'reporterId': normalizedReporterId,
+      'reporterName': normalizedReporterName.isEmpty
+          ? 'Campus member'
+          : normalizedReporterName,
+      'status': ModerationStatus.pending.name,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    return reference.id;
+  }
+
+  @override
   Future<void> resolveCase({
     required String caseId,
     required ModerationAction action,
