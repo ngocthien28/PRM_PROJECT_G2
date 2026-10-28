@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/constants/event_categories.dart';
 import '../../../../core/routing/route_names.dart';
+import '../../../../local/dao/recent_view_dao.dart';
 import '../../../../shared/enums/event_status.dart';
 import '../../../../shared/widgets/app_back_button.dart';
+import '../../../auth/presentation/viewmodels/auth_view_model.dart';
 import '../../../favorites/presentation/viewmodels/favorite_view_model.dart';
 import '../../../registration/data/models/registration_model.dart';
 import '../../../registration/presentation/screens/ticket_screen.dart';
@@ -11,6 +14,7 @@ import '../../../registration/presentation/viewmodels/registration_view_model.da
 import '../../../checkin/presentation/screens/qr_scanner_screen.dart';
 import '../../data/models/event_model.dart';
 import '../viewmodels/event_detail_view_model.dart';
+import '../viewmodels/event_list_view_model.dart';
 import '../widgets/event_poster.dart';
 import '../widgets/event_results.dart';
 import '../widgets/event_format.dart';
@@ -34,6 +38,19 @@ class EventDetailScreen extends ConsumerWidget {
     final toggleState = managed
         ? const FavoriteToggleState()
         : ref.watch(favoriteToggleProvider(eventId));
+
+    // ── UC-086: Record view history for student ─────────────────────────
+    if (!managed) {
+      final user = ref.watch(currentUserProvider).asData?.value;
+      if (user != null) {
+        Future.microtask(() {
+          ref.read(recentViewDaoProvider).recordView(
+                eventId: eventId,
+                userId: user.uid,
+              );
+        });
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -276,6 +293,14 @@ class EventDetailScreen extends ConsumerWidget {
                       );
                     },
                   ),
+                  // ── UC-085: Sự kiện liên quan ──────────────────────────
+                  if (!managed) ...[
+                    const SizedBox(height: 36),
+                    _RelatedEventsSection(
+                      currentEventId: value.id,
+                      category: value.category,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -452,3 +477,191 @@ class _JoinEventButton extends ConsumerWidget {
     );
   }
 }
+
+// ── UC-085: Provider & Widgets cho Sự kiện liên quan ─────────────────────────
+
+final relatedEventsProvider = FutureProvider.autoDispose
+    .family<List<EventModel>, ({String eventId, String category})>(
+  (ref, arg) async {
+    final repo = ref.watch(eventReadRepositoryProvider);
+    return repo.getRelatedEvents(
+      eventId: arg.eventId,
+      category: arg.category,
+      limit: 4,
+    );
+  },
+);
+
+class _RelatedEventsSection extends ConsumerWidget {
+  const _RelatedEventsSection({
+    required this.currentEventId,
+    required this.category,
+  });
+
+  final String currentEventId;
+  final String category;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final relatedAsync = ref.watch(
+      relatedEventsProvider((eventId: currentEventId, category: category)),
+    );
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return relatedAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (events) {
+        if (events.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Divider(height: 48),
+            Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: colors.primary,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Sự kiện liên quan',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '(${EventCategories.label(category)})',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 235,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: events.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 16),
+                itemBuilder: (context, index) {
+                  final related = events[index];
+                  return _RelatedEventCard(event: related);
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _RelatedEventCard extends StatelessWidget {
+  const _RelatedEventCard({required this.event});
+  final EventModel event;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Card(
+      key: ValueKey('related-${event.id}'),
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colors.outlineVariant.withAlpha(80)),
+      ),
+      child: InkWell(
+        onTap: () => context.push(RouteNames.eventDetail(event.id)),
+        child: SizedBox(
+          width: 220,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                height: 110,
+                child: EventPoster(
+                  url: event.posterUrl,
+                  category: event.category,
+                  height: 110,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      event.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.schedule_outlined,
+                          size: 14,
+                          color: colors.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            eventDateTime(context, event.startAt),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.place_outlined,
+                          size: 14,
+                          color: colors.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            event.locationName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
