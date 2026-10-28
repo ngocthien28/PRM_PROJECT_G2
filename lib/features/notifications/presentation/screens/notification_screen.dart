@@ -177,7 +177,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                             onSelected: (_) =>
                                 setState(() => _unreadOnly = false),
                           ),
-                          FilterChip(
+                          ChoiceChip(
                             label: const Text('Unread only'),
                             selected: _unreadOnly,
                             onSelected: (value) =>
@@ -208,7 +208,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF91691E),
+                                color: Color(0xFF76510E),
                               ),
                             ),
                           ],

@@ -60,8 +60,43 @@ class _ManageClubScreenState extends ConsumerState<ManageClubScreen> {
     super.dispose();
   }
 
-  void _close() {
+  bool get _hasUnsavedChanges =>
+      _nameController.text != (widget.club?.name ?? '') ||
+      _descriptionController.text != (widget.club?.description ?? '') ||
+      _logo != null;
+
+  Future<bool> _confirmDiscard() async {
     FocusManager.instance.primaryFocus?.unfocus();
+    if (_busy) return false;
+    if (!_hasUnsavedChanges) return true;
+    return await showDialog<bool>(
+          context: context,
+          builder: (dialog) => AlertDialog(
+            title: const Text('Discard unsaved changes?'),
+            content: const Text(
+              'Your club changes have not been saved. You can keep editing or discard them.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialog, false),
+                child: const Text('Keep editing'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialog, true),
+                child: const Text('Discard changes'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  Future<void> _close() async {
+    if (!await _confirmDiscard() || !mounted) return;
+    _leaveWithoutPrompt();
+  }
+
+  void _leaveWithoutPrompt() {
     if (context.canPop()) {
       context.pop();
     } else {
@@ -161,13 +196,14 @@ class _ManageClubScreenState extends ConsumerState<ManageClubScreen> {
     final theme = Theme.of(context);
     final name = _nameController.text.trim();
     final description = _descriptionController.text.trim();
-    return CampusScaffold(
+    final page = CampusScaffold(
       title: _isEditing ? 'Edit Club' : 'Create Club',
       section: CampusSection.clubs,
       role: user?.role.name ?? 'organizer',
       userName: user?.displayName ?? 'Organizer',
       unreadCount: ref.watch(unreadNotificationCountProvider),
       onBack: _busy ? null : _close,
+      onBeforeNavigate: _confirmDiscard,
       body: Column(
         children: [
           Expanded(
@@ -526,6 +562,14 @@ class _ManageClubScreenState extends ConsumerState<ManageClubScreen> {
           ),
         ],
       ),
+    );
+    return PopScope(
+      canPop: !_hasUnsavedChanges && !_busy,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop || !await _confirmDiscard() || !mounted) return;
+        _leaveWithoutPrompt();
+      },
+      child: page,
     );
   }
 }

@@ -372,35 +372,28 @@ class _ModerationCaseCard extends StatelessWidget {
               ],
             ],
           );
-          final button = FilledButton.icon(
-            key: ValueKey('review-case-${moderationCase.id}'),
-            onPressed: moderationCase.status == ModerationStatus.pending
-                ? onReview
-                : null,
-            icon: Icon(
-              moderationCase.status == ModerationStatus.pending
-                  ? Icons.fact_check_outlined
-                  : Icons.check_rounded,
-              size: 18,
-            ),
-            label: Text(
-              moderationCase.status == ModerationStatus.pending
-                  ? 'Review case'
-                  : 'Reviewed',
-            ),
-          );
+          final button = moderationCase.status == ModerationStatus.pending
+              ? FilledButton.icon(
+                  key: ValueKey('review-case-${moderationCase.id}'),
+                  onPressed: onReview,
+                  icon: const Icon(Icons.fact_check_outlined, size: 18),
+                  label: const Text('Review case'),
+                )
+              : null;
           if (compact) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [information, const SizedBox(height: 18), button],
+              children: [
+                information,
+                if (button != null) ...[const SizedBox(height: 18), button],
+              ],
             );
           }
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(child: information),
-              const SizedBox(width: 20),
-              button,
+              if (button != null) ...[const SizedBox(width: 20), button],
             ],
           );
         },
@@ -514,6 +507,7 @@ class _ReviewDialogState extends State<_ReviewDialog> {
               decoration: const InputDecoration(
                 labelText: 'Decision note',
                 hintText: 'Explain what was reviewed and why.',
+                helperText: 'Enter at least 5 characters before saving.',
                 alignLabelWithHint: true,
               ),
             ),
