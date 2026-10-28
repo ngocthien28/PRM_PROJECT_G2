@@ -1,10 +1,13 @@
 import { createRequire } from 'node:module';
 import { getSeedData } from './seed_data.mjs';
+import {readFileSync} from 'node:fs';
+import {randomUUID} from 'node:crypto';
 
 const require = createRequire(new URL('../../notification-server/', import.meta.url));
 const { initializeApp, getApps } = require('firebase-admin');
 const { getAuth } = require('firebase-admin/auth');
 const { getFirestore, Timestamp } = require('firebase-admin/firestore');
+const {getStorage} = require('firebase-admin/storage');
 
 function verifyEmulatorEnvironment() {
   const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
@@ -20,19 +23,36 @@ function verifyEmulatorEnvironment() {
     console.error('================================================================');
     process.exit(1);
   }
+  for (const host of [authHost, firestoreHost, process.env.FIREBASE_STORAGE_EMULATOR_HOST].filter(Boolean)) {
+    if (!/^(127\.0\.0\.1|localhost):\d+$/.test(host)) throw new Error('Seed requires loopback emulator hosts.');
+  }
 }
 
 export async function runSeed(options = {}) {
   verifyEmulatorEnvironment();
 
   const projectId = process.env.GCLOUD_PROJECT || process.env.FIREBASE_PROJECT || 'demo-campushub';
+  if (!projectId.startsWith('demo-')) throw new Error('Seed requires a demo- project.');
   if (!getApps().length) {
-    initializeApp({ projectId });
+    initializeApp({ projectId, storageBucket: `${projectId}.appspot.com` });
   }
 
   const auth = getAuth();
   const db = getFirestore();
   const seedData = getSeedData(options.now || new Date());
+  let posterCount = 0;
+  if (process.env.FIREBASE_STORAGE_EMULATOR_HOST) {
+    const bucket = getStorage().bucket(`${projectId}.appspot.com`);
+    const path = `events/${seedData.events[0].id}/demo-poster.png`;
+    const token = randomUUID();
+    await bucket.file(path).save(readFileSync(new URL('../fixtures/organizer-poster.png', import.meta.url)), {
+      resumable: false, metadata: {contentType: 'image/png', metadata: {firebaseStorageDownloadTokens: token}},
+    });
+    seedData.events[0].posterUrl = `http://${process.env.FIREBASE_STORAGE_EMULATOR_HOST}/v0/b/${bucket.name}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
+    posterCount = 1;
+  } else {
+    console.log('[Poster NOT VERIFIED] Start Storage Emulator to seed a downloadable poster.');
+  }
 
   console.log(`[CampusHub Seed] Initializing seed data for project: ${projectId}`);
   console.log(`[CampusHub Seed] Auth Emulator: ${process.env.FIREBASE_AUTH_EMULATOR_HOST}`);
@@ -115,8 +135,10 @@ export async function runSeed(options = {}) {
   // 5. Seed Registrations
   console.log('\n--- 5. Seeding Registrations ---');
   for (const reg of seedData.registrations) {
+    const previous = await db.collection('registrations').doc(reg.id).get();
     await db.collection('registrations').doc(reg.id).set({
       ...reg,
+      qrToken: previous.data()?.qrToken || reg.qrToken,
       registeredAt: Timestamp.fromDate(reg.registeredAt),
       cancelledAt: reg.cancelledAt ? Timestamp.fromDate(reg.cancelledAt) : null,
       checkedInAt: reg.checkedInAt ? Timestamp.fromDate(reg.checkedInAt) : null,
@@ -173,6 +195,7 @@ export async function runSeed(options = {}) {
     registrationsCount: seedData.registrations.length,
     clubsCount: seedData.clubs.length,
     notificationsCount: seedData.notifications.length,
+    posterCount,
   };
 }
 
