@@ -15,6 +15,18 @@ class AppNotification {
   final String? referenceId;
   final bool isRead;
   final DateTime createdAt;
+
+  AppNotification copyWith({bool? isRead}) => AppNotification(
+    id: id,
+    userId: userId,
+    title: title,
+    body: body,
+    type: type,
+    referenceId: referenceId,
+    isRead: isRead ?? this.isRead,
+    createdAt: createdAt,
+  );
+
   factory AppNotification.fromMap(String id, Map<String, dynamic> data) {
     final date = data['createdAt'];
     if (date != null && date is! Timestamp) {
@@ -41,5 +53,33 @@ class AppNotification {
     'referenceId': referenceId,
     'isRead': isRead,
     'createdAt': Timestamp.fromDate(createdAt.toUtc()),
+  };
+
+  factory AppNotification.fromCacheMap(Map<String, dynamic> data) {
+    final createdAt = data['createdAt'];
+    if (createdAt is! int) {
+      throw const FormatException('Invalid cached notification timestamp.');
+    }
+    return AppNotification(
+      id: data['id'] as String? ?? '',
+      userId: data['userId'] as String? ?? '',
+      title: data['title'] as String? ?? '',
+      body: data['body'] as String? ?? '',
+      type: data['type'] as String? ?? '',
+      referenceId: data['referenceId'] as String?,
+      isRead: data['isRead'] as bool? ?? false,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(createdAt, isUtc: true),
+    );
+  }
+
+  Map<String, dynamic> toCacheMap() => {
+    'id': id,
+    'userId': userId,
+    'title': title,
+    'body': body,
+    'type': type,
+    'referenceId': referenceId,
+    'isRead': isRead,
+    'createdAt': createdAt.toUtc().millisecondsSinceEpoch,
   };
 }
