@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/widgets/loading_indicator.dart';
 import '../viewmodels/auth_view_model.dart';
 
 class SplashScreen extends ConsumerWidget {
@@ -45,7 +46,7 @@ class SplashScreen extends ConsumerWidget {
                 const Text('CampusHub', style: TextStyle(fontSize: 30)),
                 const SizedBox(height: 24),
                 if (error == null || action.isLoading)
-                  const CircularProgressIndicator(),
+                  const LoadingIndicator(message: 'Loading your account...'),
                 if (error != null) ...[
                   Text(error, textAlign: TextAlign.center),
                   if (action.hasError)
