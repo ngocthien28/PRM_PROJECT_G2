@@ -14,6 +14,7 @@ class RegistrationModel {
     required this.registeredAt,
     this.cancelledAt,
     this.checkedInAt,
+    this.isFromCache = false,
   });
 
   final String id;
@@ -24,6 +25,7 @@ class RegistrationModel {
   final DateTime registeredAt;
   final DateTime? cancelledAt;
   final DateTime? checkedInAt;
+  final bool isFromCache;
 
   bool get isActive => status == RegistrationStatus.registered;
   bool get isCancelled => status == RegistrationStatus.cancelled;
@@ -31,11 +33,8 @@ class RegistrationModel {
   bool get canCancel => isActive && checkedInAt == null;
 
   /// Generates the QR payload structure for this registration.
-  QrPayload get payload => QrPayload(
-    registrationId: id,
-    eventId: eventId,
-    token: qrToken,
-  );
+  QrPayload get payload =>
+      QrPayload(registrationId: id, eventId: eventId, token: qrToken);
 
   /// Compact JSON string to be encoded in QrImageView.
   String get encodedQr => payload.encode();
@@ -44,7 +43,8 @@ class RegistrationModel {
     DocumentSnapshot<Map<String, dynamic>> doc,
   ) {
     final data = doc.data();
-    if (data == null) throw const FormatException('Registration does not exist.');
+    if (data == null)
+      throw const FormatException('Registration does not exist.');
     return RegistrationModel.fromMap(doc.id, data);
   }
 
@@ -55,7 +55,8 @@ class RegistrationModel {
       return null;
     }
 
-    final registeredAt = parseDate(data['registeredAt']) ?? DateTime.now().toUtc();
+    final registeredAt =
+        parseDate(data['registeredAt']) ?? DateTime.now().toUtc();
     final cancelledAt = parseDate(data['cancelledAt']);
     final checkedInAt = parseDate(data['checkedInAt']);
 
@@ -80,8 +81,12 @@ class RegistrationModel {
     'status': status.name,
     'qrToken': qrToken,
     'registeredAt': Timestamp.fromDate(registeredAt.toUtc()),
-    'cancelledAt': cancelledAt != null ? Timestamp.fromDate(cancelledAt!.toUtc()) : null,
-    'checkedInAt': checkedInAt != null ? Timestamp.fromDate(checkedInAt!.toUtc()) : null,
+    'cancelledAt': cancelledAt != null
+        ? Timestamp.fromDate(cancelledAt!.toUtc())
+        : null,
+    'checkedInAt': checkedInAt != null
+        ? Timestamp.fromDate(checkedInAt!.toUtc())
+        : null,
   };
 
   Map<String, dynamic> toCreateMap() => {
@@ -113,6 +118,7 @@ class RegistrationModel {
       registeredAt: registeredAt ?? this.registeredAt,
       cancelledAt: cancelledAt ?? this.cancelledAt,
       checkedInAt: checkedInAt ?? this.checkedInAt,
+      isFromCache: isFromCache,
     );
   }
 }
