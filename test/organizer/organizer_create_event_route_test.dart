@@ -23,6 +23,8 @@ import 'package:campushub/features/organizer_events/data/event_poster_service.da
 import 'package:campushub/features/organizer_events/data/models/event_form_input.dart';
 import 'package:campushub/features/organizer_events/presentation/viewmodels/event_poster_view_model.dart';
 import 'poster_fixtures.dart';
+import 'draft_fakes.dart';
+import 'package:campushub/features/organizer_events/presentation/viewmodels/event_draft_provider.dart';
 
 class _RoutePosterPicker extends EventPosterPicker {
   @override
@@ -43,6 +45,7 @@ void main() {
     repository = EventRepositoryImpl(firestore: db);
     container = ProviderContainer(
       overrides: [
+        eventDraftRepositoryProvider.overrideWithValue(FakeDraftRepository()),
         firebaseInitializationProvider.overrideWith((ref) async {}),
         authRepositoryProvider.overrideWithValue(auth),
         profileRepositoryProvider.overrideWithValue(profiles),
