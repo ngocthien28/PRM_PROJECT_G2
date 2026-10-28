@@ -4,7 +4,7 @@ import 'local_tables.dart';
 
 /// Database schema initialization and version migrations for CampusHub.
 abstract final class DbMigrations {
-  static const int currentVersion = 4;
+  static const int currentVersion = 5;
 
   static Future<void> createEventDrafts(Database db) => db.execute('''
     CREATE TABLE IF NOT EXISTS event_drafts (
@@ -46,6 +46,10 @@ abstract final class DbMigrations {
         ${LocalTables.colQrToken} TEXT NOT NULL,
         ${LocalTables.colEventTitle} TEXT NOT NULL,
         ${LocalTables.colStartAt} INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'registered',
+        registered_at INTEGER,
+        checked_in_at INTEGER,
+        cancelled_at INTEGER,
         ${LocalTables.colUpdatedAt} INTEGER NOT NULL
       )
     ''');
@@ -79,6 +83,16 @@ abstract final class DbMigrations {
     if (oldVersion < 2) await createNotificationCache(db);
     if (oldVersion < 3) await createProfileCache(db);
     if (oldVersion < 4) await createEventDrafts(db);
+    if (oldVersion < 5) {
+      await db.execute(
+        "ALTER TABLE offline_tickets ADD COLUMN status TEXT NOT NULL DEFAULT 'registered'",
+      );
+      for (final column in ['registered_at', 'checked_in_at', 'cancelled_at']) {
+        await db.execute(
+          'ALTER TABLE offline_tickets ADD COLUMN $column INTEGER',
+        );
+      }
+    }
   }
 
   static Future<void> createProfileCache(Database db) => db.execute('''

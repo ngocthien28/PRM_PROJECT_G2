@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/errors/app_exception.dart';
@@ -187,6 +188,47 @@ class RegistrationRepositoryImpl implements RegistrationRepository {
     });
   }
 
+  bool _isOffline(Object error) =>
+      error is TimeoutException ||
+      error is FirebaseException &&
+          {
+            'unavailable',
+            'deadline-exceeded',
+            'network-request-failed',
+          }.contains(error.code);
+
+  // A cache write must never turn a confirmed server operation into a failure.
+  Future<void> _cacheRegistration(RegistrationModel registration) async {
+    final dao = _ticketDao;
+    if (dao == null) return;
+    try {
+      final old = await dao.getTicket(registration.id);
+      var title = old?.eventTitle ?? 'Registered event';
+      var start = old?.startAt ?? registration.registeredAt;
+      try {
+        final event = await _firestore
+            .collection('events')
+            .doc(registration.eventId)
+            .get(const GetOptions(source: Source.server))
+            .timeout(const Duration(seconds: 2));
+        if (event.exists) {
+          final model = EventModel.fromFirestore(event);
+          title = model.title;
+          start = model.startAt;
+        }
+      } catch (_) {
+        // Keep the last known metadata if the event is unavailable.
+      }
+      await dao.saveTicket(
+        registration: registration,
+        eventTitle: title,
+        startAt: start,
+      );
+    } catch (_) {
+      // Remote data remains authoritative when local storage is unavailable.
+    }
+  }
+
   @override
   Future<List<RegistrationModel>> getMyRegistrations(String userId) async {
     await _personalAccess(userId);
@@ -194,29 +236,33 @@ class RegistrationRepositoryImpl implements RegistrationRepository {
       final snap = await _firestore
           .collection('registrations')
           .where('userId', isEqualTo: userId)
-          .get()
-          .timeout(const Duration(seconds: 2));
-
-      final list = snap.docs.map(RegistrationModel.fromFirestore).toList();
-      list.sort((a, b) => b.registeredAt.compareTo(a.registeredAt));
-
-      for (final reg in list) {
-        _ticketDao?.saveTicket(
-          registration: reg,
-          eventTitle: 'Sự kiện đã đăng ký',
-          startAt: reg.registeredAt,
-        );
-      }
-      return list;
-    } catch (_) {
-      // Graceful offline and permission-denied fallback from SQLite / Memory cache
-      if (_ticketDao != null) {
-        final cached = await _ticketDao.getMyTickets(userId);
-        if (cached.isNotEmpty) {
-          return cached.map((t) => t.toRegistrationModel()).toList();
+          .get(const GetOptions(source: Source.server))
+          .timeout(const Duration(seconds: 5));
+      final list = snap.docs.map(RegistrationModel.fromFirestore).toList()
+        ..sort((a, b) => b.registeredAt.compareTo(a.registeredAt));
+      await Future.wait(list.map(_cacheRegistration));
+      final dao = _ticketDao;
+      if (dao != null) {
+        try {
+          final ids = list.map((r) => r.id).toSet();
+          for (final old in await dao.getMyTickets(userId)) {
+            if (!ids.contains(old.registrationId))
+              await dao.deleteTicket(old.registrationId);
+          }
+        } catch (_) {
+          /* A failed cache cleanup must not hide server data. */
         }
       }
-      return const [];
+      return list;
+    } catch (error, stack) {
+      if (_isOffline(error) && _ticketDao != null) {
+        final cached = await _ticketDao.getMyTickets(userId);
+        if (cached.isNotEmpty) {
+          return cached.map((t) => t.toRegistrationModel()).toList()
+            ..sort((a, b) => b.registeredAt.compareTo(a.registeredAt));
+        }
+      }
+      throw mapError(error, stack);
     }
   }
 
@@ -226,21 +272,29 @@ class RegistrationRepositoryImpl implements RegistrationRepository {
     String userId,
   ) async {
     await _personalAccess(userId);
+    final regId = '${eventId}_$userId';
     try {
-      final regId = '${eventId}_$userId';
       final doc = await _firestore
           .collection('registrations')
           .doc(regId)
-          .get()
-          .timeout(const Duration(seconds: 2));
-      if (!doc.exists) return null;
-      return RegistrationModel.fromFirestore(doc);
-    } catch (_) {
-      if (_ticketDao != null) {
-        final ticket = await _ticketDao.getTicket('${eventId}_$userId');
-        return ticket?.toRegistrationModel();
+          .get(const GetOptions(source: Source.server))
+          .timeout(const Duration(seconds: 5));
+      if (!doc.exists) {
+        try {
+          await _ticketDao?.deleteTicket(regId);
+        } catch (_) {}
+        return null;
       }
-      return null;
+      final registration = RegistrationModel.fromFirestore(doc);
+      await _cacheRegistration(registration);
+      return registration;
+    } catch (error, stack) {
+      if (_isOffline(error) && _ticketDao != null) {
+        final ticket = await _ticketDao.getTicket(regId);
+        if (ticket != null && ticket.userId == userId)
+          return ticket.toRegistrationModel();
+      }
+      throw mapError(error, stack);
     }
   }
 
