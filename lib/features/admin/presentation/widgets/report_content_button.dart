@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/errors/error_mapper.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../auth/data/models/app_user.dart';
 import '../../../auth/presentation/viewmodels/auth_view_model.dart';
@@ -73,13 +74,12 @@ class _ReportContentButtonState extends ConsumerState<ReportContentButton> {
           content: Text('Report sent. An administrator will review it.'),
         ),
       );
-    } catch (_) {
+    } catch (error, stackTrace) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not send the report. Please try again.'),
-        ),
-      );
+      final message = mapError(error, stackTrace).message;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
