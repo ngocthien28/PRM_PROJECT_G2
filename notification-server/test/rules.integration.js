@@ -66,3 +66,20 @@ test('tokens cannot be registered for another account', async () => {
   await assertFails(setDoc(doc(db, 'users/u2/device_tokens/t1'), token));
   await assertFails(getDocs(collection(db, 'users/u2/device_tokens')));
 });
+
+test('active users can submit only reports attributed to themselves', async () => {
+  const owner = env.authenticatedContext('u1').firestore();
+  const anonymous = env.unauthenticatedContext().firestore();
+  const report = {
+    targetType: 'club', targetId: 'c1', title: 'Safety concern: Club',
+    description: 'The published club information needs an administrator review.',
+    reporterId: 'u1', reporterName: 'Student Reporter', status: 'pending',
+    createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+  };
+
+  await assertSucceeds(setDoc(doc(owner, 'moderation_cases', 'valid'), report));
+  await assertFails(setDoc(doc(owner, 'moderation_cases', 'spoofed'), {
+    ...report, reporterId: 'u2',
+  }));
+  await assertFails(setDoc(doc(anonymous, 'moderation_cases', 'anonymous'), report));
+});
