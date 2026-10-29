@@ -95,8 +95,26 @@ void main() {
       await tester.tap(find.byTooltip('Clear search'));
       await tester.pumpAndSettle();
       expect(find.text('Campus Concert'), findsOneWidget);
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(find.text('Welcome, Minh'), findsOneWidget);
     },
   );
+
+  testWidgets('event list Back falls home when opened without history', (
+    tester,
+  ) async {
+    await mount(tester);
+    container.read(appRouterProvider).go('/events');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Discover events'), findsOneWidget);
+    expect(find.byType(BackButton), findsOneWidget);
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Welcome, Minh'), findsOneWidget);
+  });
 
   testWidgets(
     'category shortcut filters server query and bottom sheet applies availability',
