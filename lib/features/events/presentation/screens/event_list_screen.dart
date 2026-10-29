@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/event_categories.dart';
 import '../../../../core/routing/route_names.dart';
 import '../../../../core/utils/debouncer.dart';
+import '../../../../shared/widgets/app_back_button.dart';
 import '../../data/models/event_filter.dart';
 import '../viewmodels/event_list_view_model.dart';
 import '../widgets/event_results.dart';
@@ -48,6 +49,7 @@ class _EventListScreenState extends ConsumerState<EventListScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: const AppBackButton(fallbackLocation: RouteNames.home),
         title: const Text('Discover events'),
         actions: [
           IconButton(
