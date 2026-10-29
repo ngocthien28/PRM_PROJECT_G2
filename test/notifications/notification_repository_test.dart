@@ -32,7 +32,7 @@ void main() {
   });
 
   test(
-    'cached inbox is emitted immediately while Firestore refreshes',
+    'UC-079 shows the cached inbox immediately while Firestore refreshes',
     () async {
       final db = FakeFirebaseFirestore();
       final cache = _MemoryNotificationCache();
