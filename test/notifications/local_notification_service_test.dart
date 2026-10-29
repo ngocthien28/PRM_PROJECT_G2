@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const channel = MethodChannel('campushub/notifications');
-  test('native channel receives stable ID, body and cancellation', () async {
+  test('UC-075 receives push with stable ID, body and cancellation', () async {
     final calls = <MethodCall>[];
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
