@@ -30,6 +30,21 @@ void main() {
     expect(
       notificationDeepLink(
         AppNotification(
+          id: 'ticket-notice',
+          userId: 'u1',
+          title: 'Ticket ready',
+          body: 'Open your ticket.',
+          type: 'registration',
+          referenceId: 'event 1_u1',
+          isRead: true,
+          createdAt: DateTime.utc(2026),
+        ),
+      ),
+      '/tickets/event%201_u1',
+    );
+    expect(
+      notificationDeepLink(
+        AppNotification(
           id: 'system',
           userId: 'u1',
           title: 'Welcome',

@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import '../../firebase_options.dart';
 import '../../features/notifications/data/notification_repository_impl.dart';
+import 'desktop_notification_listener.dart';
 import 'local_notification_service.dart';
 
 @pragma('vm:entry-point')
@@ -19,6 +20,10 @@ class NotificationService {
   NotificationService._();
   static final instance = NotificationService._();
   final _local = LocalNotificationService();
+  late final DesktopNotificationListener _desktop = DesktopNotificationListener(
+    FirebaseFirestore.instance,
+    _local,
+  );
   final _seen = <String>{};
   StreamSubscription<User?>? _auth;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _profile;
@@ -29,8 +34,11 @@ class NotificationService {
   String? _uid;
   String? _token;
   bool _started = false;
-  bool get supported =>
+  bool get _isAndroid =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  bool get _isWindows =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+  bool get supported => _isAndroid || _isWindows;
   NotificationRepositoryImpl get _repository =>
       NotificationRepositoryImpl(FirebaseFirestore.instance);
 
@@ -39,35 +47,40 @@ class NotificationService {
     _started = true;
     try {
       await _local.initialize((_) => openInbox());
-      FirebaseMessaging.onBackgroundMessage(campusHubBackgroundMessage);
-      _messages = FirebaseMessaging.onMessage.listen((message) async {
-        final recipient = message.data['userId'];
-        if (_uid == null || recipient != _uid) return;
-        final id = message.data['notificationId'] ?? message.messageId;
-        if (id == null || !_seen.add(id)) return;
-        if (_seen.length > 200) _seen.remove(_seen.first);
-        try {
-          await _local.show(
-            id,
-            message.notification?.title ?? 'CampusHub',
-            message.notification?.body ?? 'You have a new update.',
-          );
-        } catch (error) {
-          debugPrint('Local notification failed: $error');
-        }
-      });
-      _opened = FirebaseMessaging.onMessageOpenedApp.listen((message) {
-        if (message.data['userId'] == FirebaseAuth.instance.currentUser?.uid) {
-          openInbox();
-        }
-      });
+      if (_isAndroid) {
+        FirebaseMessaging.onBackgroundMessage(campusHubBackgroundMessage);
+        _messages = FirebaseMessaging.onMessage.listen((message) async {
+          final recipient = message.data['userId'];
+          if (_uid == null || recipient != _uid) return;
+          final id = message.data['notificationId'] ?? message.messageId;
+          if (id == null || !_seen.add(id)) return;
+          if (_seen.length > 200) _seen.remove(_seen.first);
+          try {
+            await _local.show(
+              id,
+              message.notification?.title ?? 'CampusHub',
+              message.notification?.body ?? 'You have a new update.',
+            );
+          } catch (error) {
+            debugPrint('Local notification failed: $error');
+          }
+        });
+        _opened = FirebaseMessaging.onMessageOpenedApp.listen((message) {
+          if (message.data['userId'] ==
+              FirebaseAuth.instance.currentUser?.uid) {
+            openInbox();
+          }
+        });
+      }
       _auth = FirebaseAuth.instance.authStateChanges().listen((user) {
         unawaited(_watchProfile(user));
       });
-      final initial = await FirebaseMessaging.instance.getInitialMessage();
-      if (initial != null &&
-          initial.data['userId'] == FirebaseAuth.instance.currentUser?.uid) {
-        openInbox();
+      if (_isAndroid) {
+        final initial = await FirebaseMessaging.instance.getInitialMessage();
+        if (initial != null &&
+            initial.data['userId'] == FirebaseAuth.instance.currentUser?.uid) {
+          openInbox();
+        }
       }
     } catch (_) {
       await dispose();
@@ -104,11 +117,16 @@ class NotificationService {
     if (uid != null && FirebaseAuth.instance.currentUser?.uid != uid) return;
     if (_uid == uid) return;
     await _refresh?.cancel();
+    await _desktop.stop();
     _refresh = null;
     _uid = uid;
     _token = null;
     _seen.clear();
     if (uid == null) return;
+    if (_isWindows) {
+      await _desktop.start(uid);
+      return;
+    }
     final permission = await FirebaseMessaging.instance.requestPermission();
     if (permission.authorizationStatus == AuthorizationStatus.denied) return;
     final token = await FirebaseMessaging.instance.getToken();
@@ -135,10 +153,11 @@ class NotificationService {
     if (!supported || !_started) return;
     await _queue;
     await _refresh?.cancel();
+    await _desktop.stop();
     if (_uid != null && _token != null) {
       await _repository.removeDeviceToken(_uid!, _token!);
     }
-    await FirebaseMessaging.instance.deleteToken();
+    if (_isAndroid) await FirebaseMessaging.instance.deleteToken();
     await _local.cancelAll();
     _uid = null;
     _token = null;
@@ -151,6 +170,7 @@ class NotificationService {
     await _refresh?.cancel();
     await _messages?.cancel();
     await _opened?.cancel();
+    await _desktop.stop();
     _started = false;
   }
 }
