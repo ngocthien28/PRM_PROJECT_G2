@@ -1,0 +1,151 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "G.Khang use cases: clubs, notifications, admin and moderation",
+  "description": "A defense-oriented walkthrough of the 19 backlog use cases assigned to G.Khang. Each stop explains the input, processing, output, change impact, and the values a lecturer is most likely to ask you to modify.",
+  "steps": [
+    {
+      "directory": "lib/features",
+      "description": "Orientation: the G.Khang scope is split into clubs, notifications, and admin/moderation. Presentation screens receive user actions, view-model providers expose state, repositories enforce business rules and access Firestore, while models map stored fields into Dart objects. Follow the next stops in that order when explaining an end-to-end flow."
+    },
+    {
+      "file": "lib/core/routing/app_router.dart",
+      "line": 77,
+      "description": "Routes are the entry points for the UI. Lines 77-93 map the club list, club detail, create/edit club, and notification inbox paths to screens. Lines 152-168 map admin, My Events, and ticket detail. Changing a path here requires changing RouteNames and every caller; changing only a screen does not change its URL."
+    },
+    {
+      "file": "lib/features/clubs/data/models/club_model.dart",
+      "line": 4,
+      "description": "ClubModel is the contract shared by Firestore, repository, and UI. Its constructor fields define what a club contains; fromMap converts Firestore values into safe Dart values; toMap serializes writes; copyWith changes selected properties without losing the others. A new property such as category must be added to all four places and to the Firestore rules/UI."
+    },
+    {
+      "file": "lib/features/clubs/presentation/viewmodels/club_view_model.dart",
+      "line": 6,
+      "description": "These Riverpod providers connect screens to ClubRepositoryImpl. The list provider streams all active clubs, the family provider streams one club by ID, and membership watches the deterministic club/user membership. Changing provider parameters affects every screen that watches it."
+    },
+    {
+      "file": "lib/features/clubs/data/club_repository_impl.dart",
+      "line": 22,
+      "description": "UC-067 and UC-068 data flow begins here. watchClubs queries only status=active and orders by name; watchClub listens to one document. The screen rebuilds automatically on each snapshot. To display inactive clubs, change the status filter, but then review permissions and labels so cancelled clubs cannot be joined."
+    },
+    {
+      "file": "lib/features/clubs/presentation/screens/club_list_screen.dart",
+      "line": 129,
+      "description": "UC-067, UC-088 and UC-089 UI processing. The search field writes _query; lines 185-195 filter name/description and optionally sort by memberCount descending; lines 214-232 select a responsive grid column count; each card opens RouteNames.clubDetail. Change searchable fields in the predicate, and change the popularity rule in the comparator."
+    },
+    {
+      "file": "lib/features/clubs/presentation/screens/club_detail_screen.dart",
+      "line": 79,
+      "description": "UC-068, UC-071, UC-072 and UC-083 converge here. build watches club, current user and membership, renders facts, then chooses Join or Leave from membership state. Managers receive Edit/Deactivate controls; other signed-in users receive Report content. Changing visibility conditions changes authorization in the UI only, so repository and rules must remain the real security boundary."
+    },
+    {
+      "file": "lib/features/clubs/presentation/screens/manage_club_screen.dart",
+      "line": 136,
+      "description": "UC-069/070 submit flow. _submit validates the form, requires a signed-in actor, keeps or replaces the image, then selects createClub or updateClub. On success it replaces the current route with the resulting club detail; on failure it exposes the error and always clears loading. Changing a form field also requires updating controllers, dirty-state comparison, repository arguments and ClubModel."
+    },
+    {
+      "file": "lib/features/clubs/presentation/viewmodels/club_form_validators.dart",
+      "line": 4,
+      "description": "Central validation used by the create/edit form: name is 3-80 characters and description is 20-1000. If a lecturer asks to make the name at least 5 characters, change the threshold and message here, then align maxLength/minimum hints and tests. Client validation improves UX but Firestore rules/repository must still protect data."
+    },
+    {
+      "file": "lib/features/clubs/data/club_repository_impl.dart",
+      "line": 64,
+      "description": "UC-069 creation. The repository verifies manager role, creates IDs/timestamps, optionally uploads the logo, constructs ClubModel, then atomically batches the club and an active manager membership. memberCount starts at zero because the owner membership is a manager record rather than a student member. Changing defaults here changes every newly created club."
+    },
+    {
+      "file": "lib/features/clubs/data/club_repository_impl.dart",
+      "line": 115,
+      "description": "UC-070/071 update and deactivate. updateClub loads the current club, checks owner/admin, optionally uploads a logo and writes the changed fields. cancelClub performs the same authority check then sets status=cancelled instead of deleting data. Replacing this with delete would break history, memberships, reports and notification references."
+    },
+    {
+      "file": "lib/features/clubs/data/club_repository_impl.dart",
+      "line": 157,
+      "description": "UC-072/083 join and leave transaction. It verifies active student role, reads club and deterministic membership, rejects invalid/idempotent actions, writes active/left membership, increments or floors memberCount, and creates an inbox notification in the same transaction. Any change to the counter or status must remain transactional to prevent races."
+    },
+    {
+      "file": "firestore.rules",
+      "line": 292,
+      "description": "Server-side club protection. These rules constrain who can create/update clubs and allow the membership transaction to change only memberCount/updatedAt where appropriate. A UI button is not security; if role requirements change, update and test both repository logic and these rules."
+    },
+    {
+      "file": "lib/features/notifications/data/models/app_notification.dart",
+      "line": 3,
+      "description": "Notification data contract: id, recipient, title, body, type, referenceId, read state and timestamp. type decides which route UC-091 opens; referenceId carries the target document/ticket ID. When adding a type, preserve backward-compatible parsing and add its deep-link mapping."
+    },
+    {
+      "file": "lib/features/notifications/data/notification_repository_impl.dart",
+      "line": 14,
+      "description": "UC-073/079 repository flow is cache-first. It yields account-scoped SQLite records immediately, then listens to the current user's Firestore inbox, sorts/replaces cache and emits fresh data; network failure leaves cached data visible. markRead updates Firestore then local cache. Never remove the userId filter because that would mix accounts."
+    },
+    {
+      "file": "lib/local/dao/notification_cache_dao.dart",
+      "line": 25,
+      "description": "UC-079 local persistence. Reads use WHERE user_id=? and newest-first order; replacement happens in one transaction for that account; markRead updates both memory/SQLite state. If cache retention is requested, add a created_at cutoff here rather than clearing another user's rows."
+    },
+    {
+      "file": "lib/features/notifications/presentation/screens/notification_screen.dart",
+      "line": 48,
+      "description": "UC-074/090 interaction. _open prevents double taps, marks an unread item in Firestore/cache, computes the target, shows full details when no supported target exists, or pushes the related route. The All/Unread chips filter the watched inbox without mutating stored data. Changing read timing affects unread badges across the shell."
+    },
+    {
+      "file": "lib/app.dart",
+      "line": 9,
+      "description": "UC-075 bootstrap. After Firebase is ready, the provider starts NotificationService and supplies a callback that pushes the Notifications route when a local alert is clicked. This is deliberately initialized once above MaterialApp; moving it into a page would stop notifications when that page is absent."
+    },
+    {
+      "file": "lib/core/services/notification_service.dart",
+      "line": 37,
+      "description": "UC-075 platform orchestration. supported accepts Android or Windows. Android registers FCM foreground/background/opened handlers and stores a device token. Windows instead binds the active account to DesktopNotificationListener. Profile status is watched so disabled/signed-out users are unbound and alerts are cleared. Windows is live inbox-to-toast while the app runs, not FCM delivery after the process is closed."
+    },
+    {
+      "file": "lib/core/services/desktop_notification_listener.dart",
+      "line": 23,
+      "description": "Windows UC-075 data path. start cancels the old account subscription, queries notifications by userId, primes the first snapshot as seen to avoid replaying old alerts, then presents only newly added unseen documents. stop cancels and clears state. Changing the query must retain account isolation and the first-snapshot guard."
+    },
+    {
+      "file": "lib/core/services/local_notification_service.dart",
+      "line": 15,
+      "description": "Platform notification output. Windows initializes local_notifier, builds one toast per ID, opens the inbox callback on click and releases toast objects on click/close. Android continues through the existing MethodChannel. cancelAll closes tracked Windows toasts or calls Android native code."
+    },
+    {
+      "file": "lib/features/notifications/presentation/screens/notification_screen.dart",
+      "line": 18,
+      "description": "UC-091 deep-link table. club opens club detail; event types open event detail; ticket/registration now call RouteNames.ticketDetail(referenceId); moderation opens its queue. The producer must store the exact target ID expected by each route. Adding a notification type without adding a case falls back to the detail dialog."
+    },
+    {
+      "file": "lib/features/admin/data/admin_repository_impl.dart",
+      "line": 10,
+      "description": "UC-076 dashboard data. Four independent Firestore queries run concurrently, active student memberships are filtered against active clubs, and counts become AdminStats. To add a metric, extend AdminStats, query it here, then render it in AdminDashboardScreen; avoid counting raw membership history as active members."
+    },
+    {
+      "file": "lib/features/admin/presentation/screens/admin_dashboard_screen.dart",
+      "line": 15,
+      "description": "UC-076 presentation watches the stats provider, exposes refresh/error/loading states, renders responsive metric cards, and routes quick actions. Reordering cards is presentation-only; changing the meaning of a count belongs in the repository."
+    },
+    {
+      "file": "lib/features/admin/data/moderation_repository_impl.dart",
+      "line": 12,
+      "description": "UC-077/084/092 backend flow. watchCases streams newest reports. submitReport validates actor, target, reason and description before creating pending data. resolveCase runs a transaction, rejects missing/already-reviewed cases, and writes resolution, reviewer and audit timestamps atomically. Adding a moderation status requires model parsing, filters, UI labels and Firestore rules."
+    },
+    {
+      "file": "lib/features/admin/presentation/screens/moderation_screen.dart",
+      "line": 24,
+      "description": "UC-077/084 UI flow. _review opens a decision dialog, sends resolve/dismiss plus the note to the repository, then reports success/failure. build watches the queue, supports filters, and only shows review actions for pending cases. Lowering the note minimum must be aligned with repository validation/tests."
+    },
+    {
+      "file": "lib/features/admin/presentation/widgets/report_content_button.dart",
+      "line": 42,
+      "description": "UC-092 user flow. The reusable button opens a reason/description dialog, validates the draft, calls submitReport with targetType and targetId, and shows feedback. Club detail and event detail supply those target values. To add a reason, update the reason list and any reporting rules/analytics that expect a fixed vocabulary."
+    },
+    {
+      "file": "firestore.rules",
+      "line": 332,
+      "description": "Final security boundary. Lines 332-356 isolate notification reads/mark-read operations by recipient; lines 358-392 constrain moderation creation and admin resolution. When changing repository fields, update hasOnly/hasAll checks here or valid client writes may be rejected in production."
+    },
+    {
+      "file": "test/notifications/desktop_notification_listener_test.dart",
+      "line": 14,
+      "description": "Regression proof for Windows UC-075: an existing inbox record is ignored on startup and a later record for the active user becomes exactly one desktop presentation call. The notification screen test separately proves UC-091 encodes and opens the ticket detail route."
+    }
+  ]
+}
