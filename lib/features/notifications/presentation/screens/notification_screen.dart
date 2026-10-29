@@ -24,7 +24,7 @@ String? notificationDeepLink(AppNotification item) {
     'event_update' ||
     'event_cancelled' ||
     'event_reminder' => RouteNames.eventDetail(referenceId),
-    'ticket' || 'registration' => RouteNames.myEvents,
+    'ticket' || 'registration' => RouteNames.ticketDetail(referenceId),
     'moderation' => RouteNames.moderation,
     _ => null,
   };
@@ -36,7 +36,7 @@ String notificationActionLabel(AppNotification item) => switch (item.type) {
   'event_update' ||
   'event_cancelled' ||
   'event_reminder' => 'View event',
-  'ticket' || 'registration' => 'View my events',
+  'ticket' || 'registration' => 'View ticket',
   'moderation' => 'Open moderation',
   _ => 'Open',
 };
