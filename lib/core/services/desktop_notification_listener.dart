@@ -9,9 +9,6 @@ abstract interface class DesktopNotificationPresenter {
   Future<void> show(String id, String title, String body);
 }
 
-/// Turns newly-created inbox records into Windows notifications while the app
-/// is running. Existing records from the first Firestore snapshot are primed
-/// as seen so reopening the app never floods the desktop with old alerts.
 class DesktopNotificationListener {
   DesktopNotificationListener(this._firestore, this._presenter);
 
