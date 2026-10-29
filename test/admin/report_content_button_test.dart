@@ -3,6 +3,7 @@ import 'package:campushub/features/admin/data/moderation_repository.dart';
 import 'package:campushub/features/admin/presentation/viewmodels/moderation_view_model.dart';
 import 'package:campushub/features/admin/presentation/widgets/report_content_button.dart';
 import 'package:campushub/features/auth/presentation/viewmodels/auth_view_model.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -68,9 +69,58 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('UC-092 explains when Firestore rejects the report', (
+    tester,
+  ) async {
+    final repository = _RecordingModerationRepository(
+      error: FirebaseException(
+        plugin: 'cloud_firestore',
+        code: 'permission-denied',
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWith(
+            (_) => Stream.value(testUser(uid: 'student-1')),
+          ),
+          moderationRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: ReportContentButton(
+              targetType: 'club',
+              targetId: 'club-1',
+              targetLabel: 'Code Club',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('report-club-club-1')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('report-description')),
+      'This report is detailed enough to submit for review.',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('submit-content-report')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('You do not have permission to access this data.'),
+      findsOneWidget,
+    );
+  });
 }
 
 class _RecordingModerationRepository implements ModerationRepository {
+  _RecordingModerationRepository({this.error});
+
+  final Object? error;
   String? targetType;
   String? targetId;
   String? title;
@@ -85,6 +135,7 @@ class _RecordingModerationRepository implements ModerationRepository {
     required String reporterId,
     required String reporterName,
   }) async {
+    if (error case final error?) throw error;
     this.targetType = targetType;
     this.targetId = targetId;
     this.title = title;
