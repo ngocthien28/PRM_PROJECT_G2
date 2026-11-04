@@ -2,6 +2,13 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'app_exception.dart';
 
+/// FEATURE: UC-013 - Implement Shared Loading and Error Handling
+/// MODULE: App Shell
+/// DESCRIPTION: Ánh xạ mã Firebase/domain thành AppException; giữ cause và che chi tiết lỗi không xác định.
+/// ROLE: Shared error mapping
+/// CALLED FROM: Repositories và view models gọi mapError.
+/// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+/// TECHNOLOGY: Dart, Firebase Core.
 AppException mapError(Object error, StackTrace stack) {
   final sourceCode = error is FirebaseException
       ? error.code
