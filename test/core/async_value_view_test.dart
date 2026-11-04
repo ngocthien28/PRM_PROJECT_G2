@@ -7,7 +7,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// FEATURE: UC-014 - Test Authentication and Profile
+/// MODULE: Testing & Integration
+/// DESCRIPTION: Hàm void main: Loading/error/retry và retained profile data.
+/// ROLE: Test entry point / fixture helper
+/// CALLED FROM: Các test Auth/Profile/navigation.
+/// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+/// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod.
 void main() {
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Hàm Future&lt;void&gt; show: Loading/error/retry và retained profile data.
+  /// ROLE: Test entry point / fixture helper
+  /// CALLED FROM: Các test Auth/Profile/navigation.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod.
   Future<void> show(
     WidgetTester tester,
     AsyncValue<String?> value, {
@@ -24,6 +38,13 @@ void main() {
     ),
   );
 
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: loading, data and nullable data render correctly.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod.
   testWidgets('loading, data and nullable data render correctly', (
     tester,
   ) async {
@@ -35,6 +56,13 @@ void main() {
     expect(find.text('No profile'), findsOneWidget);
   });
 
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: mapped error is readable and Retry invokes recovery.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod.
   testWidgets('mapped error is readable and Retry invokes recovery', (
     tester,
   ) async {
@@ -52,6 +80,13 @@ void main() {
     expect(retries, 1);
   });
 
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: unknown error hides internal details and optional Retry.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod.
   testWidgets('unknown error hides internal details and optional Retry', (
     tester,
   ) async {
@@ -67,6 +102,13 @@ void main() {
     expect(find.text('Retry'), findsNothing);
   });
 
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: refresh and failure do not reveal retained profile data.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod.
   testWidgets('refresh and failure do not reveal retained profile data', (
     tester,
   ) async {

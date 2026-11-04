@@ -33,6 +33,13 @@ class _ManageEventsScreenState extends ConsumerState<ManageEventsScreen> {
     await ref.read(organizerEventsProvider.future);
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Chọn admin shell, fallback và isAdmin theo role hiện tại.
+  /// ROLE: Cross-module role/access integration
+  /// CALLED FROM: Routes organizer/admin events.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   @override
   Widget build(BuildContext context) {
     final events = ref.watch(organizerEventsProvider);

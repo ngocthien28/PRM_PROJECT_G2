@@ -18,6 +18,13 @@ export 'participant_summary_view_model.dart';
 
 /// The bounded server-backed management list. Dashboard totals use their own
 /// full-data summary provider so this list's page limit cannot truncate KPIs.
+/// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+/// MODULE: Testing & Integration
+/// DESCRIPTION: Chỉ tải danh sách quản lý cho actor active có canOrganize; user khác nhận danh sách rỗng.
+/// ROLE: Cross-module role/access integration
+/// CALLED FROM: ManageEventsScreen.
+/// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+/// TECHNOLOGY: Dart, Riverpod.
 final organizerEventsProvider = FutureProvider.autoDispose<List<EventModel>>((
   ref,
 ) async {
@@ -28,6 +35,13 @@ final organizerEventsProvider = FutureProvider.autoDispose<List<EventModel>>((
   return ref.watch(eventRepositoryProvider).getManagedEvents(actor: actor);
 });
 
+/// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+/// MODULE: Testing & Integration
+/// DESCRIPTION: Theo dõi UID/role/status và chặn quyền sai trước khi đọc event chỉnh sửa.
+/// ROLE: Cross-module role/access integration
+/// CALLED FROM: OrganizerEditEventScreen.
+/// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+/// TECHNOLOGY: Dart, Riverpod.
 final organizerEditEventProvider = FutureProvider.autoDispose
     .family<EventModel, String>((ref, eventId) async {
       // Profile data unrelated to authorization must not reset a dirty edit form.

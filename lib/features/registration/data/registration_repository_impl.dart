@@ -31,6 +31,13 @@ class RegistrationRepositoryImpl implements RegistrationRepository {
     }
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Lấy actor mới qua resolver; chặn UID thiếu/account inactive; fake DB tests có thể không tiêm resolver.
+  /// ROLE: Cross-module role/access integration
+  /// CALLED FROM: _personalAccess, getEventParticipants và checkIn.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK.
   Future<AppUser?> _actor() async {
     if (_authenticatedActor == null) return null; // Isolated fake-DB tests.
     try {
@@ -53,6 +60,13 @@ class RegistrationRepositoryImpl implements RegistrationRepository {
     }
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: So UID với userId và yêu cầu student khi studentOnly trước thao tác cá nhân.
+  /// ROLE: Cross-module role/access integration
+  /// CALLED FROM: Các thao tác registration cá nhân.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK.
   Future<void> _personalAccess(
     String userId, {
     bool studentOnly = false,
@@ -300,6 +314,13 @@ class RegistrationRepositoryImpl implements RegistrationRepository {
     }
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Yêu cầu organizer/admin và owner trước truy vấn participants.
+  /// ROLE: Cross-module role/access integration
+  /// CALLED FROM: participantSummaryProvider.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK.
   @override
   Future<List<RegistrationModel>> getEventParticipants(String eventId) async {
     try {
@@ -332,6 +353,13 @@ class RegistrationRepositoryImpl implements RegistrationRepository {
     }
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: So organizerId với actor, kiểm tra role/status và owner/admin từ profile trong transaction trước ghi check-in.
+  /// ROLE: Cross-module role/access integration
+  /// CALLED FROM: CheckinViewModel.processBarcode.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK.
   @override
   Future<RegistrationModel> checkIn({
     required String organizerId,

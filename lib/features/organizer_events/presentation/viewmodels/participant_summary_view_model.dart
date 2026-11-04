@@ -51,6 +51,13 @@ class ParticipantSummaryState {
 /// Enforces role and ownership authorization:
 /// - Only active organizers or admins can query participants.
 /// - Non-admin organizers can only query events they own.
+/// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+/// MODULE: Testing & Integration
+/// DESCRIPTION: Kiểm tra role/status và owner/admin trước truy vấn participants.
+/// ROLE: Cross-module role/access integration
+/// CALLED FROM: ParticipantListScreen.
+/// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+/// TECHNOLOGY: Dart, Riverpod.
 final participantSummaryProvider = FutureProvider.autoDispose
     .family<ParticipantSummaryState, String>((ref, eventId) async {
       final actor =
