@@ -7,6 +7,13 @@ import '../../core/theme/app_theme.dart';
 
 enum CampusSection { home, clubs, inbox, admin, moderation, events, myEvents }
 
+/// FEATURE: UC-001, UC-003, UC-015
+/// MODULE: App Shell
+/// DESCRIPTION: Chọn route gốc admin, organizer hoặc student từ role để các module trở về workspace.
+/// ROLE: Role landing navigation
+/// CALLED FROM: ClubListScreen và NotificationScreen.
+/// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+/// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
 String campusHome(String role) => role == 'admin'
     ? RouteNames.admin
     : role == 'organizer'
@@ -43,6 +50,13 @@ class CampusScaffold extends ConsumerWidget {
   final Widget? floatingActionButton;
   final Future<bool> Function()? onBeforeNavigate;
 
+  /// FEATURE: UC-001, UC-003, UC-015
+  /// MODULE: App Shell
+  /// DESCRIPTION: Lọc My Events, Manage Events và Moderation theo role; quyền truy cập vẫn do route guard kiểm tra.
+  /// ROLE: Role-aware destination visibility
+  /// CALLED FROM: CampusScaffold.build.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   List<(String, IconData, CampusSection, String)> get destinations => [
     (
       role == 'admin'
@@ -88,6 +102,13 @@ class CampusScaffold extends ConsumerWidget {
       ),
   ];
 
+  /// FEATURE: UC-001, UC-007
+  /// MODULE: App Shell
+  /// DESCRIPTION: Dựng sidebar/NavigationBar; xử lý xác nhận logout, trạng thái chờ và lỗi qua AuthViewModel.
+  /// ROLE: Responsive shell / logout
+  /// CALLED FROM: Các màn hình dùng CampusScaffold.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final signOutBusy =
@@ -130,6 +151,13 @@ class CampusScaffold extends ConsumerWidget {
         };
     final wide = MediaQuery.sizeOf(context).width >= 1120;
     final selected = destinations.indexWhere((d) => d.$3 == section);
+    /// FEATURE: UC-001 - Build Shared App Navigation and Theme
+    /// MODULE: App Shell
+    /// DESCRIPTION: Chờ onBeforeNavigate, kiểm tra context và router.go để đổi đích cấp cao không tích lũy lịch sử.
+    /// ROLE: Top-level navigation
+    /// CALLED FROM: Sidebar onTap và NavigationBar.onDestinationSelected.
+    /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+    /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
     Future<void> navigate(int index) async {
       if (onBeforeNavigate != null && !await onBeforeNavigate!()) return;
       if (!context.mounted) return;
@@ -462,6 +490,13 @@ class CampusScaffold extends ConsumerWidget {
 class _BrandMark extends StatelessWidget {
   const _BrandMark({this.size = 38});
   final double size;
+  /// FEATURE: UC-001 - Build Shared App Navigation and Theme
+  /// MODULE: App Shell
+  /// DESCRIPTION: Vẽ biểu tượng thương hiệu theo kích thước truyền vào.
+  /// ROLE: Shared shell presentation
+  /// CALLED FROM: _BrandMark trong widget tree.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   @override
   Widget build(BuildContext context) => Container(
     width: size,
@@ -478,6 +513,13 @@ class CampusPage extends StatelessWidget {
   const CampusPage({super.key, required this.children, this.maxWidth = 1200});
   final List<Widget> children;
   final double maxWidth;
+  /// FEATURE: UC-001 - Build Shared App Navigation and Theme
+  /// MODULE: App Shell
+  /// DESCRIPTION: Bọc nội dung trang cuộn với giới hạn chiều rộng và padding responsive.
+  /// ROLE: Shared shell presentation
+  /// CALLED FROM: CampusPage trong widget tree.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
     physics: const AlwaysScrollableScrollPhysics(),
@@ -509,6 +551,13 @@ class SectionHeading extends StatelessWidget {
   final String title;
   final String? subtitle;
   final Widget? trailing;
+  /// FEATURE: UC-001 - Build Shared App Navigation and Theme
+  /// MODULE: App Shell
+  /// DESCRIPTION: Hiển thị tiêu đề, mô tả và hành động tùy chọn của section.
+  /// ROLE: Shared shell presentation
+  /// CALLED FROM: SectionHeading trong widget tree.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   @override
   Widget build(BuildContext context) => Row(
     crossAxisAlignment: CrossAxisAlignment.center,
@@ -544,6 +593,13 @@ class CampusEmptyState extends StatelessWidget {
   final IconData icon;
   final String title, message;
   final Widget? action;
+  /// FEATURE: UC-001 - Build Shared App Navigation and Theme
+  /// MODULE: App Shell
+  /// DESCRIPTION: Hiển thị trạng thái trống và hành động tùy chọn theo style chung.
+  /// ROLE: Shared shell presentation
+  /// CALLED FROM: CampusEmptyState trong widget tree.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 44),
@@ -588,6 +644,13 @@ class CampusEmptyState extends StatelessWidget {
 class CampusArtwork extends StatelessWidget {
   const CampusArtwork({super.key, this.color = CampusColors.gold});
   final Color color;
+  /// FEATURE: UC-001 - Build Shared App Navigation and Theme
+  /// MODULE: App Shell
+  /// DESCRIPTION: Dựng CustomPaint cho minh họa thương hiệu trong auth và trang module.
+  /// ROLE: Shared shell presentation
+  /// CALLED FROM: CampusArtwork trong widget tree.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   @override
   Widget build(BuildContext context) => CustomPaint(
     painter: _CampusPainter(color),
@@ -598,6 +661,13 @@ class CampusArtwork extends StatelessWidget {
 class _CampusPainter extends CustomPainter {
   _CampusPainter(this.color);
   final Color color;
+  /// FEATURE: UC-001 - Build Shared App Navigation and Theme
+  /// MODULE: App Shell
+  /// DESCRIPTION: Vẽ minh họa campus bằng Canvas, Paint và Path theo kích thước widget.
+  /// ROLE: Shared theme artwork
+  /// CALLED FROM: CampusArtwork.build.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   @override
   void paint(Canvas canvas, Size size) {
     canvas.clipRect(Offset.zero & size);
@@ -669,6 +739,13 @@ class _CampusPainter extends CustomPainter {
     canvas.restore();
   }
 
+  /// FEATURE: UC-001 - Build Shared App Navigation and Theme
+  /// MODULE: App Shell
+  /// DESCRIPTION: Chỉ vẽ lại minh họa khi màu painter thay đổi.
+  /// ROLE: Painter lifecycle
+  /// CALLED FROM: Flutter CustomPaint.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   @override
   bool shouldRepaint(_CampusPainter oldDelegate) => color != oldDelegate.color;
 }
