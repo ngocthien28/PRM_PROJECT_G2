@@ -12,6 +12,13 @@ class AppErrorView extends StatelessWidget {
   final String? message;
   final VoidCallback? onRetry;
 
+  /// FEATURE: UC-013 - Implement Shared Loading and Error Handling
+  /// MODULE: App Shell
+  /// DESCRIPTION: Hiển thị AppException hoặc lỗi chung và nút Retry khi có callback.
+  /// ROLE: Shared async UI
+  /// CALLED FROM: ProfileScreen, EditProfileScreen hoặc AsyncValueView.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material.
   @override
   Widget build(BuildContext context) => Center(
     child: SingleChildScrollView(
