@@ -59,6 +59,11 @@ class HomeScreen extends ConsumerWidget {
           onPressed: () => context.push(RouteNames.profile),
           icon: const Icon(Icons.account_circle_outlined, size: 22),
         ),
+        IconButton(
+          tooltip: 'My events',
+          onPressed: () => context.go(RouteNames.myEvents),
+          icon: const Icon(Icons.confirmation_number_outlined, size: 22),
+        ),
       ],
       body: RefreshIndicator(
         onRefresh: refresh,
