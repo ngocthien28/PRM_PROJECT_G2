@@ -72,6 +72,13 @@ class CheckinViewModel extends Notifier<CheckinState> {
 
   /// Processes a scanned raw QR string or manually entered payload.
   /// Locks the scanner until [unlockScanner] is explicitly called.
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm tra identity/status trước checkIn; role/owner được repository xác minh tiếp.
+  /// ROLE: Cross-module role/access integration
+  /// CALLED FROM: QrScannerScreen.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Riverpod.
   Future<CheckinResult> processBarcode(
     String rawData, {
     String? expectedEventId,

@@ -8,6 +8,13 @@ import 'package:campushub/shared/enums/user_role.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// FEATURE: UC-014, UC-015
+/// MODULE: Testing & Integration
+/// DESCRIPTION: Hàm AppUser user: Ma trận direct URL cho guest/disabled/student/organizer/admin.
+/// ROLE: Test entry point / fixture helper
+/// CALLED FROM: Các test Auth/Profile/navigation.
+/// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+/// TECHNOLOGY: Dart, flutter_test, Riverpod.
 AppUser user(UserRole role, {String uid = 'u1', String status = 'active'}) =>
     AppUser(
       uid: uid,
@@ -19,6 +26,13 @@ AppUser user(UserRole role, {String uid = 'u1', String status = 'active'}) =>
       updatedAt: DateTime.utc(2026),
     );
 
+/// FEATURE: UC-014, UC-015
+/// MODULE: Testing & Integration
+/// DESCRIPTION: Hàm void main: Ma trận direct URL cho guest/disabled/student/organizer/admin.
+/// ROLE: Test entry point / fixture helper
+/// CALLED FROM: Các test Auth/Profile/navigation.
+/// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+/// TECHNOLOGY: Dart, flutter_test, Riverpod.
 void main() {
   const identity = AsyncData<AuthIdentity?>(
     AuthIdentity(uid: 'u1', email: 'user@example.com'),
@@ -50,6 +64,13 @@ void main() {
   const admin = ['/admin', '/admin/events', '/admin/moderation'];
 
   for (final role in UserRole.values) {
+    /// FEATURE: UC-014, UC-015
+    /// MODULE: Testing & Integration
+    /// DESCRIPTION: Kiểm thử: ${role.name}: module access matrix and direct URLs.
+    /// ROLE: Existing test callback
+    /// CALLED FROM: flutter_test runner / main.
+    /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+    /// TECHNOLOGY: Dart, flutter_test, Riverpod.
     test('${role.name}: module access matrix and direct URLs', () {
       for (final path in [...shared, ...organizer, ...admin]) {
         final allowed =
@@ -87,6 +108,13 @@ void main() {
     });
   }
 
+  /// FEATURE: UC-014, UC-015
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: role downgrade and account mismatch revoke module access.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   test('role downgrade and account mismatch revoke module access', () {
     const path = '/admin/moderation';
     expect(
@@ -115,6 +143,13 @@ void main() {
     );
   });
 
+  /// FEATURE: UC-014, UC-015
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: retained privileged profile is gated while refreshing or failed.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   test('retained privileged profile is gated while refreshing or failed', () {
     final previous = AsyncData<AppUser?>(user(UserRole.admin));
     for (final profile in [
@@ -135,6 +170,13 @@ void main() {
     }
   });
 
+  /// FEATURE: UC-014, UC-015
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: restricted roots match path segments.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   test('restricted roots match path segments', () {
     expect(isRouteWithin('/admin/moderation', '/admin'), isTrue);
     expect(isRouteWithin('/administrator', '/admin'), isFalse);

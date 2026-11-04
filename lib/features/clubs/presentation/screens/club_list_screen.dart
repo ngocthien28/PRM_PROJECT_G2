@@ -18,6 +18,13 @@ class ClubListScreen extends ConsumerStatefulWidget {
 class _ClubListScreenState extends ConsumerState<ClubListScreen> {
   String _query = '';
   bool _popular = false;
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Chỉ hiện tạo club cho role.canOrganize; shell và back route dùng role hiện tại.
+  /// ROLE: Cross-module role/access integration
+  /// CALLED FROM: ClubListScreen state.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(clubsProvider);

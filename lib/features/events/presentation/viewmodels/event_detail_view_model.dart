@@ -5,6 +5,13 @@ import '../../data/models/event_model.dart';
 import 'event_list_view_model.dart';
 
 /// Management reads must retain the repository's owner/admin checks.
+/// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+/// MODULE: Testing & Integration
+/// DESCRIPTION: Chặn user thiếu/không active/không canOrganize trước khi đọc event có actor.
+/// ROLE: Cross-module role/access integration
+/// CALLED FROM: EventDetailScreen managed mode.
+/// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+/// TECHNOLOGY: Dart, Riverpod.
 final managedEventDetailProvider = FutureProvider.autoDispose
     .family<EventModel, String>((ref, id) async {
       final user = await ref.watch(currentUserProvider.future);

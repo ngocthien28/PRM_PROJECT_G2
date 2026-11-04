@@ -15,10 +15,24 @@ import 'package:campushub/features/admin/presentation/viewmodels/admin_dashboard
 import 'package:campushub/features/admin/data/admin_repository.dart';
 import 'package:campushub/features/events/presentation/viewmodels/event_list_view_model.dart';
 
+/// FEATURE: UC-014 - Test Authentication and Profile
+/// MODULE: Testing & Integration
+/// DESCRIPTION: Hàm void main: Register/logout/login, protected Back, disabled profile và bootstrap Retry.
+/// ROLE: Test entry point / fixture helper
+/// CALLED FROM: Các test Auth/Profile/navigation.
+/// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+/// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod.
 void main() {
   late FakeProfiles profiles;
   late FakeAuth auth;
   late ProviderContainer container;
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Thiết lập/thu hồi fixture: Register/logout/login, protected Back, disabled profile và bootstrap Retry.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod.
   setUp(() {
     profiles = FakeProfiles();
     auth = FakeAuth(profiles);
@@ -41,11 +55,25 @@ void main() {
       ],
     );
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Thiết lập/thu hồi fixture: Register/logout/login, protected Back, disabled profile và bootstrap Retry.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod.
   tearDown(() async {
     container.dispose();
     await auth.dispose();
     await profiles.dispose();
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Hàm Future&lt;void&gt; mount: Register/logout/login, protected Back, disabled profile và bootstrap Retry.
+  /// ROLE: Test entry point / fixture helper
+  /// CALLED FROM: Các test Auth/Profile/navigation.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod.
   Future<void> mount(WidgetTester tester) async {
     await tester.pumpWidget(
       UncontrolledProviderScope(
@@ -56,8 +84,22 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Hàm Future&lt;void&gt; fill: Register/logout/login, protected Back, disabled profile và bootstrap Retry.
+  /// ROLE: Test entry point / fixture helper
+  /// CALLED FROM: Các test Auth/Profile/navigation.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod.
   Future<void> fill(WidgetTester tester, int index, String text) =>
       tester.enterText(find.byType(TextFormField).at(index), text);
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: register logout login and protected Back all follow the session.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod.
   testWidgets(
     'register logout login and protected Back all follow the session',
     (tester) async {
@@ -107,6 +149,13 @@ void main() {
       expect(find.text('Welcome, Minh'), findsOneWidget);
     },
   );
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: login links to forgot password and back.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod.
   testWidgets('login links to forgot password and back', (tester) async {
     await mount(tester);
     await tester.tap(find.text('Forgot password?'));
@@ -117,6 +166,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(TextFormField), findsNWidgets(2));
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: restored missing profile can recover safely.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod.
   testWidgets('restored missing profile can recover safely', (tester) async {
     auth.identity = testIdentity;
     await mount(tester);
@@ -126,6 +182,13 @@ void main() {
     expect(find.text('Welcome, Minh'), findsOneWidget);
     expect(profiles.users['uid']?.role, UserRole.student);
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: disabled profile is gated and can sign out.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod.
   testWidgets('disabled profile is gated and can sign out', (tester) async {
     auth.identity = testIdentity;
     profiles.users['uid'] = testUser(status: 'disabled');
@@ -136,6 +199,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Sign in'), findsWidgets);
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: profile load failure offers retry, never auto-creates.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod.
   testWidgets('profile load failure offers retry, never auto-creates', (
     tester,
   ) async {
@@ -151,6 +221,13 @@ void main() {
     expect(find.text('Welcome, Minh'), findsOneWidget);
     expect(profiles.creates, 0);
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: live disabled status removes protected landing.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod.
   testWidgets('live disabled status removes protected landing', (tester) async {
     auth.identity = testIdentity;
     profiles.users['uid'] = testUser();
@@ -161,6 +238,13 @@ void main() {
     expect(find.textContaining('This account is disabled'), findsOneWidget);
   });
   for (final role in [UserRole.organizer, UserRole.admin]) {
+    /// FEATURE: UC-014 - Test Authentication and Profile
+    /// MODULE: Testing & Integration
+    /// DESCRIPTION: Kiểm thử: restored ${role.name} session reaches its role route.
+    /// ROLE: Existing test callback
+    /// CALLED FROM: flutter_test runner / main.
+    /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+    /// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod.
     testWidgets('restored ${role.name} session reaches its role route', (
       tester,
     ) async {
@@ -178,6 +262,13 @@ void main() {
       );
     });
   }
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: Firebase initialization failure is explicit and retryable.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod.
   testWidgets('Firebase initialization failure is explicit and retryable', (
     tester,
   ) async {

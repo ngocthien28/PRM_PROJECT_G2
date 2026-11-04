@@ -21,6 +21,13 @@ class EventDraftRepository {
     organizerId: uid,
   );
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Yêu cầu organizer/admin active và UID đúng scope trước truy cập draft local.
+  /// ROLE: Cross-module role/access integration
+  /// CALLED FROM: EventDraftRepository._run.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart.
   String _uid() {
     final actor = currentActor();
     if (actor == null || !actor.isActive || !actor.role.canOrganize) {

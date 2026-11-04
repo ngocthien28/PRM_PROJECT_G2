@@ -6,7 +6,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'auth_fakes.dart';
 
+/// FEATURE: UC-014 - Test Authentication and Profile
+/// MODULE: Testing & Integration
+/// DESCRIPTION: Hàm void main: Role landing, prefix, missing/stale profile và action đang chạy.
+/// ROLE: Test entry point / fixture helper
+/// CALLED FROM: Các test Auth/Profile/navigation.
+/// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+/// TECHNOLOGY: Dart, flutter_test, Riverpod.
 void main() {
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Hàm String? redirect: Role landing, prefix, missing/stale profile và action đang chạy.
+  /// ROLE: Test entry point / fixture helper
+  /// CALLED FROM: Các test Auth/Profile/navigation.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   String? redirect(
     String path, {
     AsyncValue<AuthIdentity?> auth = const AsyncData(testIdentity),
@@ -18,11 +32,25 @@ void main() {
     profile: profile ?? AsyncData(testUser()),
     actionLoading: busy,
   );
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: loading routes to splash without looping.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   test('loading routes to splash without looping', () {
     expect(redirect('/home', auth: const AsyncLoading()), '/splash');
     expect(redirect('/splash', auth: const AsyncLoading()), isNull);
     expect(redirect('/home', profile: const AsyncLoading()), '/splash');
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: guest can access all auth pages but cannot return to protected pages.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   test(
     'guest can access all auth pages but cannot return to protected pages',
     () {
@@ -34,6 +62,13 @@ void main() {
       }
     },
   );
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: missing, disabled, stale and failed profiles are gated.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   test('missing, disabled, stale and failed profiles are gated', () {
     expect(redirect('/home', profile: const AsyncData(null)), '/splash');
     expect(
@@ -53,6 +88,13 @@ void main() {
       '/splash',
     );
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: role landing and restricted prefixes follow agreed contract.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   test('role landing and restricted prefixes follow agreed contract', () {
     for (final role in UserRole.values) {
       expect(
@@ -81,6 +123,13 @@ void main() {
       isNull,
     );
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: create event route is protected for every direct URL access.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   test('create event route is protected for every direct URL access', () {
     const createEvent = '/organizer/events/create';
 
@@ -98,6 +147,13 @@ void main() {
     expect(redirect(createEvent), '/home');
     expect(redirect(createEvent, auth: const AsyncData(null)), '/login');
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: registration keeps form stable until action completes.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   test('registration keeps form stable until action completes', () {
     expect(
       redirect('/register', profile: const AsyncData(null), busy: true),
@@ -105,6 +161,13 @@ void main() {
     );
     expect(redirect('/register', profile: const AsyncData(null)), '/splash');
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: all event management URLs fail closed for guest/student/loading/disabled.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   test(
     'all event management URLs fail closed for guest/student/loading/disabled',
     () {
