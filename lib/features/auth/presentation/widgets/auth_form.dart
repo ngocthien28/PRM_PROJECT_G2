@@ -13,6 +13,13 @@ enum AuthFormKind { login, register, reset }
 class AuthForm extends ConsumerStatefulWidget {
   final AuthFormKind kind;
   const AuthForm({super.key, required this.kind});
+  /// FEATURE: UC-004, UC-005, UC-006
+  /// MODULE: Authentication & Authorization
+  /// DESCRIPTION: Tạo state giữ controller và FormState của form auth.
+  /// ROLE: Authentication form UI
+  /// CALLED FROM: Flutter AuthForm lifecycle.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   @override
   ConsumerState<AuthForm> createState() => _AuthFormState();
 }
@@ -23,6 +30,13 @@ class _AuthFormState extends ConsumerState<AuthForm> {
   final _password = TextEditingController();
   final _confirm = TextEditingController();
   final _name = TextEditingController();
+  /// FEATURE: UC-004, UC-005, UC-006
+  /// MODULE: Authentication & Authorization
+  /// DESCRIPTION: Giải phóng controller email, password, confirm và name khi đóng form.
+  /// ROLE: Authentication form UI
+  /// CALLED FROM: Flutter state lifecycle.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   @override
   void dispose() {
     _email.dispose();
@@ -32,16 +46,37 @@ class _AuthFormState extends ConsumerState<AuthForm> {
     super.dispose();
   }
 
+  /// FEATURE: UC-004, UC-005, UC-006
+  /// MODULE: Authentication & Authorization
+  /// DESCRIPTION: Chọn nhãn submit theo loại login/register/reset.
+  /// ROLE: Authentication form UI
+  /// CALLED FROM: AuthForm build.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   String get _title => switch (widget.kind) {
     AuthFormKind.login => 'Sign in',
     AuthFormKind.register => 'Create account',
     AuthFormKind.reset => 'Reset password',
   };
+  /// FEATURE: UC-001, UC-004, UC-005, UC-006
+  /// MODULE: Authentication & Authorization
+  /// DESCRIPTION: Xóa feedback rồi dùng context.go chuyển giữa các route auth.
+  /// ROLE: Authentication form UI
+  /// CALLED FROM: Liên kết điều hướng AuthForm.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   void _navigate(String path) {
     ref.read(authViewModelProvider.notifier).clearFeedback();
     context.go(path);
   }
 
+  /// FEATURE: UC-004, UC-005, UC-006, UC-012
+  /// MODULE: Authentication & Authorization
+  /// DESCRIPTION: Chặn khi bận hoặc form không hợp lệ; gọi action đúng AuthFormKind.
+  /// ROLE: Authentication form UI
+  /// CALLED FROM: Nút submit AuthForm.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   Future<void> _submit() async {
     if (ref.read(authViewModelProvider).isLoading ||
         !_form.currentState!.validate()) {
@@ -59,6 +94,13 @@ class _AuthFormState extends ConsumerState<AuthForm> {
     }
   }
 
+  /// FEATURE: UC-004, UC-005, UC-006, UC-012, UC-013
+  /// MODULE: Authentication & Authorization
+  /// DESCRIPTION: Ghép validator, disabled/loading và thông báo action cho ba form xác thực.
+  /// ROLE: Authentication form UI
+  /// CALLED FROM: Flutter AuthForm state.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   @override
   Widget build(BuildContext context) {
     final action = ref.watch(authViewModelProvider);
@@ -188,6 +230,13 @@ class _AuthCanvas extends StatelessWidget {
   });
   final String heading, description;
   final Widget content;
+  /// FEATURE: UC-001, UC-004, UC-005, UC-006
+  /// MODULE: Authentication & Authorization
+  /// DESCRIPTION: Dựng khung auth responsive với theme chung và CampusArtwork trên màn hình rộng.
+  /// ROLE: Authentication form UI
+  /// CALLED FROM: AuthForm.build.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(
