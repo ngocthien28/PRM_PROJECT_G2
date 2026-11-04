@@ -8,6 +8,13 @@ class StorageService {
   StorageService(this.storage);
   final FirebaseStorage storage;
 
+  /// FEATURE: UC-010 - Update Profile Avatar
+  /// MODULE: Profile Management
+  /// DESCRIPTION: Kiểm tra extension JPG/PNG/WebP và kích thước 1 byte–5 MB; upload vào avatars/uid và trả download URL.
+  /// ROLE: Firebase Storage SDK / avatar validation
+  /// CALLED FROM: ProfileViewModel.chooseAvatar.
+  /// RELATED FILES: lib/features/profile/presentation/viewmodels/profile_view_model.dart; lib/features/profile/data/profile_repository_impl.dart.
+  /// TECHNOLOGY: Dart, Firebase Storage SDK.
   Future<String> uploadAvatar({
     required String uid,
     required Uint8List bytes,

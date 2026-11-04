@@ -24,6 +24,13 @@ abstract final class DbMigrations {
     )
   ''');
 
+  /// FEATURE: UC-011 - Implement Local Profile and Settings Cache
+  /// MODULE: Profile Management
+  /// DESCRIPTION: Tạo schema ban đầu, bao gồm local_profile_cache qua createProfileCache.
+  /// ROLE: Profile cache schema
+  /// CALLED FROM: AppDatabase._initDatabase onCreate.
+  /// RELATED FILES: lib/features/profile/presentation/viewmodels/profile_view_model.dart; lib/features/profile/data/profile_repository_impl.dart.
+  /// TECHNOLOGY: Dart, sqflite.
   static Future<void> onCreate(Database db, int version) async {
     await createNotificationCache(db);
     await createProfileCache(db);
@@ -75,6 +82,13 @@ abstract final class DbMigrations {
     ''');
   }
 
+  /// FEATURE: UC-011 - Implement Local Profile and Settings Cache
+  /// MODULE: Profile Management
+  /// DESCRIPTION: Khi nâng từ version dưới 3 lên ít nhất 3, tạo local_profile_cache; giữ các migration module khác.
+  /// ROLE: Profile cache schema
+  /// CALLED FROM: AppDatabase._initDatabase onUpgrade.
+  /// RELATED FILES: lib/features/profile/presentation/viewmodels/profile_view_model.dart; lib/features/profile/data/profile_repository_impl.dart.
+  /// TECHNOLOGY: Dart, sqflite.
   static Future<void> onUpgrade(
     Database db,
     int oldVersion,
@@ -97,6 +111,13 @@ abstract final class DbMigrations {
     }
   }
 
+  /// FEATURE: UC-011 - Implement Local Profile and Settings Cache
+  /// MODULE: Profile Management
+  /// DESCRIPTION: Tạo bảng profile/settings khóa ghép user_id/cache_key cùng JSON payload.
+  /// ROLE: Profile cache schema
+  /// CALLED FROM: DbMigrations.onCreate và onUpgrade.
+  /// RELATED FILES: lib/features/profile/presentation/viewmodels/profile_view_model.dart; lib/features/profile/data/profile_repository_impl.dart.
+  /// TECHNOLOGY: Dart, sqflite.
   static Future<void> createProfileCache(Database db) => db.execute('''
     CREATE TABLE IF NOT EXISTS local_profile_cache (
       user_id TEXT NOT NULL, cache_key TEXT NOT NULL, payload TEXT NOT NULL,
