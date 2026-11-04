@@ -45,6 +45,13 @@ class EventDraftRepository {
     return actor.uid;
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Gọi _uid trước/sau mở database và sau thao tác để chặn đổi account khi truy cập draft.
+  /// ROLE: Local authorization call site
+  /// CALLED FROM: EventDraftRepository public operations.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart.
   Future<T> _run<T>(
     Future<T> Function(EventDraftDao dao, String uid) action,
   ) async {
@@ -67,6 +74,13 @@ class EventDraftRepository {
 
   Future<EventDraft?> getDraft() => _run((dao, uid) => dao.getDraft(uid));
   Future<bool> hasDraft() => _run((dao, uid) => dao.hasDraft(uid));
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Từ chối draft.organizerId khác UID được scope trước ghi local draft.
+  /// ROLE: Local authorization call site
+  /// CALLED FROM: EventDraftRepository public operations.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart.
   Future<void> saveDraft(EventDraft draft) => _run((dao, uid) async {
     if (draft.organizerId != uid) {
       throw const AppException(
