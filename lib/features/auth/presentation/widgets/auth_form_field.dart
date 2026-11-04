@@ -18,6 +18,13 @@ class AuthFormField extends StatelessWidget {
     this.keyboardType,
     this.autofillHints,
   });
+  /// FEATURE: UC-004, UC-005, UC-006, UC-012
+  /// MODULE: Authentication & Authorization
+  /// DESCRIPTION: Ghép TextFormField với validator, obscureText, autofill và enabled do AuthForm truyền vào.
+  /// ROLE: Reusable validated form field
+  /// CALLED FROM: AuthForm.build.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material.
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 16),

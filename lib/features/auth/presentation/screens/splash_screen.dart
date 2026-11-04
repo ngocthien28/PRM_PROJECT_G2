@@ -6,6 +6,13 @@ import '../viewmodels/auth_view_model.dart';
 
 class SplashScreen extends ConsumerWidget {
   const SplashScreen({super.key});
+  /// FEATURE: UC-002, UC-003, UC-004, UC-007, UC-013
+  /// MODULE: Authentication & Authorization
+  /// DESCRIPTION: Phân biệt phiên chờ, profile thiếu/bị khóa/lỗi; mở Retry, recoverProfile và signOut phù hợp.
+  /// ROLE: Session gate recovery UI
+  /// CALLED FROM: appRouterProvider / sessionRedirect.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod.
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authStateProvider);
