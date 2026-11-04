@@ -15,12 +15,26 @@ class _Profiles extends Mock implements ProfileRepository {}
 
 class _Picker extends Mock implements ImagePicker {}
 
+/// FEATURE: UC-014 - Test Authentication and Profile
+/// MODULE: Testing & Integration
+/// DESCRIPTION: Hàm void main: Validation, lưu trùng, lỗi, hủy picker và account switch.
+/// ROLE: Test entry point / fixture helper
+/// CALLED FROM: Các test Auth/Profile/navigation.
+/// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+/// TECHNOLOGY: Dart, flutter_test, Riverpod, image_picker, mocktail.
 void main() {
   late ProviderContainer container;
   late _Profiles profiles;
   late _Picker picker;
   late StreamController<AuthIdentity?> sessions;
 
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Thiết lập/thu hồi fixture: Validation, lưu trùng, lỗi, hủy picker và account switch.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod, image_picker, mocktail.
   setUp(() async {
     profiles = _Profiles();
     picker = _Picker();
@@ -39,11 +53,25 @@ void main() {
     await ready;
   });
 
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Thiết lập/thu hồi fixture: Validation, lưu trùng, lỗi, hủy picker và account switch.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod, image_picker, mocktail.
   tearDown(() async {
     container.dispose();
     await sessions.close();
   });
 
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: duplicate saves are suppressed and success is reported.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod, image_picker, mocktail.
   test('duplicate saves are suppressed and success is reported', () async {
     final pending = Completer<void>();
     when(
@@ -64,6 +92,13 @@ void main() {
     );
   });
 
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: invalid input is rejected before a repository write.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod, image_picker, mocktail.
   test('invalid input is rejected before a repository write', () async {
     await container
         .read(profileActionProvider.notifier)
@@ -78,6 +113,13 @@ void main() {
     );
   });
 
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: repository failure becomes readable feedback.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod, image_picker, mocktail.
   test('repository failure becomes readable feedback', () async {
     when(
       () => profiles.updateProfile(uid: 'u1', displayName: 'Minh', phone: ''),
@@ -91,6 +133,13 @@ void main() {
     );
   });
 
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: cancelling avatar selection clears loading and makes no profile write.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod, image_picker, mocktail.
   test(
     'cancelling avatar selection clears loading and makes no profile write',
     () async {
@@ -113,6 +162,13 @@ void main() {
     },
   );
 
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: a completed save cannot publish feedback into a different account.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod, image_picker, mocktail.
   test(
     'a completed save cannot publish feedback into a different account',
     () async {

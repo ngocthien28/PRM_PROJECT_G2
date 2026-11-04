@@ -41,6 +41,13 @@ class OrganizerDashboardScreen extends ConsumerWidget {
     }
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Tính canManage từ active/canOrganize để bật hành động và đưa role vào shell.
+  /// ROLE: Cross-module role/access integration
+  /// CALLED FROM: appRouterProvider organizer route.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboard = ref.watch(organizerDashboardProvider);

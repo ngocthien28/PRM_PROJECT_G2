@@ -14,12 +14,26 @@ class MockAuth extends Mock implements FirebaseAuth {}
 
 class MockAuthUser extends Mock implements User {}
 
+/// FEATURE: UC-014 - Test Authentication and Profile
+/// MODULE: Testing & Integration
+/// DESCRIPTION: Hàm void main: Session restore, schema student, idempotency và SDK normalization.
+/// ROLE: Test entry point / fixture helper
+/// CALLED FROM: Các test Auth/Profile/navigation.
+/// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+/// TECHNOLOGY: Dart, flutter_test, Firebase Auth SDK, Cloud Firestore SDK, mocktail, fake_cloud_firestore, firebase_auth_mocks.
 void main() {
   for (final code in [
     'invalid-user-token',
     'user-token-expired',
     'user-not-found',
   ]) {
+    /// FEATURE: UC-014 - Test Authentication and Profile
+    /// MODULE: Testing & Integration
+    /// DESCRIPTION: Kiểm thử: restored $code session signs out and returns to login.
+    /// ROLE: Existing test callback
+    /// CALLED FROM: flutter_test runner / main.
+    /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+    /// TECHNOLOGY: Dart, flutter_test, Firebase Auth SDK, Cloud Firestore SDK, mocktail, fake_cloud_firestore, firebase_auth_mocks.
     test('restored $code session signs out and returns to login', () async {
       final auth = MockAuth();
       final user = MockAuthUser();
@@ -39,6 +53,13 @@ void main() {
     });
   }
 
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: network failure while restoring a session preserves the session.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Firebase Auth SDK, Cloud Firestore SDK, mocktail, fake_cloud_firestore, firebase_auth_mocks.
   test(
     'network failure while restoring a session preserves the session',
     () async {
@@ -64,6 +85,13 @@ void main() {
     },
   );
 
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: restored disabled account fails before profile access.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Firebase Auth SDK, Cloud Firestore SDK, mocktail, fake_cloud_firestore, firebase_auth_mocks.
   test('restored disabled account fails before profile access', () async {
     final auth = MockAuth();
     final user = MockAuthUser();
@@ -79,6 +107,13 @@ void main() {
     expect(profiles.creates, 0);
     await profiles.dispose();
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: unidentified restore failure offers recovery without signing out.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Firebase Auth SDK, Cloud Firestore SDK, mocktail, fake_cloud_firestore, firebase_auth_mocks.
   test(
     'unidentified restore failure offers recovery without signing out',
     () async {
@@ -101,6 +136,13 @@ void main() {
       verifyNever(auth.signOut);
     },
   );
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: profile creation writes agreed schema and never stores a password.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Firebase Auth SDK, Cloud Firestore SDK, mocktail, fake_cloud_firestore, firebase_auth_mocks.
   test(
     'profile creation writes agreed schema and never stores a password',
     () async {
@@ -135,6 +177,13 @@ void main() {
       expect(AppUser.fromMap(user!.toMap()).role, user.role);
     },
   );
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: recovery does not overwrite existing elevated or disabled profile.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Firebase Auth SDK, Cloud Firestore SDK, mocktail, fake_cloud_firestore, firebase_auth_mocks.
   test(
     'recovery does not overwrite existing elevated or disabled profile',
     () async {
@@ -155,6 +204,13 @@ void main() {
       expect((await doc.get()).data(), before);
     },
   );
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: missing profile and invalid role fail closed.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Firebase Auth SDK, Cloud Firestore SDK, mocktail, fake_cloud_firestore, firebase_auth_mocks.
   test('missing profile and invalid role fail closed', () async {
     final db = FakeFirebaseFirestore();
     final repo = ProfileRepositoryImpl(db);
@@ -168,6 +224,13 @@ void main() {
       throwsA(isA<AppException>()),
     );
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: Firebase registration creates initial profile.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Firebase Auth SDK, Cloud Firestore SDK, mocktail, fake_cloud_firestore, firebase_auth_mocks.
   test('Firebase registration creates initial profile', () async {
     final auth = MockFirebaseAuth();
     final db = FakeFirebaseFirestore();
@@ -186,6 +249,13 @@ void main() {
       isTrue,
     );
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: Firestore failure after real repository registration is recoverable.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Firebase Auth SDK, Cloud Firestore SDK, mocktail, fake_cloud_firestore, firebase_auth_mocks.
   test(
     'Firestore failure after real repository registration is recoverable',
     () async {
@@ -214,6 +284,13 @@ void main() {
       await profiles.dispose();
     },
   );
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: login normalizes email, preserves password and maps auth errors.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Firebase Auth SDK, Cloud Firestore SDK, mocktail, fake_cloud_firestore, firebase_auth_mocks.
   test(
     'login normalizes email, preserves password and maps auth errors',
     () async {
@@ -245,6 +322,13 @@ void main() {
       await profiles.dispose();
     },
   );
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: reset uses Firebase email API and maps network error.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Firebase Auth SDK, Cloud Firestore SDK, mocktail, fake_cloud_firestore, firebase_auth_mocks.
   test('reset uses Firebase email API and maps network error', () async {
     final auth = MockAuth();
     final profiles = FakeProfiles();

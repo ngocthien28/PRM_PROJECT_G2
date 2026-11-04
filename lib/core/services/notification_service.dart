@@ -149,6 +149,13 @@ class NotificationService {
     });
   }
 
+  /// FEATURE: UC-007 - Log Out
+  /// MODULE: Authentication & Authorization
+  /// DESCRIPTION: Dừng listener thông báo, bỏ device token và xóa thông báo local trước logout Auth.
+  /// ROLE: Logout cleanup integration
+  /// CALLED FROM: AuthViewModel.signOut.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Firebase Auth SDK, Firebase Core, Cloud Firestore SDK.
   Future<void> unregister() async {
     if (!supported || !_started) return;
     await _queue;

@@ -8,10 +8,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'auth_fakes.dart';
 
+/// FEATURE: UC-014 - Test Authentication and Profile
+/// MODULE: Testing & Integration
+/// DESCRIPTION: Hàm void main: Async state, submit trùng, recovery, account switch và logout.
+/// ROLE: Test entry point / fixture helper
+/// CALLED FROM: Các test Auth/Profile/navigation.
+/// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+/// TECHNOLOGY: Dart, flutter_test, Riverpod.
 void main() {
   late FakeProfiles profiles;
   late FakeAuth auth;
   late ProviderContainer container;
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Thiết lập/thu hồi fixture: Async state, submit trùng, recovery, account switch và logout.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   setUp(() {
     profiles = FakeProfiles();
     auth = FakeAuth(profiles);
@@ -23,16 +37,37 @@ void main() {
       ],
     );
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Hàm void observeSession: Async state, submit trùng, recovery, account switch và logout.
+  /// ROLE: Test entry point / fixture helper
+  /// CALLED FROM: Các test Auth/Profile/navigation.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   void observeSession() {
     container.listen(currentUserProvider, (_, _) {});
     container.listen(authStateProvider, (_, _) {});
   }
 
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Thiết lập/thu hồi fixture: Async state, submit trùng, recovery, account switch và logout.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   tearDown(() async {
     container.dispose();
     await auth.dispose();
     await profiles.dispose();
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: sign in moves loading to success and updates current user.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   test('sign in moves loading to success and updates current user', () async {
     profiles.users['uid'] = testUser();
     observeSession();
@@ -46,6 +81,13 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect((await container.read(currentUserProvider.future))?.uid, 'uid');
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: startup auth error is exposed as state and a later login recovers.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   test(
     'startup auth error is exposed as state and a later login recovers',
     () async {
@@ -75,6 +117,13 @@ void main() {
       expect((await scoped.read(currentUserProvider.future))?.uid, 'uid');
     },
   );
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: request error stops loading with a readable error.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   test('request error stops loading with a readable error', () async {
     auth.failure = const AppException('Email or password is incorrect.');
     await container
@@ -86,6 +135,13 @@ void main() {
       'Email or password is incorrect.',
     );
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: double submit makes a single repository request.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   test('double submit makes a single repository request', () async {
     auth.pending = Completer<void>();
     final vm = container.read(authViewModelProvider.notifier);
@@ -95,6 +151,13 @@ void main() {
     auth.pending!.complete();
     await request;
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: registration success creates student profile.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   test('registration success creates student profile', () async {
     await container
         .read(authViewModelProvider.notifier)
@@ -106,6 +169,13 @@ void main() {
       'Account created successfully.',
     );
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: partial registration retains account and can recover.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   test('partial registration retains account and can recover', () async {
     observeSession();
     await container.read(authStateProvider.future);
@@ -125,6 +195,13 @@ void main() {
     expect(profiles.users['uid'], isNotNull);
     expect(container.read(authViewModelProvider).hasError, isFalse);
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: reset success and failure are reported.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   test('reset success and failure are reported', () async {
     final vm = container.read(authViewModelProvider.notifier);
     await vm.resetPassword('uid@example.com');
@@ -136,6 +213,13 @@ void main() {
     await vm.resetPassword('uid@example.com');
     expect(container.read(authViewModelProvider).hasError, isTrue);
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: logout clears profile without deleting Firestore data.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   test('logout clears profile without deleting Firestore data', () async {
     auth.identity = testIdentity;
     profiles.users['uid'] = testUser();
@@ -146,6 +230,13 @@ void main() {
     expect(await container.read(currentUserProvider.future), isNull);
     expect(profiles.users['uid'], isNotNull);
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: failed logout keeps the existing session.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   test('failed logout keeps the existing session', () async {
     auth.identity = testIdentity;
     profiles.users['uid'] = testUser();
@@ -157,6 +248,13 @@ void main() {
     expect(auth.identity?.uid, 'uid');
     expect(container.read(currentUserProvider).asData?.value?.uid, 'uid');
   });
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: switching accounts removes the old profile.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod.
   test('switching accounts removes the old profile', () async {
     auth.identity = testIdentity;
     profiles.users['uid'] = testUser();

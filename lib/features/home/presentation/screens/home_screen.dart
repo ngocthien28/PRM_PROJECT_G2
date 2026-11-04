@@ -18,6 +18,13 @@ import '../../../weather/presentation/widgets/weather_banner.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
+  /// FEATURE: UC-001, UC-007, UC-008
+  /// MODULE: Authentication & Authorization
+  /// DESCRIPTION: Gắn shell với phiên, signOut action và nút profile; phần event feed thuộc UC khác.
+  /// ROLE: Shell authentication integration
+  /// CALLED FROM: StudentShell.build.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider).asData?.value;

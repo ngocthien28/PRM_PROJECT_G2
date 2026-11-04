@@ -22,6 +22,13 @@ class AdminDashboardScreen extends ConsumerWidget {
       counts?.activeMembershipCount ?? 0,
     ].fold<int>(1, (largest, count) => math.max(largest, count));
     final user = ref.watch(currentUserProvider).asData?.value;
+    /// FEATURE: UC-007 - Log Out
+    /// MODULE: Authentication & Authorization
+    /// DESCRIPTION: Yêu cầu xác nhận trước AuthViewModel.signOut từ dashboard admin.
+    /// ROLE: Admin logout UI
+    /// CALLED FROM: CampusScaffold.onSignOut trong AdminDashboardScreen.
+    /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+    /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
     Future<void> signOut() async {
       final confirmed = await showDialog<bool>(
         context: context,
