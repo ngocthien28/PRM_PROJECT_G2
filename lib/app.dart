@@ -14,6 +14,13 @@ final pushInitializationProvider = FutureProvider<void>((ref) async {
   );
 });
 
+/// FEATURE: UC-002, UC-013
+/// MODULE: App Shell
+/// DESCRIPTION: Chuyển lỗi cấu hình nền tảng hoặc khởi tạo Firebase thành thông báo có thể thử lại.
+/// ROLE: Bootstrap error feedback
+/// CALLED FROM: CampusHubApp.build.
+/// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+/// TECHNOLOGY: Dart, Flutter Material, Riverpod.
 String firebaseInitializationMessage(Object error) {
   if (error is UnsupportedError &&
       error.message.toString().contains('have not been configured for')) {
@@ -27,6 +34,13 @@ String firebaseInitializationMessage(Object error) {
 
 class CampusHubApp extends ConsumerWidget {
   const CampusHubApp({super.key});
+  /// FEATURE: UC-001, UC-002, UC-013
+  /// MODULE: App Shell
+  /// DESCRIPTION: Chờ Firebase; dựng MaterialApp.router với theme chung hoặc loading/lỗi và nút Retry.
+  /// ROLE: App shell / bootstrap state
+  /// CALLED FROM: Flutter widget tree.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod.
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final initialization = ref.watch(firebaseInitializationProvider);

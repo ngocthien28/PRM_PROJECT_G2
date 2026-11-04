@@ -17,6 +17,13 @@ class AsyncValueView<T> extends StatelessWidget {
   final VoidCallback? onRetry;
   final String loadingMessage;
 
+  /// FEATURE: UC-013 - Implement Shared Loading and Error Handling
+  /// MODULE: App Shell
+  /// DESCRIPTION: Ưu tiên loading rồi lỗi trước retained data; dùng LoadingIndicator và AppErrorView để tránh lộ profile cũ.
+  /// ROLE: Shared async UI
+  /// CALLED FROM: ProfileScreen, EditProfileScreen hoặc AsyncValueView.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod.
   @override
   Widget build(BuildContext context) {
     if (value.isLoading) return LoadingIndicator(message: loadingMessage);

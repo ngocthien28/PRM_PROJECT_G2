@@ -11,6 +11,13 @@ abstract final class CampusColors {
 }
 
 class AppTheme {
+  /// FEATURE: UC-001 - Build Shared App Navigation and Theme
+  /// MODULE: App Shell
+  /// DESCRIPTION: Tạo Material 3 light theme với bảng màu, typography và style điều khiển dùng chung.
+  /// ROLE: Shared theme
+  /// CALLED FROM: CampusHubApp.build.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material.
   static ThemeData get light {
     final scheme = ColorScheme.fromSeed(seedColor: CampusColors.teal).copyWith(
       primary: CampusColors.teal,
