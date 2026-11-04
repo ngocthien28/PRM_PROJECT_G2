@@ -15,6 +15,13 @@ import 'package:flutter/foundation.dart'
 /// );
 /// ```
 class DefaultFirebaseOptions {
+  /// FEATURE: UC-002 - Configure Firebase Authentication and Auth State
+  /// MODULE: Authentication & Authorization
+  /// DESCRIPTION: Chọn FirebaseOptions cho Web/Android/Windows; ném UnsupportedError trên nền tảng chưa cấu hình.
+  /// ROLE: FlutterFire platform configuration
+  /// CALLED FROM: firebaseInitializationProvider.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Firebase Core.
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
       return web;

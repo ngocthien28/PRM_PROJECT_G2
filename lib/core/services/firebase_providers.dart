@@ -23,6 +23,13 @@ import '../../features/auth/data/models/app_user.dart';
 import '../errors/app_exception.dart';
 import 'storage_service.dart';
 
+/// FEATURE: UC-002 - Configure Firebase Authentication and Auth State
+/// MODULE: Authentication & Authorization
+/// DESCRIPTION: Khởi tạo Firebase theo cấu hình nền tảng; cấu hình demo project và host SDK khi bật emulator.
+/// ROLE: Riverpod dependency injection
+/// CALLED FROM: Các provider hoặc view model phụ thuộc firebaseInitializationProvider.
+/// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+/// TECHNOLOGY: Dart, Riverpod, Firebase Auth SDK, Firebase Core, Cloud Firestore SDK, Firebase Storage SDK.
 final firebaseInitializationProvider = FutureProvider<void>((ref) async {
   try {
     const useEmulator = bool.fromEnvironment(
@@ -68,14 +75,35 @@ final firebaseInitializationProvider = FutureProvider<void>((ref) async {
     rethrow;
   }
 });
+/// FEATURE: UC-002 - Configure Firebase Authentication and Auth State
+/// MODULE: Authentication & Authorization
+/// DESCRIPTION: Cung cấp FirebaseAuth.instance cho AuthRepositoryImpl.
+/// ROLE: Riverpod dependency injection
+/// CALLED FROM: Các provider hoặc view model phụ thuộc firebaseAuthProvider.
+/// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+/// TECHNOLOGY: Dart, Riverpod, Firebase Auth SDK, Firebase Core, Cloud Firestore SDK, Firebase Storage SDK.
 final firebaseAuthProvider = Provider<FirebaseAuth>(
   (ref) => FirebaseAuth.instance,
 );
+/// FEATURE: UC-002, UC-008, UC-009, UC-010
+/// MODULE: Authentication & Authorization
+/// DESCRIPTION: Cung cấp FirebaseFirestore.instance cho repository profile và resolver actor.
+/// ROLE: Riverpod dependency injection
+/// CALLED FROM: Các provider hoặc view model phụ thuộc firestoreProvider.
+/// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+/// TECHNOLOGY: Dart, Riverpod, Firebase Auth SDK, Firebase Core, Cloud Firestore SDK, Firebase Storage SDK.
 final firestoreProvider = Provider<FirebaseFirestore>(
   (ref) => FirebaseFirestore.instance,
 );
 
 // Fresh authenticated context for security-sensitive repository actions.
+/// FEATURE: UC-002, UC-015
+/// MODULE: Authentication & Authorization
+/// DESCRIPTION: Đọc UID Auth và profile từ Firestore Source.server; kiểm tra UID trước khi cung cấp actor cho Event/Registration.
+/// ROLE: Riverpod dependency injection
+/// CALLED FROM: Các provider hoặc view model phụ thuộc authenticatedActorProvider.
+/// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+/// TECHNOLOGY: Dart, Riverpod, Firebase Auth SDK, Firebase Core, Cloud Firestore SDK, Firebase Storage SDK.
 final authenticatedActorProvider = Provider<Future<AppUser?> Function()>((ref) {
   final auth = ref.watch(firebaseAuthProvider);
   final firestore = ref.watch(firestoreProvider);
@@ -97,12 +125,33 @@ final authenticatedActorProvider = Provider<Future<AppUser?> Function()>((ref) {
     return actor;
   };
 });
+/// FEATURE: UC-002, UC-004, UC-008, UC-009, UC-010
+/// MODULE: Authentication & Authorization
+/// DESCRIPTION: Tiêm ProfileRepositoryImpl dùng Firestore SDK cho auth và profile state.
+/// ROLE: Riverpod dependency injection
+/// CALLED FROM: Các provider hoặc view model phụ thuộc profileRepositoryProvider.
+/// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+/// TECHNOLOGY: Dart, Riverpod, Firebase Auth SDK, Firebase Core, Cloud Firestore SDK, Firebase Storage SDK.
 final profileRepositoryProvider = Provider<ProfileRepository>(
   (ref) => ProfileRepositoryImpl(ref.watch(firestoreProvider)),
 );
+/// FEATURE: UC-010 - Update Profile Avatar
+/// MODULE: Authentication & Authorization
+/// DESCRIPTION: Tiêm StorageService dùng FirebaseStorage.instance cho upload avatar.
+/// ROLE: Riverpod dependency injection
+/// CALLED FROM: Các provider hoặc view model phụ thuộc storageServiceProvider.
+/// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+/// TECHNOLOGY: Dart, Riverpod, Firebase Auth SDK, Firebase Core, Cloud Firestore SDK, Firebase Storage SDK.
 final storageServiceProvider = Provider<StorageService>(
   (ref) => StorageService(FirebaseStorage.instance),
 );
+/// FEATURE: UC-002, UC-004, UC-005, UC-006, UC-007
+/// MODULE: Authentication & Authorization
+/// DESCRIPTION: Ghép FirebaseAuth và ProfileRepository thành AuthRepositoryImpl.
+/// ROLE: Riverpod dependency injection
+/// CALLED FROM: Các provider hoặc view model phụ thuộc authRepositoryProvider.
+/// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+/// TECHNOLOGY: Dart, Riverpod, Firebase Auth SDK, Firebase Core, Cloud Firestore SDK, Firebase Storage SDK.
 final authRepositoryProvider = Provider<AuthRepository>(
   (ref) => AuthRepositoryImpl(
     ref.watch(firebaseAuthProvider),
@@ -110,6 +159,13 @@ final authRepositoryProvider = Provider<AuthRepository>(
   ),
 );
 
+/// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+/// MODULE: Testing & Integration
+/// DESCRIPTION: Tiêm resolver actor xác thực để RegistrationRepositoryImpl kiểm tra quyền.
+/// ROLE: Riverpod dependency injection
+/// CALLED FROM: Các provider hoặc view model phụ thuộc registrationRepositoryProvider.
+/// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+/// TECHNOLOGY: Dart, Riverpod, Firebase Auth SDK, Firebase Core, Cloud Firestore SDK, Firebase Storage SDK.
 final registrationRepositoryProvider = Provider<RegistrationRepository>(
   (ref) => RegistrationRepositoryImpl(
     ref.watch(firestoreProvider),
