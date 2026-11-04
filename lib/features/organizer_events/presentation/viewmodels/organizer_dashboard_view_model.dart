@@ -9,6 +9,13 @@ final organizerDashboardClockProvider = Provider<DateTime Function()>(
   (ref) => DateTime.now,
 );
 
+/// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+/// MODULE: Testing & Integration
+/// DESCRIPTION: Yêu cầu actor active có canOrganize và summary.organizerId đúng UID.
+/// ROLE: Cross-module role/access integration
+/// CALLED FROM: OrganizerDashboardScreen.
+/// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+/// TECHNOLOGY: Dart, Riverpod.
 final organizerDashboardProvider =
     FutureProvider.autoDispose<OrganizerDashboardSummary>((ref) async {
       // selectAsync observes subsequent profile emissions as well as the first

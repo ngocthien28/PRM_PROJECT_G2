@@ -41,6 +41,13 @@ class ClubRepositoryImpl implements ClubRepository {
     );
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Yêu cầu actor active và canOrganize để quản lý club.
+  /// ROLE: Cross-module role/access integration
+  /// CALLED FROM: createClub và owner.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK.
   void manager(AppUser a) {
     if (!a.isActive || !a.role.canOrganize) {
       throw const AppException('Organizer or admin access is required.');
@@ -53,6 +60,13 @@ class ClubRepositoryImpl implements ClubRepository {
     return ClubModel.fromFirestore(d);
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kết hợp manager với owner hoặc admin để cho sửa/hủy club.
+  /// ROLE: Cross-module role/access integration
+  /// CALLED FROM: updateClub và cancelClub.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK.
   void owner(AppUser a, ClubModel c) {
     manager(a);
     if (a.role != UserRole.admin && c.ownerId != a.uid) {
@@ -154,6 +168,13 @@ class ClubRepositoryImpl implements ClubRepository {
   @override
   Future<void> leaveClub({required String clubId, required AppUser actor}) =>
       membership(clubId, actor, false);
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Chặn join/leave nếu actor không phải student active trước khi ghi transaction.
+  /// ROLE: Cross-module role/access integration
+  /// CALLED FROM: joinClub và leaveClub.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK.
   Future<void> membership(String id, AppUser a, bool join) {
     final timer = Stopwatch()..start();
     final notification = db.collection('notifications').doc();

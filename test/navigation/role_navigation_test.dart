@@ -10,7 +10,21 @@ import 'package:campushub/features/auth/presentation/viewmodels/auth_view_model.
 import 'package:campushub/shared/enums/user_role.dart';
 import '../auth/auth_fakes.dart';
 
+/// FEATURE: UC-014 - Test Authentication and Profile
+/// MODULE: Testing & Integration
+/// DESCRIPTION: Hàm void main: Admin navigation tới Clubs/Notifications.
+/// ROLE: Test entry point / fixture helper
+/// CALLED FROM: Các test Auth/Profile/navigation.
+/// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+/// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod, go_router.
 void main() {
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: admin dashboard exposes Club and Notification navigation.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod, go_router.
   testWidgets('admin dashboard exposes Club and Notification navigation', (
     tester,
   ) async {
@@ -66,6 +80,13 @@ void main() {
   });
 }
 
+/// FEATURE: UC-014 - Test Authentication and Profile
+/// MODULE: Testing & Integration
+/// DESCRIPTION: Hàm Future&lt;AdminStats&gt; _adminStats: Admin navigation tới Clubs/Notifications.
+/// ROLE: Test entry point / fixture helper
+/// CALLED FROM: Các test Auth/Profile/navigation.
+/// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+/// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod, go_router.
 Future<AdminStats> _adminStats(Ref ref) async => const AdminStats(
   userCount: 2,
   clubCount: 1,

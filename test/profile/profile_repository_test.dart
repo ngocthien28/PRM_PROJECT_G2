@@ -5,14 +5,35 @@ import 'package:campushub/shared/enums/user_role.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// FEATURE: UC-014 - Test Authentication and Profile
+/// MODULE: Testing & Integration
+/// DESCRIPTION: Hàm void main: Profile setup/update/avatar URL và bảo toàn role/status.
+/// ROLE: Test entry point / fixture helper
+/// CALLED FROM: Các test Auth/Profile/navigation.
+/// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+/// TECHNOLOGY: Dart, flutter_test, Cloud Firestore SDK, fake_cloud_firestore.
 void main() {
   late FakeFirebaseFirestore firestore;
   late ProfileRepositoryImpl repository;
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Thiết lập/thu hồi fixture: Profile setup/update/avatar URL và bảo toàn role/status.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Cloud Firestore SDK, fake_cloud_firestore.
   setUp(() {
     firestore = FakeFirebaseFirestore();
     repository = ProfileRepositoryImpl(firestore);
   });
 
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: profile setup creates an active student and preserves existing roles.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Cloud Firestore SDK, fake_cloud_firestore.
   test(
     'profile setup creates an active student and preserves existing roles',
     () async {
@@ -40,6 +61,13 @@ void main() {
     },
   );
 
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: editing name, phone and avatar preserves authorization fields and other users.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Cloud Firestore SDK, fake_cloud_firestore.
   test(
     'editing name, phone and avatar preserves authorization fields and other users',
     () async {
@@ -85,6 +113,13 @@ void main() {
     },
   );
 
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: missing and mismatched profiles fail safely.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Cloud Firestore SDK, fake_cloud_firestore.
   test('missing and mismatched profiles fail safely', () async {
     expect(await repository.watchUser('missing').first, isNull);
     await firestore
