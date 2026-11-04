@@ -11,6 +11,13 @@ import '../viewmodels/profile_view_model.dart';
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
 
+  /// FEATURE: UC-009 - Update Profile
+  /// MODULE: Profile Management
+  /// DESCRIPTION: Tạo state sở hữu form/controller chỉnh sửa profile.
+  /// ROLE: Profile form lifecycle
+  /// CALLED FROM: Flutter EditProfileScreen lifecycle.
+  /// RELATED FILES: lib/features/profile/presentation/viewmodels/profile_view_model.dart; lib/features/profile/data/profile_repository_impl.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod.
   @override
   ConsumerState<EditProfileScreen> createState() => _EditProfileScreenState();
 }
@@ -21,6 +28,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _phone = TextEditingController();
   String? _editingUid;
 
+  /// FEATURE: UC-009 - Update Profile
+  /// MODULE: Profile Management
+  /// DESCRIPTION: Giải phóng name/phone controllers khi đóng màn hình.
+  /// ROLE: Profile form lifecycle
+  /// CALLED FROM: Flutter state lifecycle.
+  /// RELATED FILES: lib/features/profile/presentation/viewmodels/profile_view_model.dart; lib/features/profile/data/profile_repository_impl.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod.
   @override
   void dispose() {
     _name.dispose();
@@ -28,6 +42,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     super.dispose();
   }
 
+  /// FEATURE: UC-009, UC-012, UC-013
+  /// MODULE: Profile Management
+  /// DESCRIPTION: Chờ profile đúng UID, điền name/phone, gắn validator và chỉ pop sau action thành công.
+  /// ROLE: Validated edit form
+  /// CALLED FROM: appRouterProvider /profile/edit.
+  /// RELATED FILES: lib/features/profile/presentation/viewmodels/profile_view_model.dart; lib/features/profile/data/profile_repository_impl.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod.
   @override
   Widget build(BuildContext context) {
     final action = ref.watch(profileActionProvider);
