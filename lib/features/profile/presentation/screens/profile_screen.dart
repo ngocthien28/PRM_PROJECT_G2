@@ -13,6 +13,13 @@ import '../viewmodels/profile_view_model.dart';
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
+  /// FEATURE: UC-008, UC-009, UC-010, UC-011, UC-013
+  /// MODULE: Profile Management
+  /// DESCRIPTION: Hiển thị profile qua AsyncValueView; mở edit, chọn avatar và đọc/lưu theme preference theo UID.
+  /// ROLE: Profile presentation
+  /// CALLED FROM: appRouterProvider /profile.
+  /// RELATED FILES: lib/features/profile/presentation/viewmodels/profile_view_model.dart; lib/features/profile/data/profile_repository_impl.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(currentUserProvider);
