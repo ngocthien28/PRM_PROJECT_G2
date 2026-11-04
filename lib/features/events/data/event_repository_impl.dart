@@ -134,6 +134,13 @@ class EventRepositoryImpl implements EventRepository {
     }
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Áp dụng verified actor/manager và owner/admin cho managed read; kiểm tra participant khi event không published.
+  /// ROLE: Authorization call site; nghiệp vụ event ngoài phạm vi
+  /// CALLED FROM: Event management providers / EventRepositoryImpl.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK, dart:convert.
   @override
   Future<EventModel> getEventById(String eventId, {AppUser? actor}) async {
     try {
@@ -297,6 +304,13 @@ class EventRepositoryImpl implements EventRepository {
     return upcoming.where((event) => event.id != eventId).take(limit).toList();
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Xác minh manager và giới hạn organizer theo UID; admin dùng nhánh quản lý rộng hơn.
+  /// ROLE: Authorization call site; nghiệp vụ event ngoài phạm vi
+  /// CALLED FROM: Event management providers / EventRepositoryImpl.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK, dart:convert.
   @override
   Future<List<EventModel>> getManagedEvents({required AppUser actor}) =>
       _request(() async {
@@ -315,6 +329,13 @@ class EventRepositoryImpl implements EventRepository {
         return snapshot.docs.map(EventModel.fromFirestore).toList();
       });
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Xác minh manager trước query dashboard owner-scoped cho cả organizer và admin.
+  /// ROLE: Authorization call site; nghiệp vụ event ngoài phạm vi
+  /// CALLED FROM: Event management providers / EventRepositoryImpl.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK, dart:convert.
   @override
   Future<OrganizerDashboardSummary> getOrganizerDashboard({
     required AppUser actor,
@@ -350,6 +371,13 @@ class EventRepositoryImpl implements EventRepository {
     return summary.finish();
   });
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Gọi verified actor, manager và owner/admin trước khi xác nhận hoặc tiếp tục thao tác tạo event.
+  /// ROLE: Authorization call site; nghiệp vụ event ngoài phạm vi
+  /// CALLED FROM: Event management providers / EventRepositoryImpl.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK, dart:convert.
   @override
   Future<EventModel> createEvent({
     required EventFormInput input,
@@ -457,6 +485,13 @@ class EventRepositoryImpl implements EventRepository {
         return event;
       });
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Xác minh actor/manager trước cập nhật và kiểm tra owner/admin khi tải event.
+  /// ROLE: Authorization call site; nghiệp vụ event ngoài phạm vi
+  /// CALLED FROM: Event management providers / EventRepositoryImpl.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK, dart:convert.
   @override
   Future<EventModel> updateEvent({
     required String eventId,
@@ -502,6 +537,13 @@ class EventRepositoryImpl implements EventRepository {
         return event;
       });
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm tra owner/admin trên event được đọc trong transaction trước update.
+  /// ROLE: Authorization call site; nghiệp vụ event ngoài phạm vi
+  /// CALLED FROM: Event management providers / EventRepositoryImpl.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK, dart:convert.
   Future<EventModel> _commitUpdate(
     String eventId,
     EventFormInput input,
@@ -578,6 +620,13 @@ class EventRepositoryImpl implements EventRepository {
       event.startAt.isAtSameMomentAs(input.startAt) &&
       event.endAt.isAtSameMomentAs(input.endAt);
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm tra owner/admin trước upload và tái kiểm tra trong _commitUpdate.
+  /// ROLE: Authorization call site; nghiệp vụ event ngoài phạm vi
+  /// CALLED FROM: Event management providers / EventRepositoryImpl.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK, dart:convert.
   Future<EventModel> _savePoster(
     EventModel event,
     EventFormInput input,
@@ -673,6 +722,13 @@ class EventRepositoryImpl implements EventRepository {
     }
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Xác minh actor/manager trước khi chuyển tới transaction hủy event.
+  /// ROLE: Authorization call site; nghiệp vụ event ngoài phạm vi
+  /// CALLED FROM: Event management providers / EventRepositoryImpl.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK, dart:convert.
   @override
   Future<EventModel> cancelEvent({
     required String eventId,
@@ -699,6 +755,13 @@ class EventRepositoryImpl implements EventRepository {
     return attempt;
   });
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm tra owner/admin trên snapshot transaction trước khi đổi trạng thái event.
+  /// ROLE: Authorization call site; nghiệp vụ event ngoài phạm vi
+  /// CALLED FROM: Event management providers / EventRepositoryImpl.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK, dart:convert.
   Future<EventModel> _cancelEvent(
     DocumentReference<Map<String, dynamic>> ref,
     AppUser actor,
