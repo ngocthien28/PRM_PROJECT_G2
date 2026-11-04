@@ -1328,4 +1328,35 @@ Không có SharedPreferences, Bloc hoặc Provider package trong luồng này. l
 <a id="e-xac-minh"></a>
 ## E. Xác minh
 
-Giai đoạn 2: đã hoàn tất A–D sau các commit chú thích. Kết quả xác minh cuối, đối chiếu diff và kiểm thử sẽ được cập nhật tại đây trong giai đoạn 3.
+Đối chiếu ngày 2026-11-04, Windows/PowerShell, Flutter **3.47.3**, Dart **3.13.3**. Mốc bắt đầu nhiệm vụ là `70576ea1d1604c1b65b003cd9724cb3a3cd68bc4`; các merge và commit có trước mốc này không thuộc thay đổi chú thích/báo cáo.
+
+| Kiểm tra | Kết quả thực tế |
+|---|---|
+| `dart format` trên từng nhóm file đã sửa | Đã chạy. Chỉ giữ các khối DartDoc sau formatter, khôi phục toàn bộ dòng code/whitespace gốc để tuân thủ yêu cầu chỉ thêm comment. |
+| `dart format --output=none` trên 72 file đã sửa | Parse thành công cả 72 file; formatter đề xuất định dạng lại 36 file. Đây **không phải** kết quả formatter-clean. Đề xuất gồm khoảng trắng ngăn cách DartDoc và định dạng code có sẵn; không áp dụng thay đổi ngoài comment. |
+| `flutter analyze --no-pub` | **No issues found**, exit code 0. |
+| `flutter test --no-pub --reporter expanded` | **636 passed, 1 skipped, 0 failed**, exit code 0, khoảng 50 giây. Chạy toàn bộ Flutter test suite, bao gồm Auth/Profile và module integration. |
+| Test skipped | Smoke test Cloudinary live có sẵn trong `test/organizer/cloudinary_event_poster_live_test.dart`, chỉ chạy khi bật `RUN_CLOUDINARY_POSTER_SMOKE`; không bật trong lần xác minh này. Không sửa hoặc chú thích tính năng ngoài phạm vi đó. |
+| So sánh Dart với mốc bắt đầu | **72 file Dart hiện có**, **2.100 dòng DartDoc được thêm**, không dòng Dart bị xóa/sửa, không sửa import hoặc business logic trong commit. |
+| Kiểm tra nội dung ngoài comment | Loại đúng 300 khối DartDoc mới rồi so với bản working copy ban đầu: token code không đổi. Diff Git của Dart chỉ chứa dòng thêm `///`. |
+| Kiểm tra báo cáo | **857 source links** được đối chiếu với dòng workspace và dòng Git; đủ **15 UC anchors** theo thứ tự UC-001 đến UC-015, đủ 72 file ở bảng ngược D. File counts trong B và C được tính từ cùng tập đường dẫn duy nhất cho từng UC. |
+| `git diff --check` | Không có lỗi whitespace trong thay đổi cần commit. |
+| Phạm vi file tạo mới | Chỉ **`docs/flutter_feature_mapping.md`**. Không tạo test/helper/report phụ, không xuất kết quả formatter/analyzer/test ra file. Script và metadata tạm đặt ngoài repository và được xóa trước khi kết thúc. |
+
+Lần phân tích đầu khi thêm comment có 15 thông báo `unintended_html_in_doc_comment` do kiểu generic trong mô tả test fixture; đã escape dấu góc trong comment trước khi commit nhóm test. Lần kiểm tra cuối không còn thông báo. Không phát hiện lỗi logic/test mới: kết quả baseline trước nhiệm vụ cũng là analyze sạch và 636 test pass/1 skipped. Stack traces từ các test lỗi giả lập và thông báo Open-Meteo 400 trong test suite không làm test thất bại; không ghi chúng thành lỗi implementation mới.
+
+Các thay đổi có sẵn vẫn để ngoài commit: một dòng xóa trong `lib/core/routing/route_guards.dart`, cùng 10 file docs bị xóa: `authentication_iteration_1.md`, `club-performance.md`, `notifications-setup.md`, `organizer_demo.md`, `uc035_organizer_dashboard.md`, `uc039_cancel_event.md`, `uc040_cloudinary_free.md`, `uc040_update_event_poster.md`, `uc044_047_report.md`, `ui-redesign.md`. Không khôi phục hoặc commit các thay đổi đó. Đây là lý do working tree cuối vẫn có thay đổi của người dùng.
+
+Các commit theo trình tự giai đoạn:
+
+| SHA | Giai đoạn | Commit message |
+|---|---|---|
+| `65edbef` | 1 / App Shell | MinhNLD: annotate shared navigation, theme, bootstrap and error handling #UC1,2,3,7,13,15 |
+| `9206f8a` | 1 / Authentication | MinhNLD: annotate Firebase Auth, role routing and validated account forms #UC1,2,3,4,5,6,7,8,9,10,11,12,13,15 |
+| `2c4f306` | 1 / Profile | MinhNLD: annotate profile view, updates, avatar and local cache #UC2,4,8,9,10,11,12,13 |
+| `cc5ab69` | 1 / Tests & integration | MinhNLD: annotate auth-profile tests, logout and module access checks #UC1,7,8,14,15 |
+| `c536d39` | 1 / Authorization call sites | MinhNLD: annotate authorization call sites in events, registrations and drafts #UC15 |
+| `b418629` | 1 / Route helpers | MinhNLD: annotate shared route path helpers #UC1 |
+| `a301ea5` | 2 / Report A–D | MinhNLD: add Flutter feature mapping report sections A through D #UC1-15 |
+
+Mục E được commit riêng với message `MinhNLD: add verification results to feature mapping report #UC1-15`. Remote hiện tại: `origin` → `https://github.com/ngocthien28/PRM_PROJECT_G2.git`, branch `main`. Push dùng `git push origin main`, không force, không đổi branch/remote. Kết quả push thực tế và SHA commit E được cung cấp trong phản hồi cuối sau khi thao tác hoàn tất; không coi nội dung kế hoạch này là bằng chứng đã push.
