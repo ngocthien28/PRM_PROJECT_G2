@@ -82,6 +82,13 @@ class RegistrationRepositoryImpl implements RegistrationRepository {
     }
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Gọi _personalAccess(studentOnly: true) trước khi đăng ký.
+  /// ROLE: Personal access call site; nghiệp vụ registration ngoài phạm vi
+  /// CALLED FROM: Registration view models.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK.
   @override
   Future<RegistrationModel> joinEvent({
     required String eventId,
@@ -150,6 +157,13 @@ class RegistrationRepositoryImpl implements RegistrationRepository {
     }
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Gọi _personalAccess(studentOnly: true) và đối chiếu reg.userId trước hủy đăng ký.
+  /// ROLE: Personal access call site; nghiệp vụ registration ngoài phạm vi
+  /// CALLED FROM: Registration view models.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK.
   @override
   Future<void> cancelRegistration({
     required String registrationId,
@@ -243,6 +257,13 @@ class RegistrationRepositoryImpl implements RegistrationRepository {
     }
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Gọi _personalAccess trước khi tải registration hoặc cache theo userId.
+  /// ROLE: Personal access call site; nghiệp vụ registration ngoài phạm vi
+  /// CALLED FROM: Registration view models.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK.
   @override
   Future<List<RegistrationModel>> getMyRegistrations(String userId) async {
     await _personalAccess(userId);
@@ -281,6 +302,13 @@ class RegistrationRepositoryImpl implements RegistrationRepository {
     }
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Gọi _personalAccess và kiểm tra userId khi đọc ticket cache.
+  /// ROLE: Personal access call site; nghiệp vụ registration ngoài phạm vi
+  /// CALLED FROM: Registration view models.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK.
   @override
   Future<RegistrationModel?> getRegistration(
     String eventId,
