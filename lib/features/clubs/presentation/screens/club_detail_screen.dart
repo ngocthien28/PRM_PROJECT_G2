@@ -75,6 +75,13 @@ class _ClubDetailScreenState extends ConsumerState<ClubDetailScreen> {
     });
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Tính quyền quản lý từ role organizer/admin và owner để chọn UI quản lý club.
+  /// ROLE: Cross-module role/access integration
+  /// CALLED FROM: ClubDetailScreen state.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider).asData?.value;
@@ -390,6 +397,13 @@ class _ClubDetailScreenState extends ConsumerState<ClubDetailScreen> {
     );
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Dựng Join/Leave cho student; Edit/Cancel cho nhánh manage đã tính từ role/owner.
+  /// ROLE: Cross-module role/access integration
+  /// CALLED FROM: ClubDetailScreen.build.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   Widget _membershipPanel(
     ClubModel club,
     AppUser? user,

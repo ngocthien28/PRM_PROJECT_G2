@@ -14,7 +14,21 @@ import 'package:mocktail/mocktail.dart';
 
 class _Auth extends Mock implements FirebaseAuth {}
 
+/// FEATURE: UC-014 - Test Authentication and Profile
+/// MODULE: Testing & Integration
+/// DESCRIPTION: Hàm void main: Register/profile/edit/logout/login, role guard và SDK errors.
+/// ROLE: Test entry point / fixture helper
+/// CALLED FROM: Các test Auth/Profile/navigation.
+/// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+/// TECHNOLOGY: Dart, flutter_test, Riverpod, Firebase Auth SDK, Cloud Firestore SDK, mocktail, fake_cloud_firestore, firebase_auth_mocks.
 void main() {
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: register, load profile, edit, sign out and sign in across module guards.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod, Firebase Auth SDK, Cloud Firestore SDK, mocktail, fake_cloud_firestore, firebase_auth_mocks.
   test(
     'register, load profile, edit, sign out and sign in across module guards',
     () async {
@@ -77,6 +91,13 @@ void main() {
     },
   );
 
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: login maps rejected credentials and preserves password whitespace.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod, Firebase Auth SDK, Cloud Firestore SDK, mocktail, fake_cloud_firestore, firebase_auth_mocks.
   test(
     'login maps rejected credentials and preserves password whitespace',
     () async {
@@ -110,6 +131,13 @@ void main() {
     },
   );
 
+  /// FEATURE: UC-014 - Test Authentication and Profile
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Kiểm thử: password reset maps network failure to a recoverable message.
+  /// ROLE: Existing test callback
+  /// CALLED FROM: flutter_test runner / main.
+  /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+  /// TECHNOLOGY: Dart, flutter_test, Riverpod, Firebase Auth SDK, Cloud Firestore SDK, mocktail, fake_cloud_firestore, firebase_auth_mocks.
   test(
     'password reset maps network failure to a recoverable message',
     () async {
