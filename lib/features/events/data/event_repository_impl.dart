@@ -735,6 +735,13 @@ class EventRepositoryImpl implements EventRepository {
     return firestore.collection(FirestoreCollections.events).doc(id);
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Đối chiếu supplied actor với resolver xác thực; thiếu resolver là nhánh isolated tests.
+  /// ROLE: Event authorization boundary
+  /// CALLED FROM: Các thao tác EventRepositoryImpl có actor.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK, dart:convert.
   Future<AppUser> _verifiedActor(AppUser supplied) async {
     final resolver = authenticatedActor;
     if (resolver == null) return supplied;
@@ -748,6 +755,13 @@ class EventRepositoryImpl implements EventRepository {
     return actual;
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Yêu cầu UID không rỗng, account active và khả năng organizer/admin trước quản lý event.
+  /// ROLE: Event authorization boundary
+  /// CALLED FROM: getManagedEvents, getOrganizerDashboard và event mutations.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK, dart:convert.
   void _requireEventManager(AppUser actor) {
     if (actor.uid.trim().isEmpty ||
         !actor.isActive ||
@@ -759,6 +773,13 @@ class EventRepositoryImpl implements EventRepository {
     }
   }
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Từ chối organizer thao tác event người khác; cho phép admin theo nhánh hiện có.
+  /// ROLE: Event authorization boundary
+  /// CALLED FROM: EventRepositoryImpl update/cancel/poster.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK, dart:convert.
   void _requireOwnerOrAdmin(EventModel event, AppUser actor) {
     if (actor.role != UserRole.admin && event.organizerId != actor.uid) {
       throw const AppException(

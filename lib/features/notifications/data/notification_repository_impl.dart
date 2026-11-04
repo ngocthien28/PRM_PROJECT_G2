@@ -46,6 +46,13 @@ class NotificationRepositoryImpl implements NotificationRepository {
     await cache.markRead(notificationId);
   }
 
+  /// FEATURE: UC-007 - Log Out
+  /// MODULE: Authentication & Authorization
+  /// DESCRIPTION: Mã hóa token thành document ID ổn định dùng xóa đăng ký lúc logout.
+  /// ROLE: Device token key helper
+  /// CALLED FROM: removeDeviceToken; saveDeviceToken cũng dùng chung.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK, dart:convert.
   static String tokenId(String token) =>
       base64Url.encode(utf8.encode(token)).replaceAll('=', '');
 
@@ -61,6 +68,13 @@ class NotificationRepositoryImpl implements NotificationRepository {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
+  /// FEATURE: UC-007 - Log Out
+  /// MODULE: Authentication & Authorization
+  /// DESCRIPTION: Xóa document device token theo UID khi unregister thiết bị lúc logout.
+  /// ROLE: Logout SDK cleanup
+  /// CALLED FROM: NotificationService.unregister hoặc token refresh.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Cloud Firestore SDK, dart:convert.
   Future<void> removeDeviceToken(String userId, String token) => db
       .collection('users')
       .doc(userId)

@@ -17,6 +17,13 @@ import '../../../auth/presentation/viewmodels/auth_view_model.dart';
 class OrganizerCreateEventScreen extends ConsumerWidget {
   const OrganizerCreateEventScreen({super.key});
 
+  /// FEATURE: UC-015 - Integrate Role-Based Access Across Modules
+  /// MODULE: Testing & Integration
+  /// DESCRIPTION: Chỉ gắn draftOrganizerId cho actor active có canOrganize; repository còn kiểm tra quyền tạo event.
+  /// ROLE: Cross-module role/access integration
+  /// CALLED FROM: Route organizerCreateEvent.
+  /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final actor = ref.watch(currentUserProvider).asData?.value;

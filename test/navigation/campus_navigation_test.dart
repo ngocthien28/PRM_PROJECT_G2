@@ -11,8 +11,22 @@ import 'package:campushub/features/auth/presentation/viewmodels/auth_view_model.
 import 'package:campushub/shared/enums/user_role.dart';
 import '../auth/auth_fakes.dart';
 
+/// FEATURE: UC-014 - Test Authentication and Profile
+/// MODULE: Testing & Integration
+/// DESCRIPTION: Hàm void main: Root/back theo role và hộp thoại logout.
+/// ROLE: Test entry point / fixture helper
+/// CALLED FROM: Các test Auth/Profile/navigation.
+/// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+/// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod, go_router.
 void main() {
   for (final role in ['student', 'admin']) {
+    /// FEATURE: UC-014 - Test Authentication and Profile
+    /// MODULE: Testing & Integration
+    /// DESCRIPTION: Kiểm thử: $role Back from clubs and inbox skips navigation history.
+    /// ROLE: Existing test callback
+    /// CALLED FROM: flutter_test runner / main.
+    /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+    /// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod, go_router.
     testWidgets('$role Back from clubs and inbox skips navigation history', (tester) async {
       final root = role == 'admin' ? '/admin' : '/home';
       final router = GoRouter(initialLocation: root, routes: [
@@ -38,6 +52,13 @@ void main() {
         expect(router.canPop(), isFalse);
       }
     });
+    /// FEATURE: UC-014 - Test Authentication and Profile
+    /// MODULE: Testing & Integration
+    /// DESCRIPTION: Kiểm thử: $role can return to root after opening clubs and inbox.
+    /// ROLE: Existing test callback
+    /// CALLED FROM: flutter_test runner / main.
+    /// RELATED FILES: lib/features/auth/presentation/viewmodels/auth_view_model.dart; lib/features/profile/presentation/viewmodels/profile_view_model.dart.
+    /// TECHNOLOGY: Dart, Flutter Material, flutter_test, Riverpod, go_router.
     testWidgets('$role can return to root after opening clubs and inbox', (
       tester,
     ) async {
