@@ -31,9 +31,23 @@ import 'route_guards.dart';
 import 'route_names.dart';
 
 class _RouterRefresh extends ChangeNotifier {
+  /// FEATURE: UC-001, UC-003
+  /// MODULE: Authentication & Authorization
+  /// DESCRIPTION: Thông báo GoRouter đánh giá lại redirect sau thay đổi auth, profile hoặc action.
+  /// ROLE: Reactive route refresh
+  /// CALLED FROM: ref.listen trong appRouterProvider.
+  /// RELATED FILES: lib/app.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+  /// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
   void refresh() => notifyListeners();
 }
 
+/// FEATURE: UC-001, UC-003, UC-015
+/// MODULE: Authentication & Authorization
+/// DESCRIPTION: Đăng ký route các module với sessionRedirect; lắng nghe phiên để thu hồi quyền khi profile đổi.
+/// ROLE: go_router graph / access integration
+/// CALLED FROM: CampusHubApp.build.
+/// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
+/// TECHNOLOGY: Dart, Flutter Material, Riverpod, go_router.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final refresh = _RouterRefresh();
   ref.listen(authStateProvider, (_, _) => refresh.refresh());
