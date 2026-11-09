@@ -1,5 +1,6 @@
 import 'package:campushub/features/organizer_events/data/models/event_form_input.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:campushub/shared/enums/event_status.dart';
 
 void main() {
   final startAt = DateTime(2030, 1, 1, 9);
@@ -32,6 +33,28 @@ void main() {
     expect(input.validate(), isEmpty);
     expect(input.isValid, isTrue);
   });
+
+  test(
+    'status selection supports draft and published with full validation',
+    () {
+      final draft = validInput().copyWith(status: EventStatus.draft);
+      expect(draft.status, EventStatus.draft);
+      expect(draft.validate(), isEmpty);
+      expect(draft.copyWith(title: 'Changed').status, EventStatus.draft);
+      expect(
+        draft.copyWith(status: EventStatus.published).status,
+        EventStatus.published,
+      );
+      expect(
+        draft.copyWith(description: '').validate(),
+        contains('description'),
+      );
+      expect(draft.copyWith(capacity: 0).validate(), contains('capacity'));
+      for (final status in [EventStatus.cancelled, EventStatus.finished]) {
+        expect(draft.copyWith(status: status).validate(), contains('status'));
+      }
+    },
+  );
 
   test('rejects an empty title', () {
     final errors = validInput(title: '').validate();

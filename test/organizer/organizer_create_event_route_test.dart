@@ -113,6 +113,81 @@ void main() {
     expect(find.byKey(const Key('titleField')), findsOneWidget);
   });
 
+  testWidgets(
+    'selected Draft persists, edit retains Draft, then Published exposes same event',
+    (tester) async {
+      restoreActiveUser(UserRole.organizer);
+      await mount(tester);
+      final router = container.read(appRouterProvider);
+      router.go(RouteNames.organizerCreateEvent);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('titleField')),
+        'Server draft workshop',
+      );
+      await tester.enterText(
+        find.byKey(const Key('descriptionField')),
+        'A complete server draft that can later be published.',
+      );
+      await tester.ensureVisible(find.byKey(const Key('categoryField')));
+      await tester.tap(find.byKey(const Key('categoryField')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Technology').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('locationField')), 'Hall A');
+      await tester.enterText(find.byKey(const Key('capacityField')), '40');
+      final status = find.byKey(const Key('eventStatusField'));
+      await tester.ensureVisible(status);
+      await tester.tap(status);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Draft').last);
+      await tester.pumpAndSettle();
+      final submit = find.byKey(const Key('submitEventFormButton'));
+      await tester.ensureVisible(submit);
+      await tester.tap(submit);
+      await tester.pumpAndSettle();
+      final created = (await db.collection('events').get()).docs.single;
+      expect(created.data()['status'], 'draft');
+      expect(await repository.getUpcomingEvents(), isEmpty);
+      expect(currentPath(), RouteNames.organizerManagedEvents);
+
+      router.go(RouteNames.organizerEditEvent(created.id));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<DropdownButtonFormField<EventStatus>>(status)
+            .initialValue,
+        EventStatus.draft,
+      );
+      await tester.enterText(
+        find.byKey(const Key('titleField')),
+        'Updated draft workshop',
+      );
+      await tester.ensureVisible(submit);
+      await tester.tap(submit);
+      await tester.pumpAndSettle();
+      expect((await created.reference.get()).data()!['status'], 'draft');
+      expect(
+        (await created.reference.get()).data()!['title'],
+        'Updated draft workshop',
+      );
+
+      router.go(RouteNames.organizerEditEvent(created.id));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(status);
+      await tester.tap(status);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Published').last);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(submit);
+      await tester.tap(submit);
+      await tester.pumpAndSettle();
+      expect((await created.reference.get()).data()!['status'], 'published');
+      expect((await repository.getUpcomingEvents()).single.id, created.id);
+      expect((await db.collection('events').get()).docs, hasLength(1));
+    },
+  );
+
   testWidgets('poster selection is isolated when switching event forms', (
     tester,
   ) async {

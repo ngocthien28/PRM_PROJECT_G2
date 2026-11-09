@@ -5,6 +5,7 @@ import 'package:campushub/features/organizer_events/presentation/screens/event_f
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:campushub/shared/enums/event_status.dart';
 
 void main() {
   EventFormInput input({
@@ -52,6 +53,94 @@ void main() {
     await t.pump();
     await t.tap(submitButton);
   }
+
+  Future<void> selectStatus(WidgetTester t, String label) async {
+    final status = find.byKey(const Key('eventStatusField'));
+    await t.ensureVisible(status);
+    await t.tap(status);
+    await t.pumpAndSettle();
+    await t.tap(find.text(label).last);
+    await t.pumpAndSettle();
+  }
+
+  testWidgets('create selects Draft and submits the complete form as a draft', (
+    t,
+  ) async {
+    EventFormInput? submitted;
+    await t.pumpWidget(form(submit: (value) async => submitted = value));
+    final field = t.widget<DropdownButtonFormField<EventStatus>>(
+      find.byKey(const Key('eventStatusField')),
+    );
+    expect(field.initialValue, EventStatus.published);
+    await selectStatus(t, 'Draft');
+    await fill(t);
+    await tapSubmit(t);
+    await t.pumpAndSettle();
+    expect(submitted?.status, EventStatus.draft);
+    expect(submitted?.title, 'Flutter Workshop');
+  });
+
+  testWidgets('Draft selection still requires all event details', (t) async {
+    var calls = 0;
+    await t.pumpWidget(form(submit: (_) async => calls++));
+    await t.enterText(find.byKey(const Key('titleField')), 'Draft workshop');
+    await selectStatus(t, 'Draft');
+    await tapSubmit(t);
+    await t.pumpAndSettle();
+    expect(calls, 0);
+    expect(find.text('Description is required.'), findsOneWidget);
+    expect(find.text('Location is required.'), findsOneWidget);
+  });
+
+  testWidgets('edit preselects Draft and saves the Published selection', (
+    t,
+  ) async {
+    EventFormInput? submitted;
+    await t.pumpWidget(
+      form(
+        initial: input().copyWith(status: EventStatus.draft),
+        submit: (value) async => submitted = value,
+      ),
+    );
+    expect(
+      t
+          .widget<DropdownButtonFormField<EventStatus>>(
+            find.byKey(const Key('eventStatusField')),
+          )
+          .initialValue,
+      EventStatus.draft,
+    );
+    await selectStatus(t, 'Published');
+    await tapSubmit(t);
+    await t.pumpAndSettle();
+    expect(submitted?.status, EventStatus.published);
+  });
+
+  testWidgets(
+    'participant event status is locked while detail edits remain available',
+    (t) async {
+      await t.pumpWidget(
+        form(
+          initial: input().copyWith(
+            status: EventStatus.published,
+            currentRegisteredCount: 1,
+          ),
+        ),
+      );
+      expect(
+        t
+            .widget<DropdownButtonFormField<EventStatus>>(
+              find.byKey(const Key('eventStatusField')),
+            )
+            .onChanged,
+        isNull,
+      );
+      expect(
+        find.text('Status cannot change after participants have registered.'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets(
     'create mode renders under ProviderScope with all required fields',

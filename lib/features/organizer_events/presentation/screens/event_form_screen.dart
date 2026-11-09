@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/constants/event_categories.dart';
+import '../../../../shared/enums/event_status.dart';
 import '../../data/models/event_form_input.dart';
 import '../viewmodels/event_form_view_model.dart';
 import '../viewmodels/event_poster_view_model.dart';
@@ -43,6 +44,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen>
   late final TextEditingController _title;
   late final TextEditingController _description;
   late String? _category;
+  late EventStatus _status;
   late final TextEditingController _location;
   late final TextEditingController _capacity;
   late DateTime _startAt;
@@ -64,6 +66,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen>
     _category = EventCategories.labels.containsKey(value?.category)
         ? value?.category
         : null;
+    _status = value?.status ?? EventStatus.published;
     _location = TextEditingController(text: value?.locationName ?? '');
     _capacity = TextEditingController(text: value?.capacity.toString() ?? '');
     _startAt = value?.startAt.toLocal() ?? now.add(const Duration(hours: 1));
@@ -103,6 +106,9 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen>
       _category = EventCategories.labels.containsKey(fields['category'])
           ? fields['category'] as String
           : null;
+      _status = fields['status'] == 'draft'
+          ? EventStatus.draft
+          : EventStatus.published;
       _startAt = DateTime.parse(fields['startAt'] as String).toLocal();
       _endAt = DateTime.parse(fields['endAt'] as String).toLocal();
       _posterNeedsReselect = fields['posterSelected'] == true;
@@ -118,6 +124,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen>
       'category': _category ?? '',
       'locationName': _location.text,
       'capacity': _capacity.text,
+      'status': _status.name,
       'startAt': _startAt.toUtc().toIso8601String(),
       'endAt': _endAt.toUtc().toIso8601String(),
       'posterSelected':
@@ -158,6 +165,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen>
         _location.clear();
         _capacity.clear();
         _category = null;
+        _status = EventStatus.published;
         _posterNeedsReselect = false;
         _startAt = DateTime.now().add(const Duration(hours: 1));
         _endAt = _startAt.add(const Duration(hours: 1));
@@ -197,6 +205,9 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen>
     posterSelection: ref.read(eventPosterViewModelProvider).selection,
     createRequestId: _createRequestId,
     currentRegisteredCount: widget.initialValue?.currentRegisteredCount,
+    status: _status == EventStatus.draft || _status == EventStatus.published
+        ? _status
+        : null,
   );
 
   Future<void> _selectDateTime(bool isStart) async {
@@ -259,7 +270,10 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen>
           .submit(
             _input,
             onSubmit,
-            requireFutureStart: !_isEditMode,
+            requireFutureStart:
+                _status == EventStatus.published &&
+                (!_isEditMode ||
+                    widget.initialValue?.status == EventStatus.draft),
             currentRegisteredCount: widget.initialValue?.currentRegisteredCount,
           );
       if (saved) {
@@ -463,6 +477,10 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen>
                                   submissionState.validationErrors['category'],
                                   isSubmitting,
                                 ),
+                                _statusField(
+                                  submissionState.validationErrors['status'],
+                                  isSubmitting || _completed,
+                                ),
                                 _textField(
                                   'locationField',
                                   _location,
@@ -587,6 +605,57 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen>
         hintText: hint,
         errorText: error,
         border: const OutlineInputBorder(),
+      ),
+    );
+  }
+
+  Widget _statusField(String? error, bool isSubmitting) {
+    final hasParticipants =
+        (widget.initialValue?.currentRegisteredCount ?? 0) > 0;
+    final editable =
+        _status == EventStatus.draft || _status == EventStatus.published;
+    return KeyedSubtree(
+      key: ValueKey('event-status-$_status'),
+      child: DropdownButtonFormField<EventStatus>(
+        key: const Key('eventStatusField'),
+        initialValue: _status,
+        isExpanded: true,
+        decoration: InputDecoration(
+          labelText: 'Status',
+          errorText: error,
+          helperText: hasParticipants
+              ? 'Status cannot change after participants have registered.'
+              : _status == EventStatus.draft
+              ? 'Only you and admins can see this draft.'
+              : null,
+          helperMaxLines: 3,
+          border: const OutlineInputBorder(),
+        ),
+        items: [
+          const DropdownMenuItem(
+            value: EventStatus.draft,
+            child: Text('Draft'),
+          ),
+          const DropdownMenuItem(
+            value: EventStatus.published,
+            child: Text('Published'),
+          ),
+          if (!editable)
+            DropdownMenuItem(
+              value: _status,
+              enabled: false,
+              child: Text(
+                _status == EventStatus.finished ? 'Finished' : 'Cancelled',
+              ),
+            ),
+        ],
+        onChanged: isSubmitting || hasParticipants || !editable
+            ? null
+            : (value) {
+                if (value == null) return;
+                setState(() => _status = value);
+                _clearFieldError('status');
+              },
       ),
     );
   }

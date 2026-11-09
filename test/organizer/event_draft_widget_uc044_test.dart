@@ -4,6 +4,7 @@ import 'package:campushub/features/organizer_events/presentation/viewmodels/even
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:campushub/shared/enums/event_status.dart';
 import 'draft_fakes.dart';
 
 void main() {
@@ -43,6 +44,40 @@ void main() {
     await tester.tap(button);
     await tester.pumpAndSettle();
   }
+
+  testWidgets('local draft restores and retains the selected server status', (
+    tester,
+  ) async {
+    final old = repository.value!;
+    repository.value = EventDraft(
+      id: old.id,
+      organizerId: old.organizerId,
+      fields: {...old.fields, 'status': 'draft'},
+      createdAt: old.createdAt,
+      updatedAt: old.updatedAt,
+    );
+    await tester.pumpWidget(form());
+    await tester.pumpAndSettle();
+    final field = find.byKey(const Key('eventStatusField'));
+    expect(
+      tester.widget<DropdownButtonFormField<EventStatus>>(field).initialValue,
+      EventStatus.draft,
+    );
+    await tester.ensureVisible(field);
+    await tester.tap(field);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Published').last);
+    await tester.pumpAndSettle(const Duration(milliseconds: 800));
+    expect(repository.value!.fields['status'], 'published');
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(form());
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<DropdownButtonFormField<EventStatus>>(field).initialValue,
+      EventStatus.published,
+    );
+  });
 
   testWidgets(
     'restore prefills fields and does not submit; raw invalid capacity is retained',

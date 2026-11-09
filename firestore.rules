@@ -144,6 +144,17 @@ service cloud.firestore {
         && afterEvent.lastCheckInRegistrationId == registrationId
         && afterEvent.updatedAt == request.time;
     }
+    function validEventStatusChange(beforeEvent, afterEvent) {
+      return (beforeEvent.status != 'cancelled'
+          && afterEvent.status == beforeEvent.status)
+        || (beforeEvent.status in ['draft', 'published']
+          && afterEvent.status in ['draft', 'published']
+          && beforeEvent.registeredCount == 0
+          && beforeEvent.checkedInCount == 0
+          && (afterEvent.status == 'draft' || afterEvent.startAt > request.time))
+        || (afterEvent.status == 'cancelled'
+          && afterEvent.diff(beforeEvent).affectedKeys().hasOnly(['status', 'updatedAt']));
+    }
     match /events/{eventId} {
       // Discovery queries must include status == published.
       allow read: if activeUser() && (
@@ -153,13 +164,16 @@ service cloud.firestore {
         ))
       );
       // Registered students may still read the event for cancellation/history.
+      // Drafts stay private even after a past registration was cancelled.
       // This is get-only; it does not broaden discovery list queries.
       allow get: if activeUser()
+        && resource.data.status != 'draft'
         && exists(/databases/$(database)/documents/registrations/$(eventId + '_' + request.auth.uid));
       allow create: if isEventManager()
         && request.resource.data.organizerId == request.auth.uid
-        && request.resource.data.status == 'published'
-        && request.resource.data.startAt > request.time
+        && request.resource.data.status in ['draft', 'published']
+        && (request.resource.data.status == 'draft'
+          || request.resource.data.startAt > request.time)
         && request.resource.data.registeredCount == 0
         && request.resource.data.checkedInCount == 0
         && request.resource.data.posterUrl == null
@@ -184,13 +198,7 @@ service cloud.firestore {
           'title', 'titleLower', 'description', 'category', 'locationName',
           'startAt', 'endAt', 'capacity', 'status', 'updatedAt', 'posterUrl'
         ])
-        && (
-          (resource.data.status != 'cancelled'
-            && request.resource.data.status == resource.data.status)
-          || (request.resource.data.status == 'cancelled'
-            && request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['status', 'updatedAt']))
-        );
+        && validEventStatusChange(resource.data, request.resource.data);
       allow update: if isStudent()
         && (joinedAtomically(eventId, resource.data, request.resource.data)
           || cancelledAtomically(eventId, resource.data, request.resource.data));
