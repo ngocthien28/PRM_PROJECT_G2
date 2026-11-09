@@ -56,18 +56,14 @@ class _ReportContentButtonState extends ConsumerState<ReportContentButton> {
     setState(() => _submitting = true);
     try {
       final title = '${draft.reason.label}: ${widget.targetLabel}';
-      await ref
-          .read(moderationRepositoryProvider)
-          .submitReport(
-            targetType: widget.targetType,
-            targetId: widget.targetId,
-            title: title.length <= 120
-                ? title
-                : '${title.substring(0, 117)}...',
-            description: draft.description,
-            reporterId: user.uid,
-            reporterName: user.displayName,
-          );
+      await ref.read(submitContentReportActionProvider)(
+        targetType: widget.targetType,
+        targetId: widget.targetId,
+        title: title,
+        description: draft.description,
+        reporterId: user.uid,
+        reporterName: user.displayName,
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
