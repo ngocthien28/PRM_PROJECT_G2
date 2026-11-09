@@ -6,6 +6,7 @@ import '../../data/notification_repository_impl.dart';
 import '../../domain/usecases/view_notifications.dart';
 import '../../domain/usecases/mark_notification_as_read.dart';
 import '../../domain/usecases/view_notification_details.dart';
+import '../../domain/usecases/open_related_content.dart';
 import '../../../../local/dao/notification_cache_dao.dart';
 
 final notificationCacheProvider = Provider<NotificationCache>(
@@ -43,6 +44,10 @@ final viewNotificationDetailsActionProvider =
       );
       return useCase.call;
     });
+
+final openRelatedContentProvider = Provider<OpenRelatedContent>((ref) {
+  return const OpenRelatedContent();
+});
 
 final notificationInboxProvider =
     StreamProvider.autoDispose<List<AppNotification>>((ref) {
