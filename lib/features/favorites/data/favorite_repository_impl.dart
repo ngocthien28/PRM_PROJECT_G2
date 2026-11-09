@@ -1,3 +1,5 @@
+// Author: ThaiQHCE181542 - Quách Hoàng Thái
+// UC-086: Local Data & Responsive - Clear All Favorites (Firestore batch & SQLite sync)
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../local/dao/favorite_local_dao.dart';
 import '../../events/data/models/event_model.dart';
