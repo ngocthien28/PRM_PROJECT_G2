@@ -50,7 +50,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     if (!item.isRead) {
       setState(() => _saving.add(item.id));
       try {
-        await ref.read(markNotificationAsReadActionProvider)(item.id);
+        await ref.read(viewNotificationDetailsActionProvider)(item);
       } catch (_) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
