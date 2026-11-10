@@ -190,13 +190,9 @@ class _ClubListScreenState extends ConsumerState<ClubListScreen> {
               ),
             ),
             data: (clubs) {
-              final visible = clubs
-                  .where(
-                    (c) =>
-                        c.name.toLowerCase().contains(_query) ||
-                        c.description.toLowerCase().contains(_query),
-                  )
-                  .toList();
+              final visible = List<ClubModel>.from(
+                ref.watch(searchClubsProvider)(clubs: clubs, query: _query),
+              );
               if (_popular) {
                 visible.sort((a, b) => b.memberCount.compareTo(a.memberCount));
               }

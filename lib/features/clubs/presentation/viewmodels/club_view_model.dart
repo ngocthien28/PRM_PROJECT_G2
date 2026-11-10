@@ -4,6 +4,7 @@ import '../../data/models/club_membership.dart';
 import '../../data/models/club_model.dart';
 import '../../domain/usecases/view_club_details.dart';
 import '../../domain/usecases/view_club_list.dart';
+import '../../domain/usecases/search_clubs.dart';
 
 typedef ViewClubListAction = Stream<List<ClubModel>> Function();
 
@@ -32,3 +33,7 @@ final clubMembershipProvider = StreamProvider.autoDispose
           .watch(clubRepositoryProvider)
           .watchMembership(key.clubId, key.userId),
     );
+
+final searchClubsProvider = Provider<SearchClubs>(
+  (ref) => const SearchClubs(),
+);
