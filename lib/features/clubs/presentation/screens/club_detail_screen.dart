@@ -12,8 +12,21 @@ import '../../../admin/presentation/widgets/report_content_button.dart';
 import '../../../notifications/presentation/viewmodels/notification_view_model.dart';
 import '../../data/models/club_membership.dart';
 import '../../data/models/club_model.dart';
+import '../../domain/usecases/deactivate_club.dart';
+import '../../domain/usecases/join_club.dart';
+import '../../domain/usecases/leave_club.dart';
 import '../viewmodels/club_view_model.dart';
 import 'club_list_screen.dart';
+
+typedef LeaveClubAction = Future<void> Function({
+  required String clubId,
+  required AppUser actor,
+});
+
+final leaveClubActionProvider = Provider<LeaveClubAction>((ref) {
+  final useCase = LeaveClub(ref.watch(firestoreProvider));
+  return useCase.call;
+});
 
 class ClubDetailScreen extends ConsumerStatefulWidget {
   const ClubDetailScreen({super.key, required this.clubId});
@@ -67,9 +80,9 @@ class _ClubDetailScreenState extends ConsumerState<ClubDetailScreen> {
     );
     if (confirmed != true || !mounted) return;
     await _action(() async {
-      await ref
-          .read(clubRepositoryProvider)
-          .cancelClub(clubId: club.id, actor: user);
+      await DeactivateClub(
+        ref.read(firestoreProvider),
+      )(clubId: club.id, actor: user);
       if (!mounted) return;
       context.go(RouteNames.clubs);
     });
@@ -485,11 +498,15 @@ class _ClubDetailScreenState extends ConsumerState<ClubDetailScreen> {
                   onPressed: _busy || !club.isActive
                       ? null
                       : () => _action(() async {
-                          final repo = ref.read(clubRepositoryProvider);
                           if (value?.isActive == true) {
-                            await repo.leaveClub(clubId: club.id, actor: user!);
+                            await ref.read(leaveClubActionProvider)(
+                              clubId: club.id,
+                              actor: user!,
+                            );
                           } else {
-                            await repo.joinClub(clubId: club.id, actor: user!);
+                            await JoinClub(
+                              ref.read(firestoreProvider),
+                            )(clubId: club.id, actor: user!);
                           }
                           if (!mounted) return;
                           // The existing Firestore listeners deliver the committed

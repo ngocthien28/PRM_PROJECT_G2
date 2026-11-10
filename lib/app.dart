@@ -34,6 +34,7 @@ String firebaseInitializationMessage(Object error) {
 
 class CampusHubApp extends ConsumerWidget {
   const CampusHubApp({super.key});
+
   /// FEATURE: UC-001, UC-002, UC-013
   /// MODULE: App Shell
   /// DESCRIPTION: Chờ Firebase; dựng MaterialApp.router với theme chung hoặc loading/lỗi và nút Retry.

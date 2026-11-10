@@ -156,7 +156,11 @@ class FakeEvents implements EventRepository {
     createRequests++;
     await _mutationGate();
     _requireManager(actor);
-    final errors = input.validate(requireFutureStart: true, now: now());
+    final errors = input.validate(
+      requireFutureStart:
+          (input.status ?? EventStatus.published) == EventStatus.published,
+      now: now(),
+    );
     if (errors.isNotEmpty) {
       throw AppException(errors.values.first, code: 'invalid-event-input');
     }
@@ -173,7 +177,7 @@ class FakeEvents implements EventRepository {
       capacity: input.capacity,
       registeredCount: 0,
       checkedInCount: 0,
-      status: EventStatus.published,
+      status: input.status ?? EventStatus.published,
       createdAt: timestamp,
       updatedAt: timestamp,
     );
@@ -209,6 +213,10 @@ class FakeEvents implements EventRepository {
     }
     final errors = input.validate(
       currentRegisteredCount: existing.registeredCount,
+      requireFutureStart:
+          existing.status == EventStatus.draft &&
+          input.status == EventStatus.published,
+      now: now(),
     );
     if (errors.isNotEmpty) {
       throw AppException(errors.values.first, code: 'invalid-event-input');
@@ -222,6 +230,7 @@ class FakeEvents implements EventRepository {
       startAt: input.startAt.toUtc(),
       endAt: input.endAt.toUtc(),
       capacity: input.capacity,
+      status: input.status,
     );
     _replace(updated);
     mutations++;

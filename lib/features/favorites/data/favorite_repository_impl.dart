@@ -1,3 +1,5 @@
+// Author: ThaiQHCE181542 - Quách Hoàng Thái
+// UC-086: Local Data & Responsive - Clear All Favorites (Firestore batch & SQLite sync)
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../local/dao/favorite_local_dao.dart';
 import '../../events/data/models/event_model.dart';
@@ -99,15 +101,30 @@ class FavoriteRepositoryImpl implements FavoriteRepository {
         i,
         i + 10 > eventIds.length ? eventIds.length : i + 10,
       );
-      final eventsSnap = await firestore
-          .collection('events')
-          .where(FieldPath.documentId, whereIn: chunk)
-          .get();
-      for (final doc in eventsSnap.docs) {
-        try {
-          results.add(EventModel.fromFirestore(doc));
-        } catch (_) {
-          // Skip malformed events
+      try {
+        final eventsSnap = await firestore
+            .collection('events')
+            .where(FieldPath.documentId, whereIn: chunk)
+            .where('status', isEqualTo: 'published')
+            .get();
+        for (final doc in eventsSnap.docs) {
+          try {
+            results.add(EventModel.fromFirestore(doc));
+          } catch (_) {
+            // Skip malformed events
+          }
+        }
+      } catch (_) {
+        // Fallback đọc từng document nếu query whereIn bị giới hạn quyền hoặc thiếu index
+        for (final id in chunk) {
+          try {
+            final doc = await firestore.collection('events').doc(id).get();
+            if (doc.exists) {
+              results.add(EventModel.fromFirestore(doc));
+            }
+          } catch (_) {
+            // Skip inaccessible or malformed events
+          }
         }
       }
     }

@@ -400,12 +400,19 @@ class EventRepositoryImpl implements EventRepository {
             input.startAt.microsecondsSinceEpoch,
             input.endAt.microsecondsSinceEpoch,
             input.capacity,
+            (input.status ?? EventStatus.published).name,
           ]);
           final key = input.createRequestId == null
               ? detailsKey
               : jsonEncode([actor.uid, input.createRequestId]);
           final existing = _createAttempts[key];
-          _requireValidInput(input, requireFutureStart: existing == null);
+          _requireValidInput(
+            input,
+            requireFutureStart:
+                existing == null &&
+                (input.status ?? EventStatus.published) ==
+                    EventStatus.published,
+          );
           if (input.posterSelection != null) {
             await EventPosterValidator.validate(input.posterSelection!);
             _requirePosterService();
@@ -579,6 +586,7 @@ class EventRepositoryImpl implements EventRepository {
           code: 'event-cancelled',
         );
       }
+      _requireStatusTransition(existing, input);
       if (input.capacity < existing.registeredCount) {
         throw AppException(
           'Capacity must be at least ${existing.registeredCount}, the current number of registered participants.',
@@ -611,12 +619,34 @@ class EventRepositoryImpl implements EventRepository {
         code: 'poster-unavailable',
       ));
 
+  void _requireStatusTransition(EventModel event, EventFormInput input) {
+    final target = input.status ?? event.status;
+    if (target == event.status) return;
+    if (!{EventStatus.draft, EventStatus.published}.contains(event.status) ||
+        !{EventStatus.draft, EventStatus.published}.contains(target)) {
+      throw const AppException(
+        'Only draft and published events can change publication status.',
+        code: 'event-status-transition',
+      );
+    }
+    if (event.registeredCount != 0 || event.checkedInCount != 0) {
+      throw const AppException(
+        'Publication status cannot change after participants have registered.',
+        code: 'event-status-has-participants',
+      );
+    }
+    if (target == EventStatus.published) {
+      _requireValidInput(input, requireFutureStart: true);
+    }
+  }
+
   bool _sameEditableValues(EventModel event, EventFormInput input) =>
       event.title == input.title.trim() &&
       event.description == input.description.trim() &&
       event.category == input.category.trim() &&
       event.locationName == input.locationName.trim() &&
       event.capacity == input.capacity &&
+      (input.status == null || event.status == input.status) &&
       event.startAt.isAtSameMomentAs(input.startAt) &&
       event.endAt.isAtSameMomentAs(input.endAt);
 
@@ -654,6 +684,7 @@ class EventRepositoryImpl implements EventRepository {
           code: 'event-cancelled',
         );
       }
+      _requireStatusTransition(event, input);
       if (input.capacity < event.registeredCount) {
         throw AppException(
           'Capacity must be at least ${event.registeredCount}, the current number of registered participants.',
@@ -700,6 +731,9 @@ class EventRepositoryImpl implements EventRepository {
               'event-edit-conflict',
               'event-forbidden',
               'event-cancelled',
+              'event-status-transition',
+              'event-status-has-participants',
+              'invalid-event-input',
               'event-capacity-below-registered',
               'event-not-found',
             }.contains(code)) {
@@ -877,13 +911,14 @@ class EventRepositoryImpl implements EventRepository {
     'registeredCount': 0,
     'checkedInCount': 0,
     'posterUrl': null,
-    'status': EventStatus.published.name,
+    'status': (input.status ?? EventStatus.published).name,
     'createdAt': FieldValue.serverTimestamp(),
     'updatedAt': FieldValue.serverTimestamp(),
   };
 
   Map<String, dynamic> _editableMap(EventFormInput input) => {
     ..._editableValues(input),
+    if (input.status != null) 'status': input.status!.name,
     'updatedAt': FieldValue.serverTimestamp(),
   };
 

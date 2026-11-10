@@ -19,6 +19,52 @@ const registration = (eid, uid, extra = {}) => ({eventId: eid, userId: uid, stat
 const createPayload = (owner) => event(owner, {createdAt: serverTimestamp(), updatedAt: serverTimestamp()});
 const edit = (db, patch = {}) => updateDoc(doc(db, 'events/e1'), {title: 'Edited workshop', titleLower: 'edited workshop', updatedAt: serverTimestamp(), ...patch});
 
+test('owner creates a complete draft but draft does not relax required fields', async () => {
+  await assertSucceeds(setDoc(doc(dbFor('o1'), 'events/new-draft'), {...createPayload('o1'), status: 'draft'}));
+  for (const patch of [{description: ''}, {category: ''}, {locationName: ''}, {capacity: 0}]) {
+    await assertFails(setDoc(doc(dbFor('o1'), 'events/invalid-draft'), {...createPayload('o1'), status: 'draft', ...patch}));
+  }
+  for (const uid of ['s1', 'disabled', null]) {
+    await assertFails(setDoc(doc(dbFor(uid), 'events/forbidden-draft'), {...createPayload(uid ?? 'o1'), status: 'draft'}));
+  }
+});
+
+test('owner and admin publish a draft and can unpublish an event without participants', async () => {
+  for (const uid of ['o1', 'admin']) {
+    const draft = doc(dbFor(uid), 'events/draft');
+    await assertSucceeds(updateDoc(draft, {status: 'published', updatedAt: serverTimestamp()}));
+    await assertSucceeds(getDoc(doc(dbFor('s1'), 'events/draft')));
+    await assertSucceeds(updateDoc(draft, {status: 'draft', updatedAt: serverTimestamp()}));
+    await assertFails(getDoc(doc(dbFor('s1'), 'events/draft')));
+  }
+});
+
+test('status transitions reject non-owners, participants and terminal states', async () => {
+  for (const uid of ['o2', 's1', 'disabled', null]) {
+    await assertFails(updateDoc(doc(dbFor(uid), 'events/draft'), {status: 'published', updatedAt: serverTimestamp()}));
+  }
+  await assertFails(edit(dbFor('o1'), {status: 'draft'})); // e1 has a participant
+  await assertFails(updateDoc(doc(dbFor('o1'), 'events/cancelled'), {status: 'published', updatedAt: serverTimestamp()}));
+  await assertFails(updateDoc(doc(dbFor('o1'), 'events/draft'), {status: 'finished', updatedAt: serverTimestamp()}));
+  await assertFails(updateDoc(doc(dbFor('o1'), 'events/draft'), {status: 'published', registeredCount: 1, updatedAt: serverTimestamp()}));
+});
+
+test('past drafts save but cannot be published before fixing their schedule', async () => {
+  const past = Timestamp.fromMillis(Date.now() - 60000);
+  await assertSucceeds(setDoc(doc(dbFor('o1'), 'events/past-draft'), {...createPayload('o1'), status: 'draft', startAt: past}));
+  await assertFails(updateDoc(doc(dbFor('o1'), 'events/past-draft'), {status: 'published', updatedAt: serverTimestamp()}));
+  await assertSucceeds(updateDoc(doc(dbFor('o1'), 'events/past-draft'), {status: 'published', startAt: Timestamp.fromMillis(Date.now() + 60000), updatedAt: serverTimestamp()}));
+});
+
+test('a historical registration cannot expose an event reverted to draft', async () => {
+  await env.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, 'registrations/draft_s1'), registration('draft', 's1', {status: 'cancelled', cancelledAt: Timestamp.now()}));
+  });
+  await assertFails(getDoc(doc(dbFor('s1'), 'events/draft')));
+  await assertSucceeds(getDoc(doc(dbFor('o1'), 'events/draft')));
+});
+
 before(async () => {
   if (process.env.FIRESTORE_EMULATOR_HOST !== '127.0.0.1:8087') {
     throw new Error('Run with the local Firestore Emulator at 127.0.0.1:8087. Production is forbidden.');

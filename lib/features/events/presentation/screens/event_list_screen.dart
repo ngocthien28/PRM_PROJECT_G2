@@ -82,11 +82,14 @@ class _EventListScreenState extends ConsumerState<EventListScreen> {
                   TextField(
                     key: const Key('event-search'),
                     controller: _search,
-                    onChanged: (value) => _debouncer.run(
-                      () => ref
-                          .read(eventFilterProvider.notifier)
-                          .setKeyword(value),
-                    ),
+                    onChanged: (value) {
+                      setState(() {});
+                      _debouncer.run(
+                        () => ref
+                            .read(eventFilterProvider.notifier)
+                            .setKeyword(value),
+                      );
+                    },
                     decoration: InputDecoration(
                       labelText: 'Search events',
                       hintText: 'Search by title',
@@ -99,6 +102,7 @@ class _EventListScreenState extends ConsumerState<EventListScreen> {
                               onPressed: () {
                                 _search.clear();
                                 _debouncer.cancel();
+                                setState(() {});
                                 ref
                                     .read(eventFilterProvider.notifier)
                                     .setKeyword('');
@@ -189,9 +193,9 @@ class _SortBar extends ConsumerWidget {
         children: [
           Text(
             'Sắp xếp:',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: colors.onSurfaceVariant,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(color: colors.onSurfaceVariant),
           ),
           const SizedBox(width: 8),
           ...EventSort.values.map((sort) {
@@ -203,9 +207,8 @@ class _SortBar extends ConsumerWidget {
                 label: Text(sort.label),
                 selected: selected,
                 selectedColor: colors.primaryContainer,
-                onSelected: (_) => ref
-                    .read(eventFilterProvider.notifier)
-                    .setSort(sort),
+                onSelected: (_) =>
+                    ref.read(eventFilterProvider.notifier).setSort(sort),
                 avatar: Icon(
                   switch (sort) {
                     EventSort.nearest => Icons.access_time_rounded,
@@ -213,7 +216,9 @@ class _SortBar extends ConsumerWidget {
                     EventSort.available => Icons.event_seat_outlined,
                   },
                   size: 16,
-                  color: selected ? colors.onPrimaryContainer : colors.onSurfaceVariant,
+                  color: selected
+                      ? colors.onPrimaryContainer
+                      : colors.onSurfaceVariant,
                 ),
               ),
             );

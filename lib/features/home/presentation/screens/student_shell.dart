@@ -7,6 +7,7 @@ import 'home_screen.dart';
 class StudentShell extends ConsumerWidget {
   final String title;
   const StudentShell({super.key, this.title = 'Student'});
+
   /// FEATURE: UC-001, UC-007
   /// MODULE: App Shell
   /// DESCRIPTION: Mở HomeScreen cho student hoặc landing có thông tin phiên và nút AuthViewModel.signOut.

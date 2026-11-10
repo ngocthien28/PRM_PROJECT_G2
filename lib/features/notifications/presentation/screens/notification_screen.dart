@@ -8,6 +8,7 @@ import '../../../../shared/widgets/campus_scaffold.dart';
 import '../../../auth/presentation/viewmodels/auth_view_model.dart';
 import '../../data/models/app_notification.dart';
 import '../viewmodels/notification_view_model.dart';
+import '../../domain/usecases/open_related_content.dart';
 
 class NotificationScreen extends ConsumerStatefulWidget {
   const NotificationScreen({super.key});
@@ -15,31 +16,11 @@ class NotificationScreen extends ConsumerStatefulWidget {
   ConsumerState<NotificationScreen> createState() => _NotificationScreenState();
 }
 
-String? notificationDeepLink(AppNotification item) {
-  final referenceId = item.referenceId?.trim();
-  if (referenceId == null || referenceId.isEmpty) return null;
-  return switch (item.type) {
-    'club' || 'club_membership' => RouteNames.clubDetail(referenceId),
-    'event' ||
-    'event_update' ||
-    'event_cancelled' ||
-    'event_reminder' => RouteNames.eventDetail(referenceId),
-    'ticket' || 'registration' => RouteNames.ticketDetail(referenceId),
-    'moderation' => RouteNames.moderation,
-    _ => null,
-  };
-}
+String? notificationDeepLink(AppNotification item) =>
+    const OpenRelatedContent().deepLink(item);
 
-String notificationActionLabel(AppNotification item) => switch (item.type) {
-  'club' || 'club_membership' => 'View club',
-  'event' ||
-  'event_update' ||
-  'event_cancelled' ||
-  'event_reminder' => 'View event',
-  'ticket' || 'registration' => 'View ticket',
-  'moderation' => 'Open moderation',
-  _ => 'Open',
-};
+String notificationActionLabel(AppNotification item) =>
+    const OpenRelatedContent().actionLabel(item);
 
 class _NotificationScreenState extends ConsumerState<NotificationScreen> {
   final Set<String> _saving = {};
@@ -50,7 +31,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     if (!item.isRead) {
       setState(() => _saving.add(item.id));
       try {
-        await ref.read(notificationRepositoryProvider).markRead(item.id);
+        await ref.read(viewNotificationDetailsActionProvider)(item);
       } catch (_) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

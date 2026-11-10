@@ -1,3 +1,5 @@
+// Author: ThaiQHCE181542 - Quách Hoàng Thái
+// UC-086: Local Data & Responsive - View Recently Viewed Events Provider
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/firebase_providers.dart';

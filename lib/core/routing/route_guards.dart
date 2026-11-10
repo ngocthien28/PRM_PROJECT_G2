@@ -12,6 +12,7 @@ import 'route_names.dart';
 /// RELATED FILES: lib/core/routing/route_guards.dart; lib/features/auth/presentation/viewmodels/auth_view_model.dart.
 /// TECHNOLOGY: Dart, Riverpod.
 bool canAccessOrganizer(AppUser user) => user.isActive && user.role.canOrganize;
+
 /// FEATURE: UC-003, UC-015
 /// MODULE: Authentication & Authorization
 /// DESCRIPTION: Chỉ cho admin active truy cập admin.
@@ -21,6 +22,7 @@ bool canAccessOrganizer(AppUser user) => user.isActive && user.role.canOrganize;
 /// TECHNOLOGY: Dart, Riverpod.
 bool canAccessAdmin(AppUser user) =>
     user.isActive && user.role == UserRole.admin;
+
 /// FEATURE: UC-003 - Implement Role-Based App Routing
 /// MODULE: Authentication & Authorization
 /// DESCRIPTION: Chọn landing theo enum student/organizer/admin.
@@ -33,6 +35,7 @@ String roleHome(UserRole role) => switch (role) {
   UserRole.organizer => RouteNames.organizer,
   UserRole.admin => RouteNames.admin,
 };
+
 /// FEATURE: UC-003 - Implement Role-Based App Routing
 /// MODULE: Authentication & Authorization
 /// DESCRIPTION: Xác định login/register/forgot-password là route auth công khai.

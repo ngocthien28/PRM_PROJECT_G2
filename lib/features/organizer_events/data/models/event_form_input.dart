@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import '../../../../core/constants/event_categories.dart';
+import '../../../../shared/enums/event_status.dart';
 
 /// Pure-Dart input and validation for the organizer event create/edit form.
 ///
@@ -19,6 +20,7 @@ class EventFormInput {
     this.posterSelection,
     this.createRequestId,
     this.currentRegisteredCount,
+    this.status,
   });
 
   static const int minTitleLength = 3;
@@ -42,6 +44,9 @@ class EventFormInput {
   /// Used to ensure capacity cannot be reduced below current registrations.
   final int? currentRegisteredCount;
 
+  /// Null preserves an existing event's status; new events default to published.
+  final EventStatus? status;
+
   EventFormInput copyWith({
     String? title,
     String? description,
@@ -53,6 +58,7 @@ class EventFormInput {
     EventPosterSelection? posterSelection,
     String? createRequestId,
     int? currentRegisteredCount,
+    EventStatus? status,
   }) {
     return EventFormInput(
       title: title ?? this.title,
@@ -66,6 +72,7 @@ class EventFormInput {
       createRequestId: createRequestId ?? this.createRequestId,
       currentRegisteredCount:
           currentRegisteredCount ?? this.currentRegisteredCount,
+      status: status ?? this.status,
     );
   }
 
@@ -87,6 +94,11 @@ class EventFormInput {
     int? currentRegisteredCount,
   }) {
     final errors = <String, String>{};
+    if (status != null &&
+        status != EventStatus.draft &&
+        status != EventStatus.published) {
+      errors['status'] = 'Select Draft or Published.';
+    }
     final trimmedTitle = title.trim();
     final trimmedDescription = description.trim();
 

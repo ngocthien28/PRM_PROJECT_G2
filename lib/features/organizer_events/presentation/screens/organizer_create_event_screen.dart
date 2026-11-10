@@ -110,6 +110,7 @@ class OrganizerEditEventScreen extends ConsumerWidget {
             endAt: event.endAt,
             capacity: event.capacity,
             currentRegisteredCount: event.registeredCount,
+            status: event.status,
           ),
           onSubmit: (input) => ref
               .read(organizerEventActionsProvider)

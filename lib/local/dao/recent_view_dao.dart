@@ -1,3 +1,5 @@
+// Author: ThaiQHCE181542 - Quách Hoàng Thái
+// UC-086: Local Data & Responsive - View Recently Viewed Events
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

@@ -18,6 +18,7 @@ import '../../../weather/presentation/widgets/weather_banner.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
+
   /// FEATURE: UC-001, UC-007, UC-008
   /// MODULE: Authentication & Authorization
   /// DESCRIPTION: Gắn shell với phiên, signOut action và nút profile; phần event feed thuộc UC khác.
@@ -290,7 +291,12 @@ class HomeScreen extends ConsumerWidget {
               ...((events.asData!.value.toList())
                     ..sort((a, b) => b.fillRate.compareTo(a.fillRate)))
                   .take(2)
-                  .map((e) => _FeaturedEventCard(key: ValueKey('featured-${e.id}'), event: e)),
+                  .map(
+                    (e) => _FeaturedEventCard(
+                      key: ValueKey('featured-${e.id}'),
+                      event: e,
+                    ),
+                  ),
             ],
             const SizedBox(height: 26),
             Container(

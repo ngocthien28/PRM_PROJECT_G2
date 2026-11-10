@@ -1,3 +1,5 @@
+// Author: ThaiQHCE181542 - Quách Hoàng Thái
+// UC-086: Local Data & Responsive - View Recently Viewed Events & Clear All Favorites
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';

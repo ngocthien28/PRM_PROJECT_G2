@@ -20,10 +20,7 @@ abstract interface class FavoriteRepository {
   Future<void> clearAllFavorites(String userId);
 
   /// Kiểm tra xem event có trong danh sách yêu thích không (Firestore + local).
-  Future<bool> isFavorite({
-    required String userId,
-    required String eventId,
-  });
+  Future<bool> isFavorite({required String userId, required String eventId});
 
   /// Lấy danh sách sự kiện yêu thích đầy đủ của user từ Firestore.
   Future<List<EventModel>> getFavoriteEvents(String userId);
@@ -31,4 +28,3 @@ abstract interface class FavoriteRepository {
   /// Stream theo dõi real-time danh sách eventId yêu thích.
   Stream<List<String>> watchFavoriteIds(String userId);
 }
-
