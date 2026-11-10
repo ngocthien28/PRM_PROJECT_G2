@@ -13,7 +13,9 @@ import '../../../events/presentation/viewmodels/event_list_view_model.dart';
 import '../../../events/presentation/widgets/event_poster.dart';
 import '../../../events/presentation/widgets/event_results.dart';
 import '../../../../shared/widgets/role_navigation_actions.dart';
+import '../../../favorites/presentation/viewmodels/favorite_view_model.dart';
 import '../../../notifications/presentation/viewmodels/notification_view_model.dart';
+import '../../../weather/presentation/viewmodels/weather_view_model.dart';
 import '../../../weather/presentation/widgets/weather_banner.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -34,6 +36,8 @@ class HomeScreen extends ConsumerWidget {
     Future<void> refresh() async {
       try {
         ref.invalidate(homeEventsProvider);
+        ref.invalidate(weatherProvider);
+        ref.invalidate(favoriteIdsProvider);
         await ref.read(homeEventsProvider.future);
       } catch (_) {}
     }
@@ -281,7 +285,7 @@ class HomeScreen extends ConsumerWidget {
                   onPressed: () {
                     ref
                         .read(eventFilterProvider.notifier)
-                        .setSort(EventSort.popular);
+                        .setFilter(const EventFilter(sort: EventSort.popular));
                     context.push(RouteNames.events);
                   },
                   child: const Text('Xem tất cả'),

@@ -4,7 +4,9 @@ import '../../../../core/services/firebase_providers.dart';
 import '../../../../local/dao/ticket_dao.dart';
 import '../../../auth/presentation/viewmodels/auth_view_model.dart';
 import '../../../events/data/models/event_model.dart';
+import '../../../events/presentation/screens/event_detail_screen.dart';
 import '../../../events/presentation/viewmodels/event_list_view_model.dart';
+import '../../../favorites/presentation/viewmodels/favorite_view_model.dart';
 import '../../data/models/registration_model.dart';
 import '../../../events/presentation/viewmodels/event_detail_view_model.dart';
 import '../../../organizer_events/presentation/viewmodels/participant_summary_view_model.dart';
@@ -84,11 +86,15 @@ class RegistrationActionViewModel
 
       state = AsyncData(registration);
 
-      // Refresh list and event states
+      // Refresh list and event states across all modules (Home, List, Detail, Related, Favorites, Organizer)
       ref.invalidate(myRegistrationsProvider);
       ref.invalidate(eventRegistrationStatusProvider(event.id));
+      ref.invalidate(homeEventsProvider);
       ref.invalidate(eventListProvider);
       ref.invalidate(eventDetailProvider(event.id));
+      ref.invalidate(relatedEventsProvider);
+      ref.invalidate(favoriteEventsProvider);
+      ref.invalidate(recentlyViewedEventsProvider);
       ref.invalidate(participantSummaryProvider(event.id));
 
       return registration;
@@ -123,11 +129,15 @@ class RegistrationActionViewModel
 
       state = const AsyncData(null);
 
-      // Refresh lists
+      // Refresh lists across all modules (Home, List, Detail, Related, Favorites, Organizer)
       ref.invalidate(myRegistrationsProvider);
       ref.invalidate(eventRegistrationStatusProvider(eventId));
+      ref.invalidate(homeEventsProvider);
       ref.invalidate(eventListProvider);
       ref.invalidate(eventDetailProvider(eventId));
+      ref.invalidate(relatedEventsProvider);
+      ref.invalidate(favoriteEventsProvider);
+      ref.invalidate(recentlyViewedEventsProvider);
       ref.invalidate(participantSummaryProvider(eventId));
     } catch (error, stack) {
       state = AsyncError(error, stack);

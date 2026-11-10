@@ -8,6 +8,7 @@ import '../../../organizer_events/presentation/viewmodels/participant_summary_vi
 import '../../../organizer_events/presentation/viewmodels/organizer_dashboard_view_model.dart';
 import '../../../events/presentation/viewmodels/event_detail_view_model.dart';
 import '../../../events/presentation/viewmodels/event_list_view_model.dart';
+import '../../../favorites/presentation/viewmodels/favorite_view_model.dart';
 import '../../../registration/presentation/viewmodels/registration_view_model.dart';
 
 /// Represents the detailed outcome of a check-in attempt.
@@ -180,7 +181,9 @@ class CheckinViewModel extends Notifier<CheckinState> {
         ref.invalidate(organizerDashboardProvider);
         ref.invalidate(managedEventDetailProvider(payload.eventId));
         ref.invalidate(eventDetailProvider(payload.eventId));
+        ref.invalidate(homeEventsProvider);
         ref.invalidate(eventListProvider);
+        ref.invalidate(favoriteEventsProvider);
         ref.invalidate(myRegistrationsProvider);
         ref.invalidate(eventRegistrationStatusProvider(payload.eventId));
       }

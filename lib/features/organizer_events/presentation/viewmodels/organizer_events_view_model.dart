@@ -9,8 +9,10 @@ import '../../../auth/data/models/app_user.dart';
 import '../../../auth/presentation/viewmodels/auth_view_model.dart';
 import '../../../events/data/event_repository.dart';
 import '../../../events/data/models/event_model.dart';
+import '../../../events/presentation/screens/event_detail_screen.dart';
 import '../../../events/presentation/viewmodels/event_list_view_model.dart';
 import '../../../events/presentation/viewmodels/event_detail_view_model.dart';
+import '../../../favorites/presentation/viewmodels/favorite_view_model.dart';
 import '../../../../shared/enums/event_status.dart';
 import '../../data/models/event_form_input.dart';
 import 'organizer_dashboard_view_model.dart';
@@ -102,6 +104,9 @@ final organizerEventActionsProvider = Provider<OrganizerEventActions>((ref) {
       ref.invalidate(organizerEventsProvider);
       ref.invalidate(eventListProvider);
       ref.invalidate(homeEventsProvider);
+      ref.invalidate(relatedEventsProvider);
+      ref.invalidate(favoriteEventsProvider);
+      ref.invalidate(recentlyViewedEventsProvider);
     },
     refreshEvent: (id) {
       if (!ref.mounted) return;

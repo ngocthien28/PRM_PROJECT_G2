@@ -44,10 +44,11 @@ class EventDetailScreen extends ConsumerWidget {
     if (!managed) {
       final user = ref.watch(currentUserProvider).asData?.value;
       if (user != null) {
-        Future.microtask(() {
-          ref
+        Future.microtask(() async {
+          await ref
               .read(recentViewDaoProvider)
               .recordView(eventId: eventId, userId: user.uid);
+          ref.invalidate(recentlyViewedEventsProvider);
         });
       }
     }

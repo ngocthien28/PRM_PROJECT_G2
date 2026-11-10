@@ -89,10 +89,15 @@ class FavoriteRepositoryImpl implements FavoriteRepository {
 
   @override
   Future<List<EventModel>> getFavoriteEvents(String userId) async {
-    final snapshot = await _favCol(userId).get();
-    if (snapshot.docs.isEmpty) return [];
-
-    final eventIds = snapshot.docs.map((d) => d.id).toList();
+    List<String> eventIds;
+    try {
+      final snapshot = await _favCol(userId).get();
+      eventIds = snapshot.docs.map((d) => d.id).toList();
+    } catch (_) {
+      // Fallback sang SQLite local khi mất kết nối mạng
+      eventIds = await localDao.getFavoriteEventIds(userId);
+    }
+    if (eventIds.isEmpty) return [];
 
     // Lấy events từ Firestore (batch by 10 do Firestore whereIn limit)
     final results = <EventModel>[];
@@ -101,6 +106,7 @@ class FavoriteRepositoryImpl implements FavoriteRepository {
         i,
         i + 10 > eventIds.length ? eventIds.length : i + 10,
       );
+      final loadedInChunk = <String>{};
       try {
         final eventsSnap = await firestore
             .collection('events')
@@ -110,21 +116,25 @@ class FavoriteRepositoryImpl implements FavoriteRepository {
         for (final doc in eventsSnap.docs) {
           try {
             results.add(EventModel.fromFirestore(doc));
+            loadedInChunk.add(doc.id);
           } catch (_) {
             // Skip malformed events
           }
         }
       } catch (_) {
-        // Fallback đọc từng document nếu query whereIn bị giới hạn quyền hoặc thiếu index
-        for (final id in chunk) {
-          try {
-            final doc = await firestore.collection('events').doc(id).get();
-            if (doc.exists) {
-              results.add(EventModel.fromFirestore(doc));
-            }
-          } catch (_) {
-            // Skip inaccessible or malformed events
+        // Fallback bên dưới sẽ đọc từng document
+      }
+
+      // Đọc bổ sung các document chưa tải được (ví dụ sự kiện đã đổi trạng thái hoặc lỗi index)
+      for (final id in chunk) {
+        if (loadedInChunk.contains(id)) continue;
+        try {
+          final doc = await firestore.collection('events').doc(id).get();
+          if (doc.exists) {
+            results.add(EventModel.fromFirestore(doc));
           }
+        } catch (_) {
+          // Skip inaccessible or malformed events
         }
       }
     }
