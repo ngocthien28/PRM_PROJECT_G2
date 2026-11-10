@@ -36,14 +36,12 @@ class _ModerationScreenState extends ConsumerState<ModerationScreen> {
       return;
     }
     try {
-      await ref
-          .read(moderationRepositoryProvider)
-          .resolveCase(
-            caseId: moderationCase.id,
-            action: decision.action,
-            note: decision.note,
-            actorId: actor.uid,
-          );
+      await ref.read(resolveModerationCaseActionProvider)(
+        caseId: moderationCase.id,
+        action: decision.action,
+        note: decision.note,
+        actorId: actor.uid,
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${decision.action.label} saved.')),

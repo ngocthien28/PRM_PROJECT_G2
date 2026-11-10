@@ -6,6 +6,7 @@ import '../../data/moderation_repository.dart';
 import '../../data/moderation_repository_impl.dart';
 import '../../domain/usecases/submit_content_report.dart';
 import '../../domain/usecases/view_moderation_queue.dart';
+import '../../domain/usecases/resolve_moderation_case.dart';
 
 final moderationRepositoryProvider = Provider<ModerationRepository>(
   (ref) => ModerationRepositoryImpl(ref.watch(firestoreProvider)),
@@ -33,6 +34,21 @@ typedef SubmitContentReportAction = Future<String> Function({
 final submitContentReportActionProvider =
     Provider<SubmitContentReportAction>((ref) {
       final useCase = SubmitContentReport(
+        ref.watch(moderationRepositoryProvider),
+      );
+      return useCase.call;
+    });
+
+typedef ResolveModerationCaseAction = Future<void> Function({
+  required String caseId,
+  required ModerationAction action,
+  required String note,
+  required String actorId,
+});
+
+final resolveModerationCaseActionProvider =
+    Provider<ResolveModerationCaseAction>((ref) {
+      final useCase = ResolveModerationCase(
         ref.watch(moderationRepositoryProvider),
       );
       return useCase.call;
