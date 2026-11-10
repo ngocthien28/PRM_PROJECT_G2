@@ -71,7 +71,7 @@ class EventFilter {
         : DateTime(toDate!.year, toDate!.month, toDate!.day + 1);
     final result = events.where((event) {
       final start = event.startAt.toLocal();
-      return (query.isEmpty || event.titleLower.contains(query)) &&
+      return (query.isEmpty || event.matchesKeyword(query)) &&
           (category == null || event.category == category) &&
           (from == null || !start.isBefore(from)) &&
           (until == null || start.isBefore(until)) &&

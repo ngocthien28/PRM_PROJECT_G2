@@ -489,6 +489,7 @@ class EventRepositoryImpl implements EventRepository {
         if (input.posterSelection != null) {
           _posterAttempts.remove((actor.uid, event.id, input.posterSelection!));
         }
+        unawaited(eventCacheDao?.saveEvent(event));
         return event;
       });
 
@@ -541,6 +542,7 @@ class EventRepositoryImpl implements EventRepository {
         if (input.posterSelection != null) {
           _posterAttempts.remove((actor.uid, event.id, input.posterSelection!));
         }
+        unawaited(eventCacheDao?.saveEvent(event));
         return event;
       });
 
@@ -816,9 +818,11 @@ class EventRepositoryImpl implements EventRepository {
         'updatedAt': FieldValue.serverTimestamp(),
       });
     }, timeout: requestTimeout);
-    return EventModel.fromFirestore(
+    final cancelled = EventModel.fromFirestore(
       await ref.get(const GetOptions(source: Source.server)),
     );
+    unawaited(eventCacheDao?.saveEvent(cancelled));
+    return cancelled;
   }
 
   DocumentReference<Map<String, dynamic>> _eventDocument(String eventId) {

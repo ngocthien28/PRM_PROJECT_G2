@@ -207,121 +207,126 @@ class _RegistrationCard extends ConsumerWidget {
 
         return Card(
           elevation: 2,
+          clipBehavior: Clip.antiAlias,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    RegistrationStatusChip(status: registration.status),
-                    if (registration.isFromCache) const Text('Offline'),
-                    Text(
-                      DateFormat(
-                        'dd/MM/yyyy HH:mm',
-                      ).format(registration.registeredAt.toLocal()),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  event?.title ?? 'Đang tải thông tin sự kiện...',
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (event != null) ...[
-                  const SizedBox(height: 6),
+          child: InkWell(
+            onTap: () =>
+                context.push(RouteNames.eventDetail(registration.eventId)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Icon(
-                        Icons.location_on_outlined,
-                        size: 15,
-                        color: Colors.grey.shade700,
+                      RegistrationStatusChip(status: registration.status),
+                      if (registration.isFromCache) const Text('Offline'),
+                      Text(
+                        DateFormat(
+                          'dd/MM/yyyy HH:mm',
+                        ).format(registration.registeredAt.toLocal()),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          event.locationName,
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    event?.title ?? 'Đang tải thông tin sự kiện...',
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (event != null) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 15,
+                          color: Colors.grey.shade700,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            event.locationName,
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontSize: 13,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today,
+                          size: 14,
+                          color: Colors.grey.shade700,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          DateFormat(
+                            'dd/MM/yyyy HH:mm',
+                          ).format(event.startAt.toLocal()),
                           style: TextStyle(
                             color: Colors.grey.shade700,
                             fontSize: 13,
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 12),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Icon(
-                        Icons.calendar_today,
-                        size: 14,
-                        color: Colors.grey.shade700,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        DateFormat(
-                          'dd/MM/yyyy HH:mm',
-                        ).format(event.startAt.toLocal()),
-                        style: TextStyle(
-                          color: Colors.grey.shade700,
-                          fontSize: 13,
+                      if (registration.canCancel && !registration.isFromCache)
+                        TextButton.icon(
+                          key: const Key('myEventsCancelTicketButton'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.red.shade700,
+                          ),
+                          onPressed: () => _confirmCancelRegistration(
+                            context,
+                            ref,
+                            registration,
+                          ),
+                          icon: const Icon(Icons.cancel_outlined, size: 16),
+                          label: const Text('Hủy vé'),
                         ),
+                      const SizedBox(width: 8),
+                      FilledButton.icon(
+                        onPressed: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => TicketScreen(
+                                registrationId: registration.id,
+                                initialRegistration: registration,
+                                initialEvent: event,
+                              ),
+                            ),
+                          );
+                          if (context.mounted) {
+                            ref.invalidate(myRegistrationsProvider);
+                          }
+                        },
+                        icon: const Icon(Icons.qr_code, size: 18),
+                        label: const Text('Xem Vé QR'),
                       ),
                     ],
                   ),
                 ],
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    if (registration.canCancel && !registration.isFromCache)
-                      TextButton.icon(
-                        key: const Key('myEventsCancelTicketButton'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.red.shade700,
-                        ),
-                        onPressed: () => _confirmCancelRegistration(
-                          context,
-                          ref,
-                          registration,
-                        ),
-                        icon: const Icon(Icons.cancel_outlined, size: 16),
-                        label: const Text('Hủy vé'),
-                      ),
-                    const SizedBox(width: 8),
-                    FilledButton.icon(
-                      onPressed: () async {
-                        await Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => TicketScreen(
-                              registrationId: registration.id,
-                              initialRegistration: registration,
-                              initialEvent: event,
-                            ),
-                          ),
-                        );
-                        if (context.mounted) {
-                          ref.invalidate(myRegistrationsProvider);
-                        }
-                      },
-                      icon: const Icon(Icons.qr_code, size: 18),
-                      label: const Text('Xem Vé QR'),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
         );
