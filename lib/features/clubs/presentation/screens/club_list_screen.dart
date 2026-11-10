@@ -190,11 +190,12 @@ class _ClubListScreenState extends ConsumerState<ClubListScreen> {
               ),
             ),
             data: (clubs) {
-              final visible = List<ClubModel>.from(
-                ref.watch(searchClubsProvider)(clubs: clubs, query: _query),
+              var visible = ref.watch(searchClubsProvider)(
+                clubs: clubs,
+                query: _query,
               );
               if (_popular) {
-                visible.sort((a, b) => b.memberCount.compareTo(a.memberCount));
+                visible = ref.watch(sortClubsByMembershipProvider)(visible);
               }
               if (visible.isEmpty) {
                 return CampusEmptyState(
