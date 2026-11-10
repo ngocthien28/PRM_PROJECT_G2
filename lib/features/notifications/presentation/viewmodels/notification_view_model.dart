@@ -7,10 +7,15 @@ import '../../domain/usecases/view_notifications.dart';
 import '../../domain/usecases/mark_notification_as_read.dart';
 import '../../domain/usecases/view_notification_details.dart';
 import '../../domain/usecases/open_related_content.dart';
+import '../../domain/usecases/view_notifications_offline.dart';
 import '../../../../local/dao/notification_cache_dao.dart';
 
 final notificationCacheProvider = Provider<NotificationCache>(
   (_) => NotificationCacheDao(),
+);
+
+final viewNotificationsOfflineProvider = Provider<ViewNotificationsOffline>(
+  (ref) => ViewNotificationsOffline(ref.watch(notificationCacheProvider)),
 );
 
 final notificationRepositoryProvider = Provider<NotificationRepositoryImpl>(
