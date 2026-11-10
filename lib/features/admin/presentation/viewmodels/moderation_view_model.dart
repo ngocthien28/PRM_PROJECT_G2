@@ -5,14 +5,19 @@ import '../../data/models/moderation_case.dart';
 import '../../data/moderation_repository.dart';
 import '../../data/moderation_repository_impl.dart';
 import '../../domain/usecases/submit_content_report.dart';
+import '../../domain/usecases/view_moderation_queue.dart';
 
 final moderationRepositoryProvider = Provider<ModerationRepository>(
   (ref) => ModerationRepositoryImpl(ref.watch(firestoreProvider)),
 );
 
+final viewModerationQueueProvider = Provider<ViewModerationQueue>(
+  (ref) => ViewModerationQueue(ref.watch(moderationRepositoryProvider)),
+);
+
 final moderationCasesProvider =
     StreamProvider.autoDispose<List<ModerationCase>>(
-      (ref) => ref.watch(moderationRepositoryProvider).watchCases(),
+      (ref) => ref.watch(viewModerationQueueProvider).call(),
       retry: (_, _) => null,
     );
 
